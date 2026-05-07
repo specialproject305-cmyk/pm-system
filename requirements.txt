@@ -1,7 +1,5 @@
 streamlit
 pandas
 plotly
-gspread
-oauth2client
+supabase
 fpdf2
-psycopg2-binary
