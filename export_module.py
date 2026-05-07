@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
-from gsheets_db import read_sheet
+from supabase_db import read_sheet
 from fpdf import FPDF
 import tempfile
 

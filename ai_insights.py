@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from gsheets_db import read_sheet, insert_row, generate_id, now_str
+from supabase_db import read_sheet, insert_row, generate_id, now_str
 
 def calculate_risk(site_id):
     ms_df = read_sheet("milestones")

@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta, date
-from gsheets_db import read_all_sheets
+from supabase_db import read_all_sheets
 
 def dashboard_page():
     now = datetime.now()

@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from datetime import datetime, timedelta
-from gsheets_db import read_sheet, insert_row, update_row, find_row_by_id, delete_row_by_id, generate_id, today_str
+from supabase_db import read_sheet, insert_row, update_row, find_row_by_id, delete_row_by_id, generate_id, today_str
 
 TOWER_TEMPLATE = {
     "SPK TENANT": ["Hunting dan Survey","Validation","Sosialisasi Warga Radius","Negosiasi Sewa Lahan","Negosiasi IW Radius","Pengajuan Budget IW & SA Lahan","BAK","Legal Proses","Akuisisi","RFC"],

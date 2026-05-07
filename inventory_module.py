@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from gsheets_db import read_sheet, insert_row, update_row, find_row_by_id, generate_id, now_str
+from supabase_db import read_sheet, insert_row, update_row, find_row_by_id, generate_id, now_str
 
 def inventory_page():
     st.title("📦 Material Inventory Management")
