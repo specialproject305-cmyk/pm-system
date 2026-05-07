@@ -7,39 +7,21 @@ import streamlit as st
 
 @st.cache_resource
 def get_gsheet_client():
-    import json
     scope = [
         "https://spreadsheets.google.com/feeds",
         "https://www.googleapis.com/auth/drive"
     ]
-    # Baca dari Streamlit Secrets (production) atau file (local)
-    try:
-        secret_str = st.secrets["service_account"]
-        if isinstance(secret_str, dict):
-            creds = ServiceAccountCredentials.from_json_keyfile_dict(secret_str, scope)
-        else:
-            creds_dict = json.loads(secret_str)
-            creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
-    except Exception:
-        creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
+    # Baca dari file credentials.json
+    creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
     return gspread.authorize(creds)
 
-# ⭐ CACHE LEBIH LAMA - 60 detik
-@st.cache_data(ttl=60)
-def read_sheet(sheet_name):
-    """Baca sheet dengan cache 60 detik"""
-    try:
-        sheet = get_sheet(sheet_name)
-        data = sheet.get_all_records()
-        return pd.DataFrame(data) if data else pd.DataFrame()
-    except Exception as e:
-        st.error(f"Error membaca {sheet_name}: {e}")
-        return pd.DataFrame()
+def get_sheet(sheet_name):
+    client = get_gsheet_client()
+    spreadsheet = client.open("PM_Database")
+    return spreadsheet.worksheet(sheet_name)
 
-# ⭐ FETCH ALL SEKALIGUS (kurangi request)
 @st.cache_data(ttl=60)
 def read_all_sheets():
-    """Baca semua sheet dalam 1 kali fetch"""
     result = {}
     sheet_names = ['projects', 'milestones', 'materials', 'inventory_transactions', 
                    'chat_messages', 'notifications', 'users', 'ai_insights']
@@ -59,12 +41,21 @@ def read_all_sheets():
             result[name] = pd.DataFrame()
     return result
 
+@st.cache_data(ttl=60)
+def read_sheet(sheet_name):
+    try:
+        sheet = get_sheet(sheet_name)
+        data = sheet.get_all_records()
+        return pd.DataFrame(data) if data else pd.DataFrame()
+    except Exception as e:
+        st.error(f"Error membaca {sheet_name}: {e}")
+        return pd.DataFrame()
+
 def insert_row(sheet_name, data_dict):
     sheet = get_sheet(sheet_name)
     headers = sheet.row_values(1)
     row = [str(data_dict.get(h, '')) for h in headers]
     sheet.append_row(row)
-    # Clear semua cache
     st.cache_data.clear()
 
 def update_row(sheet_name, row_index, data_dict):
