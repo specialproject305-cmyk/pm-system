@@ -11,6 +11,22 @@ def get_gsheet_client():
         "https://spreadsheets.google.com/feeds",
         "https://www.googleapis.com/auth/drive"
     ]
+    
+    # DEBUG: Cek apakah file ada
+    import os
+    if os.path.exists("credentials.json"):
+        st.success("✅ File credentials.json ditemukan")
+    else:
+        st.error("❌ File credentials.json TIDAK ditemukan")
+        # Coba pakai service_account.json
+        if os.path.exists("service_account.json"):
+            st.warning("⚠️ Pakai service_account.json")
+            creds = ServiceAccountCredentials.from_json_keyfile_name("service_account.json", scope)
+            return gspread.authorize(creds)
+    
+    creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
+    return gspread.authorize(creds)
+    ]
     # Baca dari file credentials.json
     creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
     return gspread.authorize(creds)
