@@ -7,17 +7,22 @@ import streamlit as st
 
 @st.cache_resource
 def get_gsheet_client():
+    import json
     scope = [
         "https://spreadsheets.google.com/feeds",
         "https://www.googleapis.com/auth/drive"
     ]
-    creds = ServiceAccountCredentials.from_json_keyfile_name("service_account.json", scope)
+    # Baca dari Streamlit Secrets (production) atau file (local)
+    try:
+        secret_str = st.secrets["service_account"]
+        if isinstance(secret_str, dict):
+            creds = ServiceAccountCredentials.from_json_keyfile_dict(secret_str, scope)
+        else:
+            creds_dict = json.loads(secret_str)
+            creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+    except Exception:
+        creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
     return gspread.authorize(creds)
-
-def get_sheet(sheet_name):
-    client = get_gsheet_client()
-    spreadsheet = client.open("PM_Database")
-    return spreadsheet.worksheet(sheet_name)
 
 # ⭐ CACHE LEBIH LAMA - 60 detik
 @st.cache_data(ttl=60)
