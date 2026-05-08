@@ -40,7 +40,34 @@ def dashboard_page():
         for c in ['current_stock', 'min_stock']:
             if c in materials_df.columns:
                 materials_df[c] = pd.to_numeric(materials_df[c], errors='coerce').fillna(0)
-    
+
+    # ===== TOAST NOTIFICATIONS =====
+messages = all_data.get('chat_messages', pd.DataFrame())
+notifs = all_data.get('notifications', pd.DataFrame())
+milestones_df = all_data.get('milestones', pd.DataFrame())
+materials_df = all_data.get('materials', pd.DataFrame())
+
+# 1. Chat baru (30 detik terakhir)
+if not messages.empty:
+    latest_msg = messages.iloc[-1]
+    msg_time = latest_msg.get('created_at', '')
+    st.toast(f"💬 {latest_msg.get('sender','')}: {latest_msg.get('message','')[:40]}...", icon="💬")
+
+# 2. Milestone terlambat
+if not milestones_df.empty and 'status' in milestones_df.columns:
+    delayed = milestones_df[milestones_df['status'] == 'DELAYED']
+    if not delayed.empty:
+        st.toast(f"⚠️ {len(delayed)} milestone terlambat!", icon="⚠️")
+
+# 3. Material kritis
+if not materials_df.empty:
+    for c in ['current_stock', 'min_stock']:
+        if c in materials_df.columns:
+            materials_df[c] = pd.to_numeric(materials_df[c], errors='coerce').fillna(0)
+    critical = materials_df[materials_df['current_stock'] < materials_df['min_stock']]
+    if not critical.empty:
+        st.toast(f"🔴 {len(critical)} material stok kritis!", icon="🔴")
+        
     # ===== FILTERS =====
     st.markdown("### 🔍 Filter Data")
     col_f1, col_f2, col_f3, col_f4 = st.columns([2, 2, 2, 1])
