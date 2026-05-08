@@ -2,6 +2,9 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from datetime import datetime, timedelta
+@st.cache_data(ttl=60)
+def load_milestones():
+    return read_sheet("milestones")
 
 from supabase_db import (
     read_all_sheets,
