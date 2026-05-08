@@ -303,7 +303,11 @@ def milestone_page():
     # TAB 4
     # ======================================================
 
-    with tab4:
+    # ======================================================
+# TAB 4
+# ======================================================
+
+with tab4:
 
     st.subheader("Edit Milestone")
 
@@ -320,7 +324,6 @@ def milestone_page():
             sel = st.selectbox(
                 "Pilih Milestone",
                 site_ms["id"].tolist(),
-
                 format_func=lambda x:
                 site_ms[
                     site_ms["id"] == x
@@ -340,15 +343,20 @@ def milestone_page():
                         value=str(ms.get("name", ""))
                     )
 
+                    # ==========================================
                     # PLAN DATE
+                    # ==========================================
+
                     c1, c2 = st.columns(2)
 
                     with c1:
+
                         try:
                             ps_d = datetime.strptime(
                                 str(ms.get("planned_start", ""))[:10],
                                 "%Y-%m-%d"
                             ).date()
+
                         except:
                             ps_d = datetime.now().date()
 
@@ -359,11 +367,13 @@ def milestone_page():
                         )
 
                     with c2:
+
                         try:
                             pe_d = datetime.strptime(
                                 str(ms.get("planned_end", ""))[:10],
                                 "%Y-%m-%d"
                             ).date()
+
                         except:
                             pe_d = datetime.now().date()
 
@@ -373,15 +383,20 @@ def milestone_page():
                             key="edit_plan_end"
                         )
 
+                    # ==========================================
                     # ACTUAL DATE
+                    # ==========================================
+
                     c3, c4 = st.columns(2)
 
                     with c3:
+
                         try:
                             av_d = datetime.strptime(
                                 str(ms.get("actual_start", ""))[:10],
                                 "%Y-%m-%d"
                             ).date()
+
                         except:
                             av_d = datetime.now().date()
 
@@ -392,11 +407,13 @@ def milestone_page():
                         )
 
                     with c4:
+
                         try:
                             av2_d = datetime.strptime(
                                 str(ms.get("actual_end", ""))[:10],
                                 "%Y-%m-%d"
                             ).date()
+
                         except:
                             av2_d = datetime.now().date()
 
@@ -406,28 +423,36 @@ def milestone_page():
                             key="edit_actual_end"
                         )
 
-                    # STATUS
+                    # ==========================================
+                    # STATUS & WEIGHT
+                    # ==========================================
+
                     c5, c6, c7 = st.columns(3)
 
                     with c5:
 
-                        sl = [
+                        status_list = [
                             "PENDING",
                             "ONGOING",
                             "DONE",
                             "DELAYED"
                         ]
 
-                        s_idx = (
-                            sl.index(ms.get("status", "PENDING"))
-                            if ms.get("status") in sl
+                        current_status = ms.get(
+                            "status",
+                            "PENDING"
+                        )
+
+                        status_index = (
+                            status_list.index(current_status)
+                            if current_status in status_list
                             else 0
                         )
 
                         estatus = st.selectbox(
                             "Status",
-                            sl,
-                            index=s_idx
+                            status_list,
+                            index=status_index
                         )
 
                     with c6:
@@ -441,30 +466,33 @@ def milestone_page():
 
                     with c7:
 
-                        ml = [
+                        material_list = [
                             "Belum Dicek",
                             "Lengkap",
                             "Tidak Lengkap"
                         ]
 
-                        m_idx = (
-                            ml.index(
-                                ms.get(
-                                    "material_status",
-                                    "Belum Dicek"
-                                )
-                            )
-                            if ms.get("material_status") in ml
+                        current_material = ms.get(
+                            "material_status",
+                            "Belum Dicek"
+                        )
+
+                        material_index = (
+                            material_list.index(current_material)
+                            if current_material in material_list
                             else 0
                         )
 
                         emat = st.selectbox(
                             "Material",
-                            ml,
-                            index=m_idx
+                            material_list,
+                            index=material_index
                         )
 
+                    # ==========================================
                     # BUTTON
+                    # ==========================================
+
                     b1, b2 = st.columns(2)
 
                     with b1:
@@ -480,7 +508,10 @@ def milestone_page():
                             "🗑️ Hapus"
                         )
 
+                    # ==========================================
                     # UPDATE
+                    # ==========================================
+
                     if update_btn:
 
                         update_row(
@@ -503,7 +534,10 @@ def milestone_page():
                         st.success("✅ Diupdate!")
                         st.rerun()
 
+                    # ==========================================
                     # DELETE
+                    # ==========================================
+
                     if delete_btn:
 
                         delete_row_by_id(
@@ -514,7 +548,7 @@ def milestone_page():
                         sync_milestone_to_site(selected_site)
 
                         st.warning("🗑️ Dihapus!")
-                        st.rerun()    
+                        st.rerun()  
 
     # ======================================================
     # TAB 5
