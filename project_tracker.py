@@ -43,7 +43,9 @@ def project_tracker_page():
                 elif val == 'CRITICAL': return 'background-color: #f8d7da; font-weight: bold'
                 return ''
             
-            display_cols = ['site_id', 'site_name', 'site_coordinate', 'vendor', 'status', 'progress', 'pm']
+            display_cols = ['site_id', 'site_name', 'site_coordinate', 'vendor', 'pm',
+                'start_date', 'end_date', 'start_date_actual', 'end_date_actual',
+                'status', 'progress']
             display_df = df[[c for c in display_cols if c in df.columns]]
             styled = display_df.style.map(color_status, subset=['status']) if 'status' in df.columns else display_df
             st.dataframe(styled, use_container_width=True)
