@@ -16,7 +16,7 @@ def login_page():
         st.markdown("<br><br>", unsafe_allow_html=True)
         st.markdown("""
         <div style="text-align: center;">
-            <h1>🏗️ PM System</h1>
+            <h1>👷 PROJECT MONITORING SYSTEM</h1>
             <p style="color: gray;">Project Management Dashboard</p>
         </div>
         """, unsafe_allow_html=True)
