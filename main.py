@@ -31,10 +31,10 @@ with st.sidebar:
     
     menu = st.sidebar.radio("📂 Navigasi:", [
         "📊 Dashboard", 
+        "🤖 Insights", 
         "📁 Site Tracker", 
         "🧱 Milestones",
         "📦 Inventory", 
-        "🤖 AI Insights", 
         "💬 Chat & Notif", 
         "📄 Export Report"
     ])
