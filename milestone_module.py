@@ -10,6 +10,38 @@ TOWER_TEMPLATE = {
     "Implementation": ["Request SPK","Proses Pengadaan vendor","Kick of Meeting (KoM)","Mobilisasi team & Bowplank","Foundation","Curing time","Backfilling","Erection","Pondasi rack ODC","Install ME & Grounding","Pekerjaan Fence","Lanscape","PLN connect","Install pole FO","Laying FO","Terminasi","DC Power Instalation","RFS","RFIN submit"]
 }
 
+def sync_milestone_to_site(site_id):
+    """Hitung progress dari milestone & update ke site"""
+    all_data = read_all_sheets()
+    ms_df = all_data.get('milestones', pd.DataFrame())
+    
+    if ms_df.empty:
+        return
+    
+    site_ms = ms_df[ms_df['project_id'] == site_id] if 'project_id' in ms_df.columns else pd.DataFrame()
+    if site_ms.empty:
+        return
+    
+    site_ms['weight'] = pd.to_numeric(site_ms['weight'], errors='coerce').fillna(0)
+    total_weight = site_ms['weight'].sum()
+    done_weight = site_ms[site_ms['status'] == 'DONE']['weight'].sum()
+    progress = round((done_weight / total_weight) * 100, 1) if total_weight > 0 else 0
+    
+    delayed = len(site_ms[site_ms['status'] == 'DELAYED'])
+    status = 'CRITICAL' if delayed > 3 else ('DELAYED' if delayed > 0 else 'ON_TRACK')
+    
+    # Update site
+    update_row('projects', site_id, {'progress': str(progress), 'status': status})
+    
+    # Update actual dates
+    actual_start = site_ms[site_ms['actual_start'].notna() & (site_ms['actual_start'] != '')]['actual_start'].min() if not site_ms.empty else None
+    actual_end = site_ms[site_ms['status'] == 'DONE']['actual_end'].max() if not site_ms.empty else None
+    
+    if actual_start:
+        update_row('projects', site_id, {'start_date_actual': str(actual_start)[:10]})
+    if actual_end:
+        update_row('projects', site_id, {'end_date_actual': str(actual_end)[:10]})
+        
 def milestone_page():
     st.title("🧱 Milestone Monitoring")
     
