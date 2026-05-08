@@ -65,7 +65,6 @@ def main():
             show_permission_denied()
     
     elif menu == "🤖 AI Insights":
-        if check_permission('editor'):
             ai_insights_page()
     
     elif menu == "💬 Chat & Notif":
