@@ -221,6 +221,31 @@ def milestone_page():
             if not site_ms.empty:
 
                 site_ms = site_ms.copy()
+                # ==========================================
+                # CRITICAL TASK DETECTION
+                # ==========================================
+                
+                today = datetime.now().date()
+                
+                site_ms["is_critical"] = False
+                
+                for idx, row in site_ms.iterrows():
+                
+                    try:
+                
+                        end_date = pd.to_datetime(
+                            row["planned_end"]
+                        ).date()
+                
+                        if (
+                            end_date < today
+                            and row["status"] != "DONE"
+                        ):
+                
+                            site_ms.at[idx, "is_critical"] = True
+                
+                    except:
+                        pass
 
                 site_ms["planned_start"] = pd.to_datetime(
                     site_ms["planned_start"],
@@ -236,15 +261,23 @@ def milestone_page():
                     "PENDING": "#6c757d",
                     "ONGOING": "#0d6efd",
                     "DONE": "#28a745",
-                    "DELAYED": "#dc3545"
+                    "DELAYED": "#dc3545",
+                    "CRITICAL": "#ff0000"
                 }
+                site_ms["display_status"] = site_ms.apply(
+                    lambda row:
+                    "CRITICAL"
+                    if row["is_critical"]
+                    else row["status"],
+                    axis=1
+                )
 
                 fig = px.timeline(
                     site_ms,
                     x_start="planned_start",
                     x_end="planned_end",
                     y="name",
-                    color="status",
+                    color="display_status",
                     color_discrete_map=color_map
                 )
 
@@ -260,6 +293,17 @@ def milestone_page():
                     fig,
                     use_container_width=True
                 )
+                critical_count = len(
+                    site_ms[
+                        site_ms["is_critical"] == True
+                    ]
+                )
+
+                if critical_count > 0:
+                
+                    st.warning(
+                        f"⚠️ {critical_count} milestone critical ditemukan"
+                    )
 
             else:
                 st.info("Belum ada milestone.")
