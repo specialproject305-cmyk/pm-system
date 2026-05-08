@@ -303,31 +303,81 @@ def milestone_page():
     # TAB 4
     # ======================================================
 
-    with tab4:
-
+        with tab4:
         st.subheader("Edit Milestone")
-
         ms_df = read_sheet("milestones")
-
         if not ms_df.empty:
-
-            site_ms = ms_df[
-                ms_df["project_id"] == selected_site
-            ]
-
+            site_ms = ms_df[ms_df["project_id"] == selected_site]
             if not site_ms.empty:
-
-                sel = st.selectbox(
-                    "Pilih Milestone",
-                    site_ms["id"].tolist(),
-
-                    format_func=lambda x:
-                    site_ms[
-                        site_ms["id"] == x
-                    ]["name"].values[0]
-                )
-
-                st.write("Selected:", sel)
+                sel = st.selectbox("Pilih Milestone", site_ms["id"].tolist(),
+                    format_func=lambda x: site_ms[site_ms["id"] == x]["name"].values[0])
+                
+                if sel:
+                    ms = site_ms[site_ms["id"] == sel].iloc[0]
+                    
+                    with st.form("edit_ms_form"):
+                        ename = st.text_input("Nama", value=str(ms.get('name', '')))
+                        
+                        # Plan dates
+                        c1, c2 = st.columns(2)
+                        with c1:
+                            try: ps_d = datetime.strptime(str(ms.get('planned_start', ''))[:10], '%Y-%m-%d')
+                            except: ps_d = datetime.now()
+                            ps = st.date_input("Plan Start", value=ps_d)
+                        with c2:
+                            try: pe_d = datetime.strptime(str(ms.get('planned_end', ''))[:10], '%Y-%m-%d')
+                            except: pe_d = datetime.now()
+                            pe = st.date_input("Plan End", value=pe_d)
+                        
+                        # Actual dates
+                        c3, c4 = st.columns(2)
+                        with c3:
+                            av_d = None
+                            try: av_d = datetime.strptime(str(ms.get('actual_start', ''))[:10], '%Y-%m-%d')
+                            except: av_d = None
+                            eas = st.date_input("Actual Start", value=av_d)
+                        with c4:
+                            av2_d = None
+                            try: av2_d = datetime.strptime(str(ms.get('actual_end', ''))[:10], '%Y-%m-%d')
+                            except: av2_d = None
+                            eae = st.date_input("Actual End", value=av2_d)
+                        
+                        # Status, weight, material
+                        c5, c6, c7 = st.columns(3)
+                        with c5:
+                            sl = ["PENDING", "ONGOING", "DONE", "DELAYED"]
+                            s_idx = sl.index(ms.get('status', 'PENDING')) if ms.get('status') in sl else 0
+                            estatus = st.selectbox("Status", sl, index=s_idx)
+                        with c6:
+                            eweight = st.number_input("Bobot %", 0.0, 100.0, float(ms.get('weight', 0) or 0))
+                        with c7:
+                            ml = ["Belum Dicek", "Lengkap", "Tidak Lengkap"]
+                            m_idx = ml.index(ms.get('material_status', 'Belum Dicek')) if ms.get('material_status') in ml else 0
+                            emat = st.selectbox("Material", ml, index=m_idx)
+                        
+                        # Buttons
+                        b1, b2 = st.columns(2)
+                        with b1:
+                            if st.form_submit_button("💾 Update", type="primary"):
+                                update_row('milestones', sel, {
+                                    'name': ename,
+                                    'planned_start': ps.strftime('%Y-%m-%d'),
+                                    'planned_end': pe.strftime('%Y-%m-%d'),
+                                    'actual_start': eas.strftime('%Y-%m-%d') if eas else '',
+                                    'actual_end': eae.strftime('%Y-%m-%d') if eae else '',
+                                    'status': estatus,
+                                    'weight': str(eweight),
+                                    'material_status': emat
+                                })
+                                sync_milestone_to_site(selected_site)
+                                st.success("✅ Diupdate!")
+                                st.rerun()
+                        with b2:
+                            if st.form_submit_button("🗑️ Hapus", type="secondary"):
+                                delete_row_by_id('milestones', sel)
+                                sync_milestone_to_site(selected_site)
+                                st.warning("🗑️ Dihapus!")
+                                st.rerun()
 
     # ======================================================
     # TAB 5
