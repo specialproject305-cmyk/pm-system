@@ -330,8 +330,7 @@ selected_dependency = st.selectbox(
                     {
                         "id": generate_id(),
                         "project_id": selected_site,
-                        "dependency_id": (dependency_map[selected_dependency]
-                        if selected_dependency != "None"
+                        "dependency_id": (dependency_map[selected_dependency]if selected_dependency != "None"
                         else ""
                         ),
                         "name": name,
