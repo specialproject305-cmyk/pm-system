@@ -88,7 +88,7 @@ def milestone_page():
                 sync_milestone_to_site(selected_site)
                 st.success(f"✅ {created} milestone dibuat!"); st.balloons(); st.rerun()
     
-    with tab4:
+       with tab4:
         st.subheader("Edit Milestone")
         ms_df = read_sheet("milestones")
         site_ms = ms_df[ms_df['project_id']==selected_site] if not ms_df.empty else pd.DataFrame()
@@ -96,32 +96,61 @@ def milestone_page():
             sel = st.selectbox("Pilih:", site_ms['id'].tolist(), format_func=lambda x: site_ms[site_ms['id']==x]['name'].values[0])
             if sel:
                 ms = site_ms[site_ms['id']==sel].iloc[0]
-                with st.form("edit_ms"):
-                    ename = st.text_input("Nama", value=ms.get('name',''))
+                with st.form("edit_ms_form"):
+                    ename = st.text_input("Nama", value=str(ms.get('name','')))
+                    
                     c1, c2 = st.columns(2)
-                    with c1: ps = st.date_input("Plan Start", value=datetime.strptime(str(ms.get('planned_start',''))[:10],'%Y-%m-%d') if ms.get('planned_start') and str(ms['planned_start'])!='' else datetime.now())
-                    with c2: pe = st.date_input("Plan End", value=datetime.strptime(str(ms.get('planned_end',''))[:10],'%Y-%m-%d') if ms.get('planned_end') and str(ms['planned_end'])!='' else datetime.now())
+                    with c1:
+                        ps_val = str(ms.get('planned_start',''))[:10]
+                        try: ps_d = datetime.strptime(ps_val, '%Y-%m-%d')
+                        except: ps_d = datetime.now()
+                        ps = st.date_input("Plan Start", value=ps_d)
+                    with c2:
+                        pe_val = str(ms.get('planned_end',''))[:10]
+                        try: pe_d = datetime.strptime(pe_val, '%Y-%m-%d')
+                        except: pe_d = datetime.now()
+                        pe = st.date_input("Plan End", value=pe_d)
+                    
                     c3, c4 = st.columns(2)
                     with c3:
-                        av = ms.get('actual_start','')
-                        av = datetime.strptime(str(av)[:10],'%Y-%m-%d') if av and str(av)!='' and str(av)!='None' else None
-                        eas = st.date_input("Actual Start", value=av)
+                        av = str(ms.get('actual_start',''))[:10]
+                        av_d = None
+                        try: av_d = datetime.strptime(av, '%Y-%m-%d')
+                        except: av_d = None
+                        eas = st.date_input("Actual Start", value=av_d)
                     with c4:
-                        av2 = ms.get('actual_end','')
-                        av2 = datetime.strptime(str(av2)[:10],'%Y-%m-%d') if av2 and str(av2)!='' and str(av2)!='None' else None
-                        eae = st.date_input("Actual End", value=av2)
+                        av2 = str(ms.get('actual_end',''))[:10]
+                        av2_d = None
+                        try: av2_d = datetime.strptime(av2, '%Y-%m-%d')
+                        except: av2_d = None
+                        eae = st.date_input("Actual End", value=av2_d)
+                    
                     c5, c6, c7 = st.columns(3)
-                    with c5: estatus = st.selectbox("Status", ["PENDING","ONGOING","DONE","DELAYED"], index=["PENDING","ONGOING","DONE","DELAYED"].index(ms.get('status','PENDING')) if ms.get('status') in ["PENDING","ONGOING","DONE","DELAYED"] else 0)
-                    with c6: eweight = st.number_input("Bobot %", 0.0, 100.0, float(ms.get('weight',0) or 0))
-                    with c7: emat = st.selectbox("Material", ["Belum Dicek","Lengkap","Tidak Lengkap"], index=["Belum Dicek","Lengkap","Tidak Lengkap"].index(ms.get('material_status','Belum Dicek')) if ms.get('material_status') in ["Belum Dicek","Lengkap","Tidak Lengkap"] else 0)
+                    with c5:
+                        sl = ["PENDING","ONGOING","DONE","DELAYED"]
+                        s_idx = sl.index(ms.get('status','PENDING')) if ms.get('status') in sl else 0
+                        estatus = st.selectbox("Status", sl, index=s_idx)
+                    with c6:
+                        eweight = st.number_input("Bobot %", 0.0, 100.0, float(ms.get('weight',0) or 0))
+                    with c7:
+                        ml = ["Belum Dicek","Lengkap","Tidak Lengkap"]
+                        m_idx = ml.index(ms.get('material_status','Belum Dicek')) if ms.get('material_status') in ml else 0
+                        emat = st.selectbox("Material", ml, index=m_idx)
+                    
                     b1, b2 = st.columns(2)
                     with b1:
-                        if st.form_submit_button("💾 Update"):
-                            update_row('milestones', sel, {'name': ename, 'planned_start': ps.strftime('%Y-%m-%d'), 'planned_end': pe.strftime('%Y-%m-%d'), 'actual_start': eas.strftime('%Y-%m-%d') if eas else '', 'actual_end': eae.strftime('%Y-%m-%d') if eae else '', 'status': estatus, 'weight': str(eweight), 'material_status': emat})
+                        if st.form_submit_button("💾 Update", type="primary"):
+                            update_row('milestones', sel, {
+                                'name': ename, 'planned_start': ps.strftime('%Y-%m-%d'),
+                                'planned_end': pe.strftime('%Y-%m-%d'),
+                                'actual_start': eas.strftime('%Y-%m-%d') if eas else '',
+                                'actual_end': eae.strftime('%Y-%m-%d') if eae else '',
+                                'status': estatus, 'weight': str(eweight), 'material_status': emat
+                            })
                             sync_milestone_to_site(selected_site)
                             st.success("✅ Diupdate!"); st.rerun()
                     with b2:
-                        if st.form_submit_button("🗑️ Hapus"):
+                        if st.form_submit_button("🗑️ Hapus", type="secondary"):
                             delete_row_by_id('milestones', sel)
                             sync_milestone_to_site(selected_site)
                             st.warning("🗑️ Dihapus!"); st.rerun()
