@@ -302,253 +302,249 @@ def milestone_page():
     # ======================================================
     # TAB 4
     # ======================================================
-
-    # ======================================================
-# TAB 4
-# ======================================================
-
-with tab4:
-
-    st.subheader("Edit Milestone")
-
-    ms_df = read_sheet("milestones")
-
-    if not ms_df.empty:
-
-        site_ms = ms_df[
-            ms_df["project_id"] == selected_site
-        ].copy()
-
-        if not site_ms.empty:
-
-            sel = st.selectbox(
-                "Pilih Milestone",
-                site_ms["id"].tolist(),
-                format_func=lambda x:
-                site_ms[
-                    site_ms["id"] == x
-                ]["name"].values[0]
-            )
-
-            if sel:
-
-                ms = site_ms[
-                    site_ms["id"] == sel
-                ].iloc[0]
-
-                with st.form("edit_ms_form"):
-
-                    ename = st.text_input(
-                        "Nama",
-                        value=str(ms.get("name", ""))
-                    )
-
-                    # ==========================================
-                    # PLAN DATE
-                    # ==========================================
-
-                    c1, c2 = st.columns(2)
-
-                    with c1:
-
-                        try:
-                            ps_d = datetime.strptime(
-                                str(ms.get("planned_start", ""))[:10],
-                                "%Y-%m-%d"
-                            ).date()
-
-                        except:
-                            ps_d = datetime.now().date()
-
-                        ps = st.date_input(
-                            "Plan Start",
-                            value=ps_d,
-                            key="edit_plan_start"
+    
+    with tab4:
+    
+        st.subheader("Edit Milestone")
+    
+        ms_df = read_sheet("milestones")
+    
+        if not ms_df.empty:
+    
+            site_ms = ms_df[
+                ms_df["project_id"] == selected_site
+            ].copy()
+    
+            if not site_ms.empty:
+    
+                sel = st.selectbox(
+                    "Pilih Milestone",
+                    site_ms["id"].tolist(),
+                    format_func=lambda x:
+                    site_ms[
+                        site_ms["id"] == x
+                    ]["name"].values[0]
+                )
+    
+                if sel:
+    
+                    ms = site_ms[
+                        site_ms["id"] == sel
+                    ].iloc[0]
+    
+                    with st.form("edit_ms_form"):
+    
+                        ename = st.text_input(
+                            "Nama",
+                            value=str(ms.get("name", ""))
                         )
-
-                    with c2:
-
-                        try:
-                            pe_d = datetime.strptime(
-                                str(ms.get("planned_end", ""))[:10],
-                                "%Y-%m-%d"
-                            ).date()
-
-                        except:
-                            pe_d = datetime.now().date()
-
-                        pe = st.date_input(
-                            "Plan End",
-                            value=pe_d,
-                            key="edit_plan_end"
-                        )
-
-                    # ==========================================
-                    # ACTUAL DATE
-                    # ==========================================
-
-                    c3, c4 = st.columns(2)
-
-                    with c3:
-
-                        try:
-                            av_d = datetime.strptime(
-                                str(ms.get("actual_start", ""))[:10],
-                                "%Y-%m-%d"
-                            ).date()
-
-                        except:
-                            av_d = datetime.now().date()
-
-                        eas = st.date_input(
-                            "Actual Start",
-                            value=av_d,
-                            key="edit_actual_start"
-                        )
-
-                    with c4:
-
-                        try:
-                            av2_d = datetime.strptime(
-                                str(ms.get("actual_end", ""))[:10],
-                                "%Y-%m-%d"
-                            ).date()
-
-                        except:
-                            av2_d = datetime.now().date()
-
-                        eae = st.date_input(
-                            "Actual End",
-                            value=av2_d,
-                            key="edit_actual_end"
-                        )
-
-                    # ==========================================
-                    # STATUS & WEIGHT
-                    # ==========================================
-
-                    c5, c6, c7 = st.columns(3)
-
-                    with c5:
-
-                        status_list = [
-                            "PENDING",
-                            "ONGOING",
-                            "DONE",
-                            "DELAYED"
-                        ]
-
-                        current_status = ms.get(
-                            "status",
-                            "PENDING"
-                        )
-
-                        status_index = (
-                            status_list.index(current_status)
-                            if current_status in status_list
-                            else 0
-                        )
-
-                        estatus = st.selectbox(
-                            "Status",
-                            status_list,
-                            index=status_index
-                        )
-
-                    with c6:
-
-                        eweight = st.number_input(
-                            "Bobot %",
-                            min_value=0.0,
-                            max_value=100.0,
-                            value=float(ms.get("weight", 0) or 0)
-                        )
-
-                    with c7:
-
-                        material_list = [
-                            "Belum Dicek",
-                            "Lengkap",
-                            "Tidak Lengkap"
-                        ]
-
-                        current_material = ms.get(
-                            "material_status",
-                            "Belum Dicek"
-                        )
-
-                        material_index = (
-                            material_list.index(current_material)
-                            if current_material in material_list
-                            else 0
-                        )
-
-                        emat = st.selectbox(
-                            "Material",
-                            material_list,
-                            index=material_index
-                        )
-
-                    # ==========================================
-                    # BUTTON
-                    # ==========================================
-
-                    b1, b2 = st.columns(2)
-
-                    with b1:
-
-                        update_btn = st.form_submit_button(
-                            "💾 Update",
-                            type="primary"
-                        )
-
-                    with b2:
-
-                        delete_btn = st.form_submit_button(
-                            "🗑️ Hapus"
-                        )
-
-                    # ==========================================
-                    # UPDATE
-                    # ==========================================
-
-                    if update_btn:
-
-                        update_row(
-                            "milestones",
-                            sel,
-                            {
-                                "name": ename,
-                                "planned_start": ps.strftime("%Y-%m-%d"),
-                                "planned_end": pe.strftime("%Y-%m-%d"),
-                                "actual_start": eas.strftime("%Y-%m-%d"),
-                                "actual_end": eae.strftime("%Y-%m-%d"),
-                                "status": estatus,
-                                "weight": str(eweight),
-                                "material_status": emat
-                            }
-                        )
-
-                        sync_milestone_to_site(selected_site)
-
-                        st.success("✅ Diupdate!")
-                        st.rerun()
-
-                    # ==========================================
-                    # DELETE
-                    # ==========================================
-
-                    if delete_btn:
-
-                        delete_row_by_id(
-                            "milestones",
-                            sel
-                        )
-
-                        sync_milestone_to_site(selected_site)
-
-                        st.warning("🗑️ Dihapus!")
-                        st.rerun()  
+    
+                        # ==========================================
+                        # PLAN DATE
+                        # ==========================================
+    
+                        c1, c2 = st.columns(2)
+    
+                        with c1:
+    
+                            try:
+                                ps_d = datetime.strptime(
+                                    str(ms.get("planned_start", ""))[:10],
+                                    "%Y-%m-%d"
+                                ).date()
+    
+                            except:
+                                ps_d = datetime.now().date()
+    
+                            ps = st.date_input(
+                                "Plan Start",
+                                value=ps_d,
+                                key="edit_plan_start"
+                            )
+    
+                        with c2:
+    
+                            try:
+                                pe_d = datetime.strptime(
+                                    str(ms.get("planned_end", ""))[:10],
+                                    "%Y-%m-%d"
+                                ).date()
+    
+                            except:
+                                pe_d = datetime.now().date()
+    
+                            pe = st.date_input(
+                                "Plan End",
+                                value=pe_d,
+                                key="edit_plan_end"
+                            )
+    
+                        # ==========================================
+                        # ACTUAL DATE
+                        # ==========================================
+    
+                        c3, c4 = st.columns(2)
+    
+                        with c3:
+    
+                            try:
+                                av_d = datetime.strptime(
+                                    str(ms.get("actual_start", ""))[:10],
+                                    "%Y-%m-%d"
+                                ).date()
+    
+                            except:
+                                av_d = datetime.now().date()
+    
+                            eas = st.date_input(
+                                "Actual Start",
+                                value=av_d,
+                                key="edit_actual_start"
+                            )
+    
+                        with c4:
+    
+                            try:
+                                av2_d = datetime.strptime(
+                                    str(ms.get("actual_end", ""))[:10],
+                                    "%Y-%m-%d"
+                                ).date()
+    
+                            except:
+                                av2_d = datetime.now().date()
+    
+                            eae = st.date_input(
+                                "Actual End",
+                                value=av2_d,
+                                key="edit_actual_end"
+                            )
+    
+                        # ==========================================
+                        # STATUS & WEIGHT
+                        # ==========================================
+    
+                        c5, c6, c7 = st.columns(3)
+    
+                        with c5:
+    
+                            status_list = [
+                                "PENDING",
+                                "ONGOING",
+                                "DONE",
+                                "DELAYED"
+                            ]
+    
+                            current_status = ms.get(
+                                "status",
+                                "PENDING"
+                            )
+    
+                            status_index = (
+                                status_list.index(current_status)
+                                if current_status in status_list
+                                else 0
+                            )
+    
+                            estatus = st.selectbox(
+                                "Status",
+                                status_list,
+                                index=status_index
+                            )
+    
+                        with c6:
+    
+                            eweight = st.number_input(
+                                "Bobot %",
+                                min_value=0.0,
+                                max_value=100.0,
+                                value=float(ms.get("weight", 0) or 0)
+                            )
+    
+                        with c7:
+    
+                            material_list = [
+                                "Belum Dicek",
+                                "Lengkap",
+                                "Tidak Lengkap"
+                            ]
+    
+                            current_material = ms.get(
+                                "material_status",
+                                "Belum Dicek"
+                            )
+    
+                            material_index = (
+                                material_list.index(current_material)
+                                if current_material in material_list
+                                else 0
+                            )
+    
+                            emat = st.selectbox(
+                                "Material",
+                                material_list,
+                                index=material_index
+                            )
+    
+                        # ==========================================
+                        # BUTTON
+                        # ==========================================
+    
+                        b1, b2 = st.columns(2)
+    
+                        with b1:
+    
+                            update_btn = st.form_submit_button(
+                                "💾 Update",
+                                type="primary"
+                            )
+    
+                        with b2:
+    
+                            delete_btn = st.form_submit_button(
+                                "🗑️ Hapus"
+                            )
+    
+                        # ==========================================
+                        # UPDATE
+                        # ==========================================
+    
+                        if update_btn:
+    
+                            update_row(
+                                "milestones",
+                                sel,
+                                {
+                                    "name": ename,
+                                    "planned_start": ps.strftime("%Y-%m-%d"),
+                                    "planned_end": pe.strftime("%Y-%m-%d"),
+                                    "actual_start": eas.strftime("%Y-%m-%d"),
+                                    "actual_end": eae.strftime("%Y-%m-%d"),
+                                    "status": estatus,
+                                    "weight": str(eweight),
+                                    "material_status": emat
+                                }
+                            )
+    
+                            sync_milestone_to_site(selected_site)
+    
+                            st.success("✅ Diupdate!")
+                            st.rerun()
+    
+                        # ==========================================
+                        # DELETE
+                        # ==========================================
+    
+                        if delete_btn:
+    
+                            delete_row_by_id(
+                                "milestones",
+                                sel
+                            )
+    
+                            sync_milestone_to_site(selected_site)
+    
+                            st.warning("🗑️ Dihapus!")
+                            st.rerun()  
 
     # ======================================================
     # TAB 5
