@@ -29,19 +29,8 @@ def dashboard_page():
     df = all_data.get('projects', pd.DataFrame())
     materials_df = all_data.get('materials', pd.DataFrame())
     milestones_df = all_data.get('milestones', pd.DataFrame())
-    
-    if not df.empty:
-        if 'progress' in df.columns:
-            df['progress'] = pd.to_numeric(df['progress'], errors='coerce').fillna(0)
-        df['start_date'] = pd.to_datetime(df['start_date'], errors='coerce')
-        df['end_date'] = pd.to_datetime(df['end_date'], errors='coerce')
-    
-    if not materials_df.empty:
-        for c in ['current_stock', 'min_stock']:
-            if c in materials_df.columns:
-                materials_df[c] = pd.to_numeric(materials_df[c], errors='coerce').fillna(0)
 
-    # ===== TOAST NOTIFICATIONS =====
+     # ===== TOAST NOTIFICATIONS =====
 messages = all_data.get('chat_messages', pd.DataFrame())
 notifs = all_data.get('notifications', pd.DataFrame())
 milestones_df = all_data.get('milestones', pd.DataFrame())
@@ -67,6 +56,17 @@ if not materials_df.empty:
     critical = materials_df[materials_df['current_stock'] < materials_df['min_stock']]
     if not critical.empty:
         st.toast(f"🔴 {len(critical)} material stok kritis!", icon="🔴")
+    
+    if not df.empty:
+        if 'progress' in df.columns:
+            df['progress'] = pd.to_numeric(df['progress'], errors='coerce').fillna(0)
+        df['start_date'] = pd.to_datetime(df['start_date'], errors='coerce')
+        df['end_date'] = pd.to_datetime(df['end_date'], errors='coerce')
+    
+    if not materials_df.empty:
+        for c in ['current_stock', 'min_stock']:
+            if c in materials_df.columns:
+                materials_df[c] = pd.to_numeric(materials_df[c], errors='coerce').fillna(0)
         
     # ===== FILTERS =====
     st.markdown("### 🔍 Filter Data")
