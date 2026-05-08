@@ -6,6 +6,8 @@ from datetime import datetime
 
 SUPABASE_URL = "https://evwvnjwrsnsjrzoyrsum.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2d3Zuandyc25zanJ6b3lyc3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxNDY3OTEsImV4cCI6MjA5MzcyMjc5MX0.o2YCZVWLrUy2Zi4Yxsmg2kkakhv4wTQTSzJZcfUks6c"
+
+from supabase import create_client
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 def read_sheet(table_name):
