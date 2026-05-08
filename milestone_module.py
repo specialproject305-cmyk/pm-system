@@ -295,6 +295,30 @@ def milestone_page():
                 "Status",
                 ["PENDING", "ONGOING", "DONE", "DELAYED"]
             )
+            ms_df = load_milestones()
+
+dependency_options = ["None"]
+
+dependency_map = {}
+
+if not ms_df.empty:
+
+    dep_site = ms_df[
+        ms_df["project_id"] == selected_site
+    ]
+
+    for _, row in dep_site.iterrows():
+
+        dependency_options.append(
+            row["name"]
+        )
+
+        dependency_map[row["name"]] = row["id"]
+
+selected_dependency = st.selectbox(
+    "Dependency Task",
+    dependency_options
+)
 
             if st.form_submit_button(
                 "💾 Simpan",
@@ -306,6 +330,10 @@ def milestone_page():
                     {
                         "id": generate_id(),
                         "project_id": selected_site,
+                        "dependency_id": (dependency_map[selected_dependency]
+                        if selected_dependency != "None"
+                        else ""
+                        ),
                         "name": name,
                         "planned_start": ps.strftime("%Y-%m-%d"),
                         "planned_end": pe.strftime("%Y-%m-%d"),
