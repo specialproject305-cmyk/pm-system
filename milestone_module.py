@@ -270,97 +270,97 @@ def milestone_page():
 
     with tab2:
 
-    st.subheader("Tambah Milestone")
-
-    with st.form("add_ms"):
-
-        name = st.text_input("Nama Milestone")
-
-        c1, c2 = st.columns(2)
-
-        with c1:
-            ps = st.date_input("Rencana Mulai")
-
-        with c2:
-            pe = st.date_input("Rencana Selesai")
-
-        weight = st.number_input(
-            "Bobot %",
-            0.0,
-            100.0,
-            10.0
-        )
-
-        status = st.selectbox(
-            "Status",
-            ["PENDING", "ONGOING", "DONE", "DELAYED"]
-        )
-
-        # ==========================================
-        # DEPENDENCY
-        # ==========================================
-
-        ms_df = load_milestones()
-
-        dependency_options = ["None"]
-
-        dependency_map = {}
-
-        if not ms_df.empty:
-
-            dep_site = ms_df[
-                ms_df["project_id"] == selected_site
-            ]
-
-            for _, row in dep_site.iterrows():
-
-                dependency_options.append(
-                    row["name"]
-                )
-
-                dependency_map[row["name"]] = row["id"]
-
-        selected_dependency = st.selectbox(
-            "Dependency Task",
-            dependency_options
-        )
-
-        # ==========================================
-        # SAVE
-        # ==========================================
-
-        if st.form_submit_button(
-            "💾 Simpan",
-            type="primary"
-        ):
-
-            insert_row(
-                "milestones",
-                {
-                    "id": generate_id(),
-                    "project_id": selected_site,
-
-                    "dependency_id": (
-                        dependency_map[selected_dependency]
-                        if selected_dependency != "None"
-                        else ""
-                    ),
-
-                    "name": name,
-                    "planned_start": ps.strftime("%Y-%m-%d"),
-                    "planned_end": pe.strftime("%Y-%m-%d"),
-                    "weight": str(weight),
-                    "status": status
-                }
+        st.subheader("Tambah Milestone")
+    
+        with st.form("add_ms"):
+    
+            name = st.text_input("Nama Milestone")
+    
+            c1, c2 = st.columns(2)
+    
+            with c1:
+                ps = st.date_input("Rencana Mulai")
+    
+            with c2:
+                pe = st.date_input("Rencana Selesai")
+    
+            weight = st.number_input(
+                "Bobot %",
+                0.0,
+                100.0,
+                10.0
             )
-
-            st.cache_data.clear()
-
-            sync_milestone_to_site(selected_site)
-
-            st.success("✅ Berhasil disimpan!")
-
-            st.rerun()
+    
+            status = st.selectbox(
+                "Status",
+                ["PENDING", "ONGOING", "DONE", "DELAYED"]
+            )
+    
+            # ==========================================
+            # DEPENDENCY
+            # ==========================================
+    
+            ms_df = load_milestones()
+    
+            dependency_options = ["None"]
+    
+            dependency_map = {}
+    
+            if not ms_df.empty:
+    
+                dep_site = ms_df[
+                    ms_df["project_id"] == selected_site
+                ]
+    
+                for _, row in dep_site.iterrows():
+    
+                    dependency_options.append(
+                        row["name"]
+                    )
+    
+                    dependency_map[row["name"]] = row["id"]
+    
+            selected_dependency = st.selectbox(
+                "Dependency Task",
+                dependency_options
+            )
+    
+            # ==========================================
+            # SAVE
+            # ==========================================
+    
+            if st.form_submit_button(
+                "💾 Simpan",
+                type="primary"
+            ):
+    
+                insert_row(
+                    "milestones",
+                    {
+                        "id": generate_id(),
+                        "project_id": selected_site,
+    
+                        "dependency_id": (
+                            dependency_map[selected_dependency]
+                            if selected_dependency != "None"
+                            else ""
+                        ),
+    
+                        "name": name,
+                        "planned_start": ps.strftime("%Y-%m-%d"),
+                        "planned_end": pe.strftime("%Y-%m-%d"),
+                        "weight": str(weight),
+                        "status": status
+                    }
+                )
+    
+                st.cache_data.clear()
+    
+                sync_milestone_to_site(selected_site)
+    
+                st.success("✅ Berhasil disimpan!")
+    
+                st.rerun()
 
     # ======================================================
     # TAB 3
