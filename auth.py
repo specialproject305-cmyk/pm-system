@@ -37,7 +37,7 @@ def login_page():
                 else:
                     st.error("❌ Username atau password salah!")
         st.markdown("<br>", unsafe_allow_html=True)
-        st.info("💡 Demo: admin/admin123 | editor/editor123 | viewer/viewer123")
+        st.info("💡 SELAMAT BEKERJA")
 
 def logout_button():
     with st.sidebar:
