@@ -115,9 +115,16 @@ def chat_notif_page():
         if not messages.empty:
             global_msgs = messages[messages['site_id'] == 'GLOBAL'] if 'site_id' in messages.columns else messages
             for _, msg in global_msgs.tail(30).iterrows():
-                with st.chat_message("user"):
-                    st.caption(f"**{msg.get('sender','?')}** · {msg.get('created_at','')}")
-                    st.write(msg.get('message',''))
+    with st.chat_message("user"):
+        col_msg, col_del = st.columns([10, 1])
+        with col_msg:
+            st.caption(f"**{msg.get('sender','?')}** · {msg.get('created_at','')}")
+            st.write(msg.get('message',''))
+        with col_del:
+            if st.button("🗑️", key=f"del_{msg.get('id','')}", help="Hapus pesan"):
+                from supabase_db import delete_row_by_id
+                delete_row_by_id('chat_messages', msg.get('id',''))
+                st.rerun()
         else:
             st.info("💬 Belum ada pesan. Mulai diskusi!")
         
