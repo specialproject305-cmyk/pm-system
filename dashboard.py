@@ -11,7 +11,7 @@ def dashboard_page():
     # ===== HEADER DENGAN JAM =====
     col_header, col_clock = st.columns([3, 1])
     with col_header:
-        st.title("🏗️ Site Management Dashboard")
+        st.title("👷 Dashboard Collocation Project")
     with col_clock:
         st.markdown(f"""
         <div style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); 
