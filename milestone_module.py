@@ -98,6 +98,7 @@ def milestone_page():
                         'planned_start': ps.strftime('%Y-%m-%d'), 'planned_end': pe.strftime('%Y-%m-%d'),
                         'weight': str(weight), 'status': status, 'material_status': mat_status
                     })
+                    sync_milestone_to_site(selected_site)
                     st.success(f"✅ Milestone {name} ditambahkan!")
                     st.rerun()
     
@@ -127,6 +128,7 @@ def milestone_page():
                         })
                         curr += timedelta(days=days)
                         created += 1
+                        sync_milestone_to_site(selected_site)
                 st.success(f"✅ {created} milestone dibuat!")
                 st.balloons()
                 st.rerun()
@@ -152,6 +154,7 @@ def milestone_page():
                     with b1:
                         if st.form_submit_button("💾 Update"):
                             update_row("milestones", ridx, {'name': ename, 'status': estatus, 'material_status': emat})
+                            sync_milestone_to_site(selected_site)
                             st.success("✅ Diupdate!")
                             st.rerun()
                     with b2:
@@ -179,6 +182,7 @@ def milestone_page():
                         'status': str(r.get('status','PENDING')), 'material_status': str(r.get('material_status','Belum Dicek'))
                     })
                     count += 1
+                    sync_milestone_to_site(selected_site)
                 st.success(f"✅ {count} milestone diimport!")
                 st.rerun()
 
