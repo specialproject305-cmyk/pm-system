@@ -65,7 +65,60 @@ TOWER_TEMPLATE = {
     ]
 }
 
+def calculate_task_progress(status):
 
+    if status == "DONE":
+        return 100
+
+    elif status == "ONGOING":
+        return 50
+
+    elif status == "DELAYED":
+        return 25
+
+    return 0
+
+
+def check_dependency(site_ms, dependency_id):
+
+    if not dependency_id:
+        return True
+
+    dep = site_ms[
+        site_ms["id"] == dependency_id
+    ]
+
+    if dep.empty:
+        return True
+
+    dep_status = dep.iloc[0]["status"]
+
+    return dep_status == "DONE"
+
+
+def detect_critical_tasks(site_ms):
+
+    today = datetime.now().date()
+
+    critical_ids = []
+
+    for _, row in site_ms.iterrows():
+
+        try:
+            end_date = datetime.strptime(
+                str(row["planned_end"])[:10],
+                "%Y-%m-%d"
+            ).date()
+
+            status = row.get("status", "PENDING")
+
+            if end_date < today and status != "DONE":
+                critical_ids.append(row["id"])
+
+        except:
+            pass
+
+    return critical_ids
 def sync_milestone_to_site(site_id):
 
     all_data = read_all_sheets()
