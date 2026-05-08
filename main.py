@@ -1,5 +1,5 @@
 import streamlit as st
-from auth import login_page, logout_button, check_permission
+from auth import login_page, logout_button, check_permission, show_permission_denied
 from dashboard import dashboard_page
 from project_tracker import project_tracker_page
 from milestone_module import milestone_page
