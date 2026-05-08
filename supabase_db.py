@@ -39,3 +39,8 @@ def today_str():
 def update_row(a, b, c): pass
 def find_row_by_id(a, b): return None
 def delete_row_by_id(a, b): pass
+    def delete_row_by_id(table_name, id_value):
+    try:
+        supabase.table(table_name).delete().eq('id', id_value).execute()
+    except Exception as e:
+        st.error(f"Error hapus: {e}")
