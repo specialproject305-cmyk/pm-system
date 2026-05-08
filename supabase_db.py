@@ -43,3 +43,12 @@ def today_str():
 
 def update_row(a, b, c): pass
 def find_row_by_id(a, b): return None
+def update_row(table_name, id_value, data_dict):
+    try:
+        supabase.table(table_name).update(data_dict).eq('id', id_value).execute()
+    except:
+        pass
+
+def execute_sql(query):
+    """Untuk query custom"""
+    pass
