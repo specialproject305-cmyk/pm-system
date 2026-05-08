@@ -4,9 +4,8 @@ import pandas as pd
 import uuid
 from datetime import datetime
 
-SUPABASE_URL = "https://ewvnjwrssnjsrzoysrum.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2d3Zuandyc25zanJ6b3lyc3VtIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODE0Njc5MSwiZXhwIjoyMDkzNzIyNzkxfQ.NOZLzQBzPShzihKgkGgLB76_XDmShNr8c0OxKOF_TQM"  # GANTI dengan anon key dari Settings → API
-
+SUPABASE_URL = "https://evwvnjwrsnsjrzoyrsum.supabase.co"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2d3Zuandyc25zanJ6b3lyc3VtIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODE0Njc5MSwiZXhwIjoyMDkzNzIyNzkxfQ.NOZLzQBzPShzihKgkGgLB76_XDmShNr8c0OxKOF_TQM"
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 def read_sheet(table_name):
