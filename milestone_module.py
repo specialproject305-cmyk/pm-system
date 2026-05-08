@@ -583,6 +583,53 @@ def milestone_page():
                                 material_list,
                                 index=material_index
                             )
+                            
+                            # ==========================================
+                            # DEPENDENCY
+                            # ==========================================
+                            
+                            dependency_options = ["None"]
+                            
+                            dependency_map = {}
+                            
+                            reverse_dependency_map = {}
+                            
+                            for _, row in site_ms.iterrows():
+                            
+                                if row["id"] != sel:
+                            
+                                    dependency_options.append(
+                                        row["name"]
+                                    )
+                            
+                                    dependency_map[row["name"]] = row["id"]
+                            
+                                    reverse_dependency_map[row["id"]] = row["name"]
+                            
+                            current_dependency_id = ms.get(
+                                "dependency_id",
+                                ""
+                            )
+                            
+                            current_dependency_name = "None"
+                            
+                            if current_dependency_id in reverse_dependency_map:
+                            
+                                current_dependency_name = reverse_dependency_map[
+                                    current_dependency_id
+                                ]
+                            
+                            dependency_index = (
+                                dependency_options.index(current_dependency_name)
+                                if current_dependency_name in dependency_options
+                                else 0
+                            )
+                            
+                            selected_dependency = st.selectbox(
+                                "Dependency Task",
+                                dependency_options,
+                                index=dependency_index
+                            )
     
                         # ==========================================
                         # BUTTON
