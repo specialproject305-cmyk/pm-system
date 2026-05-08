@@ -661,6 +661,12 @@ def milestone_page():
                                 sel,
                                 {
                                     "name": ename,
+
+                                    "dependency_id": (
+                                        dependency_map[selected_dependency]
+                                        if selected_dependency != "None"
+                                        else ""
+                                    ),
                                     "planned_start": ps.strftime("%Y-%m-%d"),
                                     "planned_end": pe.strftime("%Y-%m-%d"),
                                     "actual_start": eas.strftime("%Y-%m-%d"),
@@ -670,6 +676,7 @@ def milestone_page():
                                     "material_status": emat
                                 }
                             )
+                            st.cache_data.clear()
     
                             sync_milestone_to_site(selected_site)
     
