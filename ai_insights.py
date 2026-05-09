@@ -380,52 +380,46 @@ def ai_insights_page():
         if delay_reason:
             summary += f"\n🔍 Delay utama: **{delay_reason}**"
         
-        st.markdown(summary)
-
-        # ===== EXPORT PDF =====
+               # ===== EXPORT PDF =====
         st.divider()
         st.subheader("📥 Export Report")
         
-        if st.button("📄 Download PDF Report", key="pdf_btn", type="secondary"):
+        if st.button("📄 Generate PDF Report", key="gen_pdf", type="secondary"):
             with st.spinner("Generating PDF..."):
                 try:
+                    from fpdf import FPDF
+                    
                     pdf = FPDF()
                     pdf.add_page()
-                    
                     pdf.set_font('Helvetica', 'B', 16)
                     pdf.cell(0, 10, 'AI Analytics Report', 0, 1, 'C')
-                    pdf.set_font('Helvetica', 'I', 10)
-                    pdf.cell(0, 5, f'Generated: {datetime.now().strftime("%d %b %Y, %H:%M")}', 0, 1, 'C')
-                    pdf.cell(0, 5, f'Site: {site_name}', 0, 1, 'C')
-                    pdf.ln(5)
-                    
-                    pdf.set_font('Helvetica', 'B', 14)
-                    pdf.cell(0, 10, '1. Executive Summary', 0, 1)
                     pdf.set_font('Helvetica', '', 10)
+                    pdf.cell(0, 6, f'Site: {site_name}', 0, 1)
                     pdf.cell(0, 6, f'Health Score: {health_score}%', 0, 1)
                     pdf.cell(0, 6, f'Progress: {avg_progress:.1f}%', 0, 1)
                     pdf.cell(0, 6, f'On Track: {on_track}/{total_sites}', 0, 1)
-                    pdf.cell(0, 6, f'Forecast: {forecast_end.strftime("%d %b %Y")}', 0, 1)
                     pdf.ln(5)
-                    
-                    pdf.set_font('Helvetica', 'B', 14)
-                    pdf.cell(0, 10, '2. Recommendations', 0, 1)
+                    pdf.set_font('Helvetica', 'B', 12)
+                    pdf.cell(0, 8, 'Recommendations:', 0, 1)
                     pdf.set_font('Helvetica', '', 10)
-                    for line in summary.split('\n'):
+                    for line in summary.split('\n')[:10]:
                         clean = line.replace('**','').replace('*','').strip()
-                        if clean and clean != summary.split('\n')[0]:
+                        if clean:
                             pdf.multi_cell(0, 6, clean)
                     
+                    import tempfile
                     with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp:
                         pdf.output(tmp.name)
                         with open(tmp.name, 'rb') as f:
-                            pdf_bytes = f.read()
-                        st.download_button("📥 Download Report PDF", pdf_bytes,
-                            f"AI_Report_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf",
-                            "application/pdf", key="dl_pdf")
-                    st.success("✅ PDF ready!")
+                            st.download_button(
+                                "📥 Download PDF",
+                                f.read(),
+                                f"AI_Report_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf",
+                                "application/pdf"
+                            )
+                    st.success("✅ Klik tombol download di atas!")
                 except Exception as e:
-                    st.error(f"❌ Error: {e}")
+                    st.error(f"❌ {e}")
 
 if __name__ == "__main__":
     ai_insights_page()
