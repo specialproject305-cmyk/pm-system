@@ -191,38 +191,79 @@ else:
     )
 
 
-def milestone_page():
+def sync_milestone_to_site(site_id):
 
-    st.title("🧱 Milestone Monitoring")
+    all_data = read_all_sheets()
 
-    sites_df = read_sheet("projects")
+    ms_df = all_data.get(
+        "milestones",
+        pd.DataFrame()
+    )
 
-    if sites_df.empty:
-        st.warning("⚠️ Tambahkan site dulu!")
+    if ms_df.empty:
         return
 
-    site_options = ["ALL SITE"] + sites_df["id"].tolist()
+    if "project_id" not in ms_df.columns:
+        return
 
-    selected_site = st.selectbox(
-        "Pilih Site:",
-        site_options,
-    
-        format_func=lambda x:
-        "🌐 ALL SITE"
-        if x == "ALL SITE"
+    # FILTER SITE
+    site_ms = ms_df[
+        ms_df["project_id"] == site_id
+    ]
+
+    if site_ms.empty:
+        return
+
+    site_ms = site_ms.copy()
+
+    # CONVERT WEIGHT
+    site_ms["weight"] = pd.to_numeric(
+        site_ms["weight"],
+        errors="coerce"
+    ).fillna(0)
+
+    # AUTO PROGRESS
+    total_weight = site_ms["weight"].sum()
+
+    done_weight = site_ms[
+        site_ms["status"] == "DONE"
+    ]["weight"].sum()
+
+    progress = (
+        round(
+            (done_weight / total_weight) * 100,
+            1
+        )
+        if total_weight > 0
+        else 0
+    )
+
+    # STATUS
+    delayed = len(
+        site_ms[
+            site_ms["status"] == "DELAYED"
+        ]
+    )
+
+    status = (
+        "CRITICAL"
+        if delayed > 3
         else (
-            f"{sites_df[sites_df['id']==x]['site_id'].values[0]} - "
-            f"{sites_df[sites_df['id']==x]['site_name'].values[0]}"
+            "DELAYED"
+            if delayed > 0
+            else "ON_TRACK"
         )
     )
 
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
-        "📊 Gantt",
-        "➕ Tambah",
-        "🚀 Template",
-        "✏️ Edit",
-        "📥 Import"
-    ])
+    # UPDATE PROJECT
+    update_row(
+        "projects",
+        site_id,
+        {
+            "progress": str(progress),
+            "status": status
+        }
+    )
 
     # ======================================================
     # TAB 1
