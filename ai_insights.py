@@ -4,7 +4,51 @@ import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 from supabase_db import read_all_sheets, insert_row, generate_id, now_str
+from fpdf import FPDF
+import tempfile
 
+def generate_ai_pdf(site_name, health_score, avg_progress, on_track, total_sites, delayed, forecast_end, delay_reasons, summary):
+    pdf = FPDF()
+    pdf.add_page()
+    
+    # Header
+    pdf.set_font('Helvetica', 'B', 16)
+    pdf.cell(0, 10, 'AI Analytics Report', 0, 1, 'C')
+    pdf.set_font('Helvetica', 'I', 10)
+    pdf.cell(0, 5, f'Generated: {datetime.now().strftime("%d %b %Y, %H:%M")}', 0, 1, 'C')
+    pdf.cell(0, 5, f'Site: {site_name}', 0, 1, 'C')
+    pdf.ln(5)
+    
+    # Health Score
+    pdf.set_font('Helvetica', 'B', 14)
+    pdf.cell(0, 10, '1. Executive Summary', 0, 1)
+    pdf.set_font('Helvetica', '', 10)
+    pdf.cell(0, 6, f'Health Score: {health_score}%', 0, 1)
+    pdf.cell(0, 6, f'Progress: {avg_progress}%', 0, 1)
+    pdf.cell(0, 6, f'On Track: {on_track}/{total_sites} sites', 0, 1)
+    pdf.cell(0, 6, f'Delayed: {delayed} sites', 0, 1)
+    pdf.cell(0, 6, f'Forecast Completion: {forecast_end}', 0, 1)
+    pdf.ln(3)
+    
+    # Delay Analysis
+    if delay_reasons:
+        pdf.set_font('Helvetica', 'B', 14)
+        pdf.cell(0, 10, '2. Delay Reason Analysis', 0, 1)
+        pdf.set_font('Helvetica', '', 10)
+        for reason, count in delay_reasons.items():
+            pdf.cell(0, 6, f'- {reason}: {count} milestone', 0, 1)
+        pdf.ln(3)
+    
+    # Recommendations
+    pdf.set_font('Helvetica', 'B', 14)
+    pdf.cell(0, 10, '3. Recommendations', 0, 1)
+    pdf.set_font('Helvetica', '', 10)
+    for line in summary.split('\n'):
+        if line.strip():
+            pdf.cell(0, 6, line.strip(), 0, 1)
+    
+    return pdf
+    
 def ai_insights_page():
     st.title("🤖 AI-Powered Analytics Center")
     
@@ -337,6 +381,38 @@ def ai_insights_page():
             summary += f"\n🔍 Delay utama: **{delay_reason}**"
         
         st.markdown(summary)
+
+                # Export PDF Button
+        st.divider()
+        st.subheader("📥 Export Report")
+        
+        if st.button("📄 Download PDF Report", type="secondary"):
+            with st.spinner("Generating PDF..."):
+                # Siapkan data
+                delay_reason_data = {}
+                if not site_ms.empty and 'delay_reason' in site_ms.columns:
+                    delays = site_ms[site_ms['delay_reason'].notna() & (site_ms['delay_reason']!='') & (site_ms['delay_reason']!='Tidak Ada')]
+                    if not delays.empty:
+                        delay_reason_data = delays['delay_reason'].value_counts().to_dict()
+                
+                pdf = generate_ai_pdf(
+                    site_name, health_score, round(avg_progress,1),
+                    on_track, total_sites, delayed,
+                    forecast_end.strftime('%d %b %Y'),
+                    delay_reason_data, summary
+                )
+                
+                with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp:
+                    pdf.output(tmp.name)
+                    with open(tmp.name, 'rb') as f:
+                        pdf_bytes = f.read()
+                    st.download_button(
+                        "📥 Download Report PDF",
+                        pdf_bytes,
+                        f"AI_Report_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf",
+                        "application/pdf"
+                    )
+                st.success("✅ PDF siap download!")
         
         # Save insight
         insert_row("ai_insights", {
