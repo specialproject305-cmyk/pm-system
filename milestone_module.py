@@ -230,121 +230,167 @@ def milestone_page():
 
     with tab1:
 
-        ms_df = read_sheet("milestones")
+    ms_df = read_sheet("milestones")
 
-        if not ms_df.empty:
+    if not ms_df.empty:
+
+        # ==========================================
+        # FILTER SITE
+        # ==========================================
+
+        if selected_site == "ALL SITE":
+
+            site_ms = ms_df.copy()
+
+        else:
 
             site_ms = ms_df[
                 ms_df["project_id"] == selected_site
             ]
 
-            if not site_ms.empty:
+        if not site_ms.empty:
 
-                site_ms = site_ms.copy()
-                # ==========================================
-                # CRITICAL TASK DETECTION
-                # ==========================================
-                
-                today = datetime.now().date()
-                
-                site_ms["is_critical"] = False
-                
-                for idx, row in site_ms.iterrows():
-                
-                    try:
-                
-                        end_date = pd.to_datetime(
-                            row["planned_end"]
-                        ).date()
-                
-                        if (
-                            end_date < today
-                            and row["status"] != "DONE"
-                        ):
-                
-                            site_ms.at[idx, "is_critical"] = True
-                
-                    except:
-                        pass
+            site_ms = site_ms.copy()
 
-                site_ms["planned_start"] = pd.to_datetime(
-                    site_ms["planned_start"],
-                    errors="coerce"
+            # ==========================================
+            # CRITICAL TASK DETECTION
+            # ==========================================
+
+            today = datetime.now().date()
+
+            site_ms["is_critical"] = False
+
+            for idx, row in site_ms.iterrows():
+
+                try:
+
+                    end_date = pd.to_datetime(
+                        row["planned_end"]
+                    ).date()
+
+                    if (
+                        end_date < today
+                        and row["status"] != "DONE"
+                    ):
+
+                        site_ms.at[
+                            idx,
+                            "is_critical"
+                        ] = True
+
+                except:
+                    pass
+
+            # ==========================================
+            # DATE FORMAT
+            # ==========================================
+
+            site_ms["planned_start"] = pd.to_datetime(
+                site_ms["planned_start"],
+                errors="coerce"
+            )
+
+            site_ms["planned_end"] = pd.to_datetime(
+                site_ms["planned_end"],
+                errors="coerce"
+            )
+
+            # ==========================================
+            # DISPLAY STATUS
+            # ==========================================
+
+            site_ms["display_status"] = site_ms.apply(
+                lambda row:
+                "CRITICAL"
+                if row["is_critical"]
+                else row["status"],
+                axis=1
+            )
+
+            # ==========================================
+            # DISPLAY NAME
+            # ==========================================
+
+            if selected_site == "ALL SITE":
+
+                site_lookup = (
+                    sites_df
+                    .set_index("id")["site_id"]
+                    .to_dict()
                 )
 
-                site_ms["planned_end"] = pd.to_datetime(
-                    site_ms["planned_end"],
-                    errors="coerce"
-                )
-
-                color_map = {
-                    "PENDING": "#6c757d",
-                    "ONGOING": "#0d6efd",
-                    "DONE": "#28a745",
-                    "DELAYED": "#dc3545",
-                    "CRITICAL": "#ff0000"
-                }
-                site_ms["display_status"] = site_ms.apply(
+                site_ms["display_name"] = site_ms.apply(
                     lambda row:
-                    "CRITICAL"
-                    if row["is_critical"]
-                    else row["status"],
+                    f"[{site_lookup.get(row['project_id'], 'UNKNOWN')}] "
+                    f"{row['name']}",
                     axis=1
                 )
 
-                if selected_site == "ALL SITE":
-
-                    site_lookup = sites_df.set_index("id")["site_id"].to_dict()
-                
-                    site_ms["display_name"] = site_ms.apply(
-                        lambda row:
-                        f"[{site_lookup.get(row['project_id'], 'UNKNOWN')}] {row['name']}",
-                        axis=1
-                    )
-                
-                else:
-                
-                    site_ms["display_name"] = site_ms["name"]
-
-                fig = px.timeline(
-                    site_ms,
-                    x_start="planned_start",
-                    x_end="planned_end",
-                    y="display_name",
-                    color="display_status",
-                    color_discrete_map=color_map
-                )
-
-                fig.update_yaxes(
-                    autorange="reversed"
-                )
-
-                fig.update_layout(
-                    height=max(500, len(site_ms) * 35),
-                    xaxis_range=[
-                        site_ms["planned_start"].min(),
-                        site_ms["planned_end"].max()
-                    ]
-                )
-
-                st.plotly_chart(
-                    fig,
-                    use_container_width=True
-                )
-                critical_count = len(
-                    site_ms[
-                        site_ms["is_critical"] == True
-                    ]
-                )
-
-                if critical_count > 0:
-                
-                    st.warning(
-                        f"⚠️ {critical_count} milestone critical ditemukan"
-                    )
-
             else:
-                st.info("Belum ada milestone.")
+
+                site_ms["display_name"] = site_ms["name"]
+
+            # ==========================================
+            # COLOR
+            # ==========================================
+
+            color_map = {
+                "PENDING": "#6c757d",
+                "ONGOING": "#0d6efd",
+                "DONE": "#28a745",
+                "DELAYED": "#dc3545",
+                "CRITICAL": "#ff0000"
+            }
+
+            # ==========================================
+            # GANTT
+            # ==========================================
+
+            fig = px.timeline(
+                site_ms,
+                x_start="planned_start",
+                x_end="planned_end",
+                y="display_name",
+                color="display_status",
+                color_discrete_map=color_map
+            )
+
+            fig.update_yaxes(
+                autorange="reversed"
+            )
+
+            fig.update_layout(
+                height=max(500, len(site_ms) * 35),
+                xaxis_range=[
+                    site_ms["planned_start"].min(),
+                    site_ms["planned_end"].max()
+                ]
+            )
+
+            st.plotly_chart(
+                fig,
+                use_container_width=True
+            )
+
+            # ==========================================
+            # WARNING
+            # ==========================================
+
+            critical_count = len(
+                site_ms[
+                    site_ms["is_critical"] == True
+                ]
+            )
+
+            if critical_count > 0:
+
+                st.warning(
+                    f"⚠️ {critical_count} milestone critical ditemukan"
+                )
+
+        else:
+
+            st.info("Belum ada milestone.")
 
     # ======================================================
     # TAB 2
