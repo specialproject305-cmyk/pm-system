@@ -7,6 +7,7 @@ from inventory_module import inventory_page
 from ai_insights import ai_insights_page
 from chat_module import chat_notif_page
 from export_module import export_page
+from settings_page import settings_page
 
 st.set_page_config(page_title="PM System", page_icon="🏗️", layout="wide", initial_sidebar_state="expanded")
 
@@ -36,7 +37,8 @@ with st.sidebar:
         "🧱 Milestones",
         "📦 Inventory", 
         "💬 Chat & Notif", 
-        "📄 Export Report"
+        "📄 Export Report",
+        "⚙️ Settings"
     ])
     
     logout_button()
@@ -72,6 +74,12 @@ def main():
     
     elif menu == "📄 Export Report":
         export_page()
+
+    elif menu == "⚙️ Settings":
+        if check_permission('admin'):
+            settings_page()
+        else:
+            show_permission_denied()
 
 if __name__ == "__main__":
     main()
