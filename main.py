@@ -43,7 +43,8 @@ with st.sidebar:
     if role == 'admin':
         menu_list.append("⚙️ Settings")
     
-    menu = st.sidebar.radio("📂 Navigasi:", menu_list)
+    menu = st.sidebar.radio("📂 Navigasi:", menu_options)
+    
     st.markdown("---")
     
     # Logout button
