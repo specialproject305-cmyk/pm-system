@@ -348,18 +348,32 @@ def ai_insights_page():
         
         col_i, col_j, col_k = st.columns(3)
         
-        with col_i:
-            st.metric(f"{health_color} Health Score", f"{health_score}%")
-            if health_score >= 80: st.success("Excellent")
-            elif health_score >= 50: st.warning("Need Attention")
-            else: st.error("Critical")
-        
-        with col_j:
-            forecast_end = datetime.now() + timedelta(days=int((100-avg_progress)*3))
-            st.metric("📅 Forecast Completion", forecast_end.strftime('%d %b %Y'))
-        
-        with col_k:
-            st.metric("🎯 KPI", f"{on_track}/{total_sites} sites On Track")
+                   with col_i:
+                st.markdown(f"""
+                <div style="text-align:center; padding:10px; border-radius:10px; background:#f8f9fa;">
+                    <div style="font-size:14px; color:gray;">{health_color} Health Score</div>
+                    <div style="font-size:24px; font-weight:bold;">{health_score}%</div>
+                </div>
+                """, unsafe_allow_html=True)
+                if health_score >= 80: st.success("Excellent")
+                elif health_score >= 50: st.warning("Need Attention")
+                else: st.error("Critical")
+            
+            with col_j:
+                st.markdown(f"""
+                <div style="text-align:center; padding:10px; border-radius:10px; background:#f8f9fa;">
+                    <div style="font-size:14px; color:gray;">📅 Forecast</div>
+                    <div style="font-size:18px; font-weight:bold;">{forecast_end.strftime('%d %b %Y')}</div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with col_k:
+                st.markdown(f"""
+                <div style="text-align:center; padding:10px; border-radius:10px; background:#f8f9fa;">
+                    <div style="font-size:14px; color:gray;">🎯 KPI</div>
+                    <div style="font-size:18px; font-weight:bold;">{on_track}/{total_sites} On Track</div>
+                </div>
+                """, unsafe_allow_html=True)
         
         # Auto-generated summary
         summary = f"""
