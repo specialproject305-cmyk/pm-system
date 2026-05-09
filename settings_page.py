@@ -104,6 +104,31 @@ def settings_page():
         📱 Powered by PM System
         """
         st.markdown(preview)
+                # Send PDF Report button
+        if bot_token and chat_id:
+            st.markdown("---")
+            if st.button("📄 Send PDF Report Now", type="primary"):
+                from report_generator import generate_daily_report
+                from supabase_db import read_all_sheets
+                import requests
+                
+                with st.spinner("Generating & sending PDF..."):
+                    all_data = read_all_sheets()
+                    pdf = generate_daily_report(all_data)
+                    
+                    with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp:
+                        pdf.output(tmp.name)
+                        
+                        url = f"https://api.telegram.org/bot{bot_token}/sendDocument"
+                        with open(tmp.name, 'rb') as f:
+                            files = {'document': ('Daily_Report.pdf', f, 'application/pdf')}
+                            data = {'chat_id': chat_id, 'caption': f'📊 PM System Daily Report\n📅 {datetime.now().strftime("%d %b %Y")}'}
+                            res = requests.post(url, data=data, files=files)
+                        
+                        if res.status_code == 200:
+                            st.success("✅ PDF Report sent to Telegram!")
+                        else:
+                            st.error(f"❌ Failed: {res.text}")
 
 if __name__ == "__main__":
     settings_page()
