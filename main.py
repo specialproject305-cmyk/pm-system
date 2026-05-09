@@ -32,49 +32,49 @@ with st.sidebar:
     
     menu = st.sidebar.radio("📂 Navigasi:", [
         "📊 Dashboard", 
-        "🤖 AI Insights", 
         "📁 Site Tracker", 
         "🧱 Milestones",
         "📦 Inventory", 
+        "🤖 AI Insights", 
         "💬 Chat & Notif", 
         "📄 Export Report",
         "⚙️ Settings"
     ])
     
-    logout_button()
+    st.markdown("---")
+    
+    # Logout button
+    if st.button("🚪 Logout", use_container_width=True):
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+        st.session_state['logged_in'] = False
+        st.rerun()
 
 # ===== ROUTING =====
 def main():
     if menu == "📊 Dashboard":
         dashboard_page()
-    
     elif menu == "📁 Site Tracker":
         if check_permission('editor'):
             project_tracker_page()
         else:
             show_permission_denied()
-    
     elif menu == "🧱 Milestones":
         if check_permission('editor'):
             milestone_page()
         else:
             show_permission_denied()
-    
     elif menu == "📦 Inventory":
         if check_permission('editor'):
             inventory_page()
         else:
             show_permission_denied()
-    
     elif menu == "🤖 AI Insights":
-            ai_insights_page()
-    
+        ai_insights_page()
     elif menu == "💬 Chat & Notif":
         chat_notif_page()
-    
     elif menu == "📄 Export Report":
         export_page()
-
     elif menu == "⚙️ Settings":
         if check_permission('admin'):
             settings_page()
