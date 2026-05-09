@@ -382,49 +382,6 @@ def ai_insights_page():
         
         st.markdown(summary)
 
-                # Export PDF Button
-        st.divider()
-        st.subheader("📥 Export Report")
-        
-        if st.button("📄 Download PDF Report", type="secondary"):
-            with st.spinner("Generating PDF..."):
-                # Siapkan data
-                delay_reason_data = {}
-                if not site_ms.empty and 'delay_reason' in site_ms.columns:
-                    delays = site_ms[site_ms['delay_reason'].notna() & (site_ms['delay_reason']!='') & (site_ms['delay_reason']!='Tidak Ada')]
-                    if not delays.empty:
-                        delay_reason_data = delays['delay_reason'].value_counts().to_dict()
-                
-                pdf = generate_ai_pdf(
-                    site_name, health_score, round(avg_progress,1),
-                    on_track, total_sites, delayed,
-                    forecast_end.strftime('%d %b %Y'),
-                    delay_reason_data, summary
-                )
-                
-                with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp:
-                    pdf.output(tmp.name)
-                    with open(tmp.name, 'rb') as f:
-                        pdf_bytes = f.read()
-                    st.download_button(
-                        "📥 Download Report PDF",
-                        pdf_bytes,
-                        f"AI_Report_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf",
-                        "application/pdf"
-                    )
-                st.success("✅ PDF siap download!")
-        
-        # Save insight
-        insert_row("ai_insights", {
-            'id': generate_id(),
-            'project_id': selected_site if not is_all else 'ALL',
-            'insight_type': 'FULL_ANALYSIS',
-            'risk_score': str(health_score),
-            'description': f"Health Score: {health_score}% | Progress: {avg_progress:.1f}% | On Track: {on_track}/{total_sites}",
-            'recommendation': summary.replace("**","").replace("*",""),
-            'created_at': now_str()
-        })
-
         # ===== EXPORT PDF =====
         st.divider()
         st.subheader("📥 Export Report")
