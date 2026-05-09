@@ -64,14 +64,14 @@ def ai_insights_page():
     # Konversi numerik
     if not sites_df.empty and 'progress' in sites_df.columns:
         sites_df['progress'] = pd.to_numeric(sites_df['progress'], errors='coerce').fillna(0)
-    if not ms_df.empty:
-
-        date_cols = [
-            'planned_start',
-            'planned_end',
-            'actual_start',
-            'actual_end'
-        ]
+        if not ms_df.empty:
+            date_cols = [
+                'planned_start',
+                'planned_end',
+                'actual_start',
+                'actual_end'
+            ]
+        
 
     for col in date_cols:
 
