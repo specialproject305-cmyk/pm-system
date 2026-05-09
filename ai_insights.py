@@ -93,6 +93,41 @@ def ai_insights_page():
     
     if st.button("🔍 Generate Full Analysis", type="primary"):
         st.divider()
+        # ===== EXPORT PDF (di luar if, pakai session state) =====
+    if st.session_state.get('ai_done', False):
+        st.divider()
+        st.subheader("📥 Export Report")
+        
+        if st.button("📄 Download PDF Report", key="pdf_export", type="secondary"):
+            with st.spinner("Generating PDF..."):
+                from fpdf import FPDF
+                import tempfile
+                
+                pdf = FPDF()
+                pdf.add_page()
+                pdf.set_font('Helvetica', 'B', 16)
+                pdf.cell(0, 10, 'AI Analytics Report', 0, 1, 'C')
+                pdf.set_font('Helvetica', '', 10)
+                pdf.cell(0, 6, f'Site: {st.session_state.get("ai_site_name","")}', 0, 1)
+                pdf.cell(0, 6, f'Health Score: {st.session_state.get("ai_health",0)}%', 0, 1)
+                pdf.cell(0, 6, f'Progress: {st.session_state.get("ai_progress",0)}%', 0, 1)
+                pdf.cell(0, 6, f'On Track: {st.session_state.get("ai_on_track",0)}/{st.session_state.get("ai_total",0)}', 0, 1)
+                pdf.cell(0, 6, f'Forecast: {st.session_state.get("ai_forecast","")}', 0, 1)
+                pdf.ln(5)
+                pdf.set_font('Helvetica', 'B', 12)
+                pdf.cell(0, 8, 'Recommendations:', 0, 1)
+                pdf.set_font('Helvetica', '', 10)
+                for line in st.session_state.get("ai_summary","").split('\n')[:10]:
+                    clean = line.replace('**','').replace('*','').strip()
+                    if clean: pdf.multi_cell(0, 6, clean)
+                
+                with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp:
+                    pdf.output(tmp.name)
+                    with open(tmp.name, 'rb') as f:
+                        st.download_button("📥 Download PDF", f.read(),
+                            f"AI_Report_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf",
+                            "application/pdf", key="dl_btn")
+                st.success("✅ Klik download di atas!")
         
         # =============================================
         # 1. PROGRESS ANALYSIS
