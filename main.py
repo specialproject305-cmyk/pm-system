@@ -40,7 +40,10 @@ with st.sidebar:
         "📄 Export Report",
         "⚙️ Settings"
     ])
+    if role == 'admin':
+        menu_list.append("⚙️ Settings")
     
+    menu = st.sidebar.radio("📂 Navigasi:", menu_list)
     st.markdown("---")
     
     # Logout button
