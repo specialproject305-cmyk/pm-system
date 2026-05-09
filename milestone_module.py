@@ -51,7 +51,7 @@ def milestone_page():
     
     tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Gantt", "➕ Tambah", "🚀 Template", "✏️ Edit", "📥 Import"])
     
-    # ===== TAB 1: GANTT CHART =====
+   
         # ===== TAB 1: GANTT / SUMMARY =====
     with tab1:
         if is_all_site:
