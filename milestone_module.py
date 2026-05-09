@@ -126,6 +126,38 @@ def milestone_page():
                                     title=f"Timeline - {sites_df[sites_df['id']==selected_site]['site_name'].values[0]}")
                     fig.update_yaxes(autorange="reversed")
                     fig.update_layout(height=max(400, len(site_ms)*30))
+                                        # ===== TAMBAH DEPENDENCY LINES =====
+                    for _, row in site_ms.iterrows():
+                        dep_id = row.get("dependency_id", "")
+                        if dep_id and str(dep_id) != "" and str(dep_id) != "None":
+                            dep_row = site_ms[site_ms["id"] == dep_id]
+                            if not dep_row.empty:
+                                dep_end = dep_row.iloc[0]["planned_end"]
+                                row_start = row["planned_start"]
+                                y_dep = dep_row.iloc[0]["name"]
+                                y_row = row["name"]
+                                
+                                # Garis dari ujung milestone A ke awal milestone B
+                                fig.add_shape(
+                                    type="line",
+                                    x0=dep_end, x1=row_start,
+                                    y0=y_dep, y1=y_row,
+                                    line=dict(color="#ff6b6b", width=1.5, dash="dot"),
+                                    layer="below"
+                                )
+                                
+                                # Tambah panah kecil di ujung
+                                fig.add_annotation(
+                                    x=row_start, y=y_row,
+                                    ax=dep_end, ay=y_dep,
+                                    xref="x", yref="y",
+                                    axref="x", ayref="y",
+                                    showarrow=True,
+                                    arrowhead=2,
+                                    arrowsize=1,
+                                    arrowwidth=1.5,
+                                    arrowcolor="#ff6b6b"
+                                )
                     st.plotly_chart(fig, use_container_width=True)
                     
                     done = len(site_ms[site_ms["status"]=="DONE"])
