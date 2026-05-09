@@ -187,13 +187,19 @@ def milestone_page():
         st.warning("⚠️ Tambahkan site dulu!")
         return
 
+    site_options = ["ALL SITE"] + sites_df["id"].tolist()
+
     selected_site = st.selectbox(
         "Pilih Site:",
-        sites_df["id"].tolist(),
-
+        site_options,
+    
         format_func=lambda x:
-        f"{sites_df[sites_df['id']==x]['site_id'].values[0]} - "
-        f"{sites_df[sites_df['id']==x]['site_name'].values[0]}"
+        "🌐 ALL SITE"
+        if x == "ALL SITE"
+        else (
+            f"{sites_df[sites_df['id']==x]['site_id'].values[0]} - "
+            f"{sites_df[sites_df['id']==x]['site_name'].values[0]}"
+        )
     )
 
     tab1, tab2, tab3, tab4, tab5 = st.tabs([
