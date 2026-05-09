@@ -234,10 +234,6 @@ def milestone_page():
     
         if not ms_df.empty:
     
-            # ==========================================
-            # FILTER SITE
-            # ==========================================
-    
             if selected_site == "ALL SITE":
     
                 site_ms = ms_df.copy()
@@ -251,10 +247,6 @@ def milestone_page():
             if not site_ms.empty:
     
                 site_ms = site_ms.copy()
-    
-                # ==========================================
-                # CRITICAL TASK DETECTION
-                # ==========================================
     
                 today = datetime.now().date()
     
@@ -281,10 +273,6 @@ def milestone_page():
                     except:
                         pass
     
-                # ==========================================
-                # DATE FORMAT
-                # ==========================================
-    
                 site_ms["planned_start"] = pd.to_datetime(
                     site_ms["planned_start"],
                     errors="coerce"
@@ -295,10 +283,6 @@ def milestone_page():
                     errors="coerce"
                 )
     
-                # ==========================================
-                # DISPLAY STATUS
-                # ==========================================
-    
                 site_ms["display_status"] = site_ms.apply(
                     lambda row:
                     "CRITICAL"
@@ -306,10 +290,6 @@ def milestone_page():
                     else row["status"],
                     axis=1
                 )
-    
-                # ==========================================
-                # DISPLAY NAME
-                # ==========================================
     
                 if selected_site == "ALL SITE":
     
@@ -330,10 +310,6 @@ def milestone_page():
     
                     site_ms["display_name"] = site_ms["name"]
     
-                # ==========================================
-                # COLOR
-                # ==========================================
-    
                 color_map = {
                     "PENDING": "#6c757d",
                     "ONGOING": "#0d6efd",
@@ -341,10 +317,6 @@ def milestone_page():
                     "DELAYED": "#dc3545",
                     "CRITICAL": "#ff0000"
                 }
-    
-                # ==========================================
-                # GANTT
-                # ==========================================
     
                 fig = px.timeline(
                     site_ms,
@@ -371,10 +343,6 @@ def milestone_page():
                     fig,
                     use_container_width=True
                 )
-    
-                # ==========================================
-                # WARNING
-                # ==========================================
     
                 critical_count = len(
                     site_ms[
