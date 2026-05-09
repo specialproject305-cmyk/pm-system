@@ -360,7 +360,7 @@ def ai_insights_page():
             else: st.error("Critical")
             
         with col_j:
-                st.markdown(f"""
+            st.markdown(f"""
                 <div style="text-align:center; padding:10px; border-radius:10px; background:#f8f9fa;">
                     <div style="font-size:14px; color:gray;">📅 Forecast</div>
                     <div style="font-size:18px; font-weight:bold;">{forecast_end.strftime('%d %b %Y')}</div>
@@ -368,7 +368,7 @@ def ai_insights_page():
                 """, unsafe_allow_html=True)  
             
         with col_k:
-                st.markdown(f"""
+            st.markdown(f"""
                 <div style="text-align:center; padding:10px; border-radius:10px; background:#f8f9fa;">
                     <div style="font-size:14px; color:gray;">🎯 KPI</div>
                     <div style="font-size:18px; font-weight:bold;">{on_track}/{total_sites} On Track</div>
