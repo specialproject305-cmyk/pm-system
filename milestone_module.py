@@ -52,95 +52,113 @@ def milestone_page():
     tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Gantt", "➕ Tambah", "🚀 Template", "✏️ Edit", "📥 Import"])
     
     # ===== TAB 1: GANTT CHART =====
+        # ===== TAB 1: GANTT / SUMMARY =====
     with tab1:
-        st.subheader("📊 Gantt Chart" if not is_all_site else "📊 Gantt Chart - ALL SITE")
-        
-        ms_df = read_sheet("milestones")
-        if not ms_df.empty:
-            if is_all_site:
-                site_ms = ms_df.copy()
-            else:
-                site_ms = ms_df[ms_df["project_id"] == selected_site].copy()
+        if is_all_site:
+            st.subheader("📊 Gantt Chart - ALL SITE")
+            st.caption("Timeline milestone dari semua project")
             
-            if not site_ms.empty:
-                site_ms["planned_start"] = pd.to_datetime(site_ms["planned_start"], errors="coerce")
-                site_ms["planned_end"] = pd.to_datetime(site_ms["planned_end"], errors="coerce")
+            ms_df = read_sheet("milestones")
+            if not ms_df.empty:
+                # Group by milestone name (ambil start paling awal & end paling akhir)
+                ms_df["planned_start"] = pd.to_datetime(ms_df["planned_start"], errors="coerce")
+                ms_df["planned_end"] = pd.to_datetime(ms_df["planned_end"], errors="coerce")
                 
-                # Label dengan site name untuk All Site
-                if is_all_site:
-                    site_lookup = sites_df.set_index("id")["site_id"].to_dict()
-                    site_ms["display_name"] = site_ms.apply(
-                        lambda row: f"[{site_lookup.get(row['project_id'], '?')}] {row['name']}", axis=1)
-                else:
-                    site_ms["display_name"] = site_ms["name"]
+                # Group per nama milestone
+                grouped = ms_df.groupby("name").agg(
+                    start=("planned_start", "min"),
+                    end=("planned_end", "max"),
+                    total_sites=("project_id", "nunique"),
+                    done_count=("status", lambda x: (x == "DONE").sum()),
+                    delayed_count=("status", lambda x: (x == "DELAYED").sum()),
+                ).reset_index()
                 
-                # Deteksi critical (lewat tanggal)
-                today = datetime.now().date()
-                def is_critical(row):
-                    try:
-                        end_d = pd.to_datetime(row["planned_end"]).date()
-                        return end_d < today and row["status"] != "DONE"
-                    except:
-                        return False
+                grouped = grouped.sort_values("start")
                 
-                site_ms["is_critical"] = site_ms.apply(is_critical, axis=1)
-                site_ms["display_status"] = site_ms.apply(
-                    lambda row: "CRITICAL" if row["is_critical"] else row["status"], axis=1)
+                # Warna berdasarkan progress
+                def get_status(row):
+                    total = row["total_sites"]
+                    done = row["done_count"]
+                    delayed = row["delayed_count"]
+                    if delayed > 0:
+                        return "DELAYED"
+                    elif done == total:
+                        return "DONE"
+                    elif done > 0:
+                        return "ONGOING"
+                    return "PENDING"
+                
+                grouped["status"] = grouped.apply(get_status, axis=1)
                 
                 color_map = {
                     "PENDING": "#6c757d",
                     "ONGOING": "#0d6efd",
                     "DONE": "#28a745",
-                    "DELAYED": "#dc3545",
-                    "CRITICAL": "#ff0000"
+                    "DELAYED": "#dc3545"
                 }
                 
-                # Sort by start date
-                site_ms = site_ms.sort_values("planned_start")
-                
                 fig = px.timeline(
-                    site_ms,
-                    x_start="planned_start",
-                    x_end="planned_end",
-                    y="display_name",
-                    color="display_status",
+                    grouped,
+                    x_start="start",
+                    x_end="end",
+                    y="name",
+                    color="status",
                     color_discrete_map=color_map,
-                    title="Timeline Milestone"
+                    hover_data=["total_sites", "done_count", "delayed_count"],
+                    title="Timeline Milestone - Semua Project"
                 )
                 
                 fig.update_yaxes(autorange="reversed")
                 
-                # Set range dari milestone paling awal sampai paling akhir
-                min_date = site_ms["planned_start"].min()
-                max_date = site_ms["planned_end"].max()
+                min_date = grouped["start"].min()
+                max_date = grouped["end"].max()
                 fig.update_layout(
-                    height=max(500, len(site_ms) * 35),
-                    xaxis_range=[min_date, max_date]
+                    height=max(500, len(grouped) * 35),
+                    xaxis_range=[min_date, max_date],
+                    xaxis_title="Tanggal",
+                    yaxis_title="Milestone"
                 )
                 
                 st.plotly_chart(fig, use_container_width=True)
                 
-                # Stats
-                critical_count = len(site_ms[site_ms["is_critical"] == True])
-                done_count = len(site_ms[site_ms["status"] == "DONE"])
-                total_count = len(site_ms)
+                # Summary stats
+                total_ms = len(grouped)
+                total_sites_all = ms_df["project_id"].nunique()
+                overall_start = min_date.strftime("%d %b %Y") if pd.notna(min_date) else "-"
+                overall_end = max_date.strftime("%d %b %Y") if pd.notna(max_date) else "-"
                 
                 col_a, col_b, col_c = st.columns(3)
-                col_a.metric("Total Milestone", total_count)
-                col_b.metric("✅ Selesai", done_count)
-                col_c.metric("🔴 Critical", critical_count)
+                col_a.metric("🌍 Total Site", total_sites_all)
+                col_b.metric("📊 Total Milestone Type", total_ms)
+                col_c.metric("📅 Total Durasi", f"{overall_start} → {overall_end}")
                 
-                if critical_count > 0:
-                    st.warning(f"⚠️ {critical_count} milestone CRITICAL (lewat tanggal target)!")
+                # Tabel detail
+                st.markdown("---")
+                st.subheader("📋 Detail per Milestone")
                 
-                # Progress bar
-                if total_count > 0:
-                    st.progress(done_count / total_count)
-                    st.caption(f"Progress: {(done_count/total_count*100):.1f}%")
+                detail_df = grouped.copy()
+                detail_df["Start"] = detail_df["start"].dt.strftime("%d %b %Y")
+                detail_df["End"] = detail_df["end"].dt.strftime("%d %b %Y")
+                detail_df["Durasi (hari)"] = (detail_df["end"] - detail_df["start"]).dt.days
+                detail_df["Progress"] = detail_df.apply(
+                    lambda r: f"{r['done_count']}/{r['total_sites']} site", axis=1)
+                
+                display_df = detail_df[["name", "Start", "End", "Durasi (hari)", "Progress", "status"]]
+                display_df.columns = ["Milestone", "Mulai", "Selesai", "Durasi (hari)", "Progress", "Status"]
+                
+                def color_status(val):
+                    if val == "DONE": return 'background-color: #d4edda'
+                    elif val == "DELAYED": return 'background-color: #f8d7da'
+                    elif val == "ONGOING": return 'background-color: #cce5ff'
+                    return ''
+                
+                styled = display_df.style.map(color_status, subset=["Status"])
+                st.dataframe(styled, use_container_width=True, hide_index=True)
             else:
                 st.info("Belum ada milestone.")
+        
         else:
-            st.info("Belum ada milestone.")
+            # ... (Gantt per site, tidak berubah)
     
     # ===== TAB 2: TAMBAH MILESTONE =====
     with tab2:
