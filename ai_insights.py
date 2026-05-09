@@ -241,6 +241,52 @@ def ai_insights_page():
                 st.plotly_chart(fig, use_container_width=True)
         
         st.divider()
+
+                # =============================================
+        # DELAY REASON ANALYSIS
+        # =============================================
+        st.header("🔍 6. Delay Reason Analysis")
+        
+        if not site_ms.empty and 'delay_reason' in site_ms.columns:
+            delays = site_ms[site_ms['delay_reason'].notna() & (site_ms['delay_reason'] != '') & (site_ms['delay_reason'] != 'Tidak Ada')]
+            
+            if not delays.empty:
+                reason_counts = delays['delay_reason'].value_counts().reset_index()
+                reason_counts.columns = ['Reason', 'Count']
+                
+                col_i, col_j = st.columns(2)
+                
+                with col_i:
+                    fig = px.pie(reason_counts, values='Count', names='Reason',
+                               title="Distribusi Delay Reason",
+                               color_discrete_sequence=px.colors.qualitative.Set2)
+                    st.plotly_chart(fig, use_container_width=True)
+                
+                with col_j:
+                    # Top reason
+                    top_reason = reason_counts.iloc[0]
+                    st.error(f"🔴 **#{1} Delay Reason: {top_reason['Reason']}** ({top_reason['Count']} milestone)")
+                    
+                    # Rekomendasi per reason
+                    recos = {
+                        "Material Terlambat": "📦 Prioritaskan procurement. Cari supplier alternatif. Buffer stok 2 minggu.",
+                        "Cuaca Buruk": "🌧️ Mitigasi cuaca. Siapkan jadwal alternatif. Tambah shift saat cerah.",
+                        "Manpower Kurang": "👷 Tambah subkontraktor. Evaluasi overtime. Training multi-skill.",
+                        "Vendor Terlambat": "🏢 SLA penalty. Cari vendor backup. Monitoring mingguan.",
+                        "Izin/Tanah": "📋 Eskalasi ke manajemen. Paralel proses dengan negosiasi.",
+                        "Desain Berubah": "📐 Freeze design. Tambah buffer contingency 10%.",
+                    }
+                    
+                    if top_reason['Reason'] in recos:
+                        st.info(recos[top_reason['Reason']])
+                
+                # Tabel detail
+                st.subheader("Detail Delay per Milestone")
+                delay_detail = delays[['name', 'delay_reason', 'planned_end', 'status']].copy()
+                delay_detail['planned_end'] = delay_detail['planned_end'].dt.strftime('%d %b %Y')
+                st.dataframe(delay_detail, use_container_width=True, hide_index=True)
+            else:
+                st.success("✅ Tidak ada delay reason tercatat.")
         
         # =============================================
         # 5. EXECUTIVE SUMMARY
