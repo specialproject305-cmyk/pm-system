@@ -65,10 +65,23 @@ def ai_insights_page():
     if not sites_df.empty and 'progress' in sites_df.columns:
         sites_df['progress'] = pd.to_numeric(sites_df['progress'], errors='coerce').fillna(0)
     if not ms_df.empty:
-        ms_df['planned_start'] = pd.to_datetime(ms_df['planned_start'], errors='coerce')
-        ms_df['planned_end'] = pd.to_datetime(ms_df['planned_end'], errors='coerce')
-        ms_df['actual_start'] = pd.to_datetime(ms_df['actual_start'], errors='coerce')
-        ms_df['actual_end'] = pd.to_datetime(ms_df['actual_end'], errors='coerce')
+
+    date_cols = [
+        'planned_start',
+        'planned_end',
+        'actual_start',
+        'actual_end'
+    ]
+
+    for col in date_cols:
+
+        if col not in ms_df.columns:
+            ms_df[col] = None
+
+        ms_df[col] = pd.to_datetime(
+            ms_df[col],
+            errors='coerce'
+        )
     
     # ===== FILTER =====
     col_f1, col_f2 = st.columns(2)
@@ -205,7 +218,15 @@ def ai_insights_page():
         with col_d:
             st.subheader("Productivity Trend")
             if not site_ms.empty:
-                site_ms['month'] = site_ms['planned_end'].dt.to_period('M').astype(str)
+                site_ms = site_ms.dropna(
+                subset=['planned_end']
+            )
+            
+            site_ms['month'] = (
+                site_ms['planned_end']
+                .dt.to_period('M')
+                .astype(str)
+            )
                 monthly_done = site_ms[site_ms['status']=='DONE'].groupby('month').size().reset_index(name='done')
                 
                 if not monthly_done.empty:
@@ -286,7 +307,7 @@ def ai_insights_page():
         
         st.divider()
 
-                # =============================================
+        # =============================================
         # DELAY REASON ANALYSIS
         # =============================================
         st.header("🔍 6. Delay Reason Analysis")
@@ -350,7 +371,20 @@ def ai_insights_page():
 
                 # Hitung forecast
         if not is_all:
-            forecast_end = datetime.now() + timedelta(days=int((100-site_data.iloc[0]['progress'])*2)) if not site_data.empty else datetime.now()
+            if not site_data.empty:
+
+    forecast_end = (
+        datetime.now()
+        + timedelta(
+            days=int(
+                (100 - site_data.iloc[0]['progress']) * 2
+            )
+        )
+    )
+
+else:
+
+    forecast_end = datetime.now() if not site_data.empty else datetime.now()
         else:
             forecast_end = datetime.now() + timedelta(days=int((100-avg_progress)*2))
         
