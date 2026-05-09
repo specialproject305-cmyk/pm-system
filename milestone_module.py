@@ -136,9 +136,15 @@ def sync_milestone_to_site(site_id):
     
     else:
     
-        site_ms = ms_df[
-            ms_df["project_id"] == selected_site
-        ]
+        if selected_site == "ALL SITE":
+
+    site_ms = ms_df.copy()
+
+else:
+
+    site_ms = ms_df[
+        ms_df["project_id"] == selected_site
+    ]
 
     if site_ms.empty:
         return
