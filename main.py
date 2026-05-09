@@ -1,5 +1,5 @@
 import streamlit as st
-from auth import login_page, logout_button, check_permission, show_permission_denied
+from auth import login_page, check_permission, show_permission_denied
 from dashboard import dashboard_page
 from project_tracker import project_tracker_page
 from milestone_module import milestone_page
@@ -11,7 +11,6 @@ from settings_page import settings_page
 
 st.set_page_config(page_title="PM System", page_icon="🏗️", layout="wide", initial_sidebar_state="expanded")
 
-# ===== LOGIN CHECK =====
 if 'logged_in' not in st.session_state:
     st.session_state['logged_in'] = False
 
@@ -19,71 +18,48 @@ if not st.session_state['logged_in']:
     login_page()
     st.stop()
 
-# ===== SIDEBAR =====
+user = st.session_state.get('user', {})
+role = user.get('role', 'viewer')
+
 with st.sidebar:
     st.title("🏗️ PM System")
-    
-    user = st.session_state.get('user', {})
-    role = user.get('role', 'viewer')
-    
     st.markdown(f"👤 **{user.get('full_name', user.get('username', 'User'))}**")
     st.caption(f"🔹 Role: {role.upper()}")
     st.markdown("---")
     
-    menu = st.sidebar.radio("📂 Navigasi:", [
-        "📊 Dashboard", 
-        "📁 Site Tracker", 
-        "🧱 Milestones",
-        "📦 Inventory", 
-        "🤖 AI Insights", 
-        "💬 Chat & Notif", 
-        "📄 Export Report",
-        "⚙️ Settings"
-    ])
+    menu_options = [
+        "📊 Dashboard", "📁 Site Tracker", "🧱 Milestones",
+        "📦 Inventory", "🤖 AI Insights", "💬 Chat & Notif", "📄 Export Report"
+    ]
     if role == 'admin':
-        menu_list.append("⚙️ Settings")
+        menu_options.append("⚙️ Settings")
     
     menu = st.sidebar.radio("📂 Navigasi:", menu_options)
-    
     st.markdown("---")
     
-    # Logout button
     if st.button("🚪 Logout", use_container_width=True):
         for key in list(st.session_state.keys()):
             del st.session_state[key]
         st.session_state['logged_in'] = False
         st.rerun()
 
-# ===== ROUTING =====
 def main():
-    if menu == "📊 Dashboard":
-        dashboard_page()
+    if menu == "📊 Dashboard": dashboard_page()
     elif menu == "📁 Site Tracker":
-        if check_permission('editor'):
-            project_tracker_page()
-        else:
-            show_permission_denied()
+        if check_permission('editor'): project_tracker_page()
+        else: show_permission_denied()
     elif menu == "🧱 Milestones":
-        if check_permission('editor'):
-            milestone_page()
-        else:
-            show_permission_denied()
+        if check_permission('editor'): milestone_page()
+        else: show_permission_denied()
     elif menu == "📦 Inventory":
-        if check_permission('editor'):
-            inventory_page()
-        else:
-            show_permission_denied()
-    elif menu == "🤖 AI Insights":
-        ai_insights_page()
-    elif menu == "💬 Chat & Notif":
-        chat_notif_page()
-    elif menu == "📄 Export Report":
-        export_page()
+        if check_permission('editor'): inventory_page()
+        else: show_permission_denied()
+    elif menu == "🤖 AI Insights": ai_insights_page()
+    elif menu == "💬 Chat & Notif": chat_notif_page()
+    elif menu == "📄 Export Report": export_page()
     elif menu == "⚙️ Settings":
-        if check_permission('admin'):
-            settings_page()
-        else:
-            show_permission_denied()
+        if check_permission('admin'): settings_page()
+        else: show_permission_denied()
 
 if __name__ == "__main__":
     main()
