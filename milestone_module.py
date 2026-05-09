@@ -273,7 +273,7 @@ def sync_milestone_to_site(site_id):
 
         ms_df = read_sheet("milestones")
     
-        if not ms_df.empty:
+            if not ms_df.empty:
     
             if selected_site == "ALL SITE":
     
