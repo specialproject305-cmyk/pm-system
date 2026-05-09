@@ -347,6 +347,12 @@ def ai_insights_page():
         health_color = '🟢' if health_score >= 80 else ('🟡' if health_score >= 50 else '🔴')
         
         col_i, col_j, col_k = st.columns(3)
+
+                # Hitung forecast
+        if not is_all:
+            forecast_end = datetime.now() + timedelta(days=int((100-site_data.iloc[0]['progress'])*2)) if not site_data.empty else datetime.now()
+        else:
+            forecast_end = datetime.now() + timedelta(days=int((100-avg_progress)*2))
         
         with col_i:
             st.markdown(f"""
@@ -360,12 +366,13 @@ def ai_insights_page():
             else: st.error("Critical")
             
         with col_j:
+            forecast_str = forecast_end.strftime('%d %b %Y') if forecast_end else '-'
             st.markdown(f"""
                 <div style="text-align:center; padding:10px; border-radius:10px; background:#f8f9fa;">
                     <div style="font-size:14px; color:gray;">📅 Forecast</div>
-                    <div style="font-size:18px; font-weight:bold;">{forecast_end.strftime('%d %b %Y')}</div>
+                    <div style="font-size:18px; font-weight:bold;">{forecast_str}</div>
                 </div>
-                """, unsafe_allow_html=True)  
+                """, unsafe_allow_html=True)
             
         with col_k:
             st.markdown(f"""
