@@ -130,7 +130,15 @@ def sync_milestone_to_site(site_id):
     if "project_id" not in ms_df.columns:
         return
 
-    site_ms = ms_df[ms_df["project_id"] == site_id]
+    if selected_site == "ALL SITE":
+
+        site_ms = ms_df.copy()
+    
+    else:
+    
+        site_ms = ms_df[
+            ms_df["project_id"] == selected_site
+        ]
 
     if site_ms.empty:
         return
@@ -278,11 +286,25 @@ def milestone_page():
                     axis=1
                 )
 
+                if selected_site == "ALL SITE":
+
+                    site_lookup = sites_df.set_index("id")["site_id"].to_dict()
+                
+                    site_ms["display_name"] = site_ms.apply(
+                        lambda row:
+                        f"[{site_lookup.get(row['project_id'], 'UNKNOWN')}] {row['name']}",
+                        axis=1
+                    )
+                
+                else:
+                
+                    site_ms["display_name"] = site_ms["name"]
+
                 fig = px.timeline(
                     site_ms,
                     x_start="planned_start",
                     x_end="planned_end",
-                    y="name",
+                    y="display_name",
                     color="display_status",
                     color_discrete_map=color_map
                 )
@@ -292,7 +314,11 @@ def milestone_page():
                 )
 
                 fig.update_layout(
-                    height=max(400, len(site_ms) * 30)
+                    height=max(500, len(site_ms) * 35),
+                    xaxis_range=[
+                        site_ms["planned_start"].min(),
+                        site_ms["planned_end"].max()
+                    ]
                 )
 
                 st.plotly_chart(
