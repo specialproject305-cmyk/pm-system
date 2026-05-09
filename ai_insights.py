@@ -425,5 +425,50 @@ def ai_insights_page():
             'created_at': now_str()
         })
 
+        # ===== EXPORT PDF =====
+        st.divider()
+        st.subheader("📥 Export Report")
+        
+        if st.button("📄 Download PDF Report", key="pdf_btn", type="secondary"):
+            with st.spinner("Generating PDF..."):
+                try:
+                    pdf = FPDF()
+                    pdf.add_page()
+                    
+                    pdf.set_font('Helvetica', 'B', 16)
+                    pdf.cell(0, 10, 'AI Analytics Report', 0, 1, 'C')
+                    pdf.set_font('Helvetica', 'I', 10)
+                    pdf.cell(0, 5, f'Generated: {datetime.now().strftime("%d %b %Y, %H:%M")}', 0, 1, 'C')
+                    pdf.cell(0, 5, f'Site: {site_name}', 0, 1, 'C')
+                    pdf.ln(5)
+                    
+                    pdf.set_font('Helvetica', 'B', 14)
+                    pdf.cell(0, 10, '1. Executive Summary', 0, 1)
+                    pdf.set_font('Helvetica', '', 10)
+                    pdf.cell(0, 6, f'Health Score: {health_score}%', 0, 1)
+                    pdf.cell(0, 6, f'Progress: {avg_progress:.1f}%', 0, 1)
+                    pdf.cell(0, 6, f'On Track: {on_track}/{total_sites}', 0, 1)
+                    pdf.cell(0, 6, f'Forecast: {forecast_end.strftime("%d %b %Y")}', 0, 1)
+                    pdf.ln(5)
+                    
+                    pdf.set_font('Helvetica', 'B', 14)
+                    pdf.cell(0, 10, '2. Recommendations', 0, 1)
+                    pdf.set_font('Helvetica', '', 10)
+                    for line in summary.split('\n'):
+                        clean = line.replace('**','').replace('*','').strip()
+                        if clean and clean != summary.split('\n')[0]:
+                            pdf.multi_cell(0, 6, clean)
+                    
+                    with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp:
+                        pdf.output(tmp.name)
+                        with open(tmp.name, 'rb') as f:
+                            pdf_bytes = f.read()
+                        st.download_button("📥 Download Report PDF", pdf_bytes,
+                            f"AI_Report_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf",
+                            "application/pdf", key="dl_pdf")
+                    st.success("✅ PDF ready!")
+                except Exception as e:
+                    st.error(f"❌ Error: {e}")
+
 if __name__ == "__main__":
     ai_insights_page()
