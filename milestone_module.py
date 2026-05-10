@@ -2,13 +2,15 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from datetime import datetime, timedelta
+# Import diperbaiki agar sinkron dengan file supabase_db.py yang baru
 from supabase_db import (
     read_sheet,
     insert_row,
     update_row,
     delete_row_by_id,
     generate_id,
-    today_str
+    today_str,
+    now_str
 )
 
 TOWER_TEMPLATE = {
@@ -20,218 +22,197 @@ TOWER_TEMPLATE = {
 DELAY_REASONS = ["Tidak Ada","Material Terlambat","Cuaca Buruk","Manpower Kurang","Vendor Terlambat","Izin/Tanah","Desain Berubah","Force Majeure","Lainnya"]
 
 def sync_milestone_to_site(site_id):
+    # Mengambil data terbaru untuk menghitung progress site
     ms_df = read_sheet("milestones")
     if ms_df.empty or "project_id" not in ms_df.columns: return
+    
     site_ms = ms_df[ms_df["project_id"]==site_id].copy()
     if site_ms.empty: return
-    site_ms["weight"] = pd.to_numeric(site_ms["weight"],errors="coerce").fillna(0)
+    
+    site_ms["weight"] = pd.to_numeric(site_ms["weight"], errors="coerce").fillna(0)
     total_weight = site_ms["weight"].sum()
     done_weight = site_ms[site_ms["status"]=="DONE"]["weight"].sum()
-    progress = round((done_weight/total_weight)*100,1) if total_weight>0 else 0
+    
+    progress = round((done_weight/total_weight)*100, 1) if total_weight > 0 else 0
     delayed = len(site_ms[site_ms["status"]=="DELAYED"])
-    status = "CRITICAL" if delayed>3 else ("DELAYED" if delayed>0 else "ON_TRACK")
-    update_row("projects",site_id,{"progress":str(progress),"status":status})
+    
+    status = "CRITICAL" if delayed > 3 else ("DELAYED" if delayed > 0 else "ON_TRACK")
+    update_row("projects", site_id, {"progress": str(progress), "status": status})
 
 def milestone_page():
     st.title("🧱 Milestone Monitoring")
+    
+    # Load data awal
     sites_df = read_sheet("projects")
-    if sites_df.empty: st.warning("⚠️ Tambahkan site dulu!"); return
+    if sites_df.empty: 
+        st.warning("⚠️ Tambahkan site dulu di menu Project Tracker!")
+        return
     
-    site_options = ["ALL SITE"]+sites_df["id"].tolist()
-    selected_site = st.selectbox("Pilih Site:",site_options,
-        format_func=lambda x:"🌍 ALL SITE" if x=="ALL SITE" else f"{sites_df[sites_df['id']==x]['site_id'].values[0]} - {sites_df[sites_df['id']==x]['site_name'].values[0]}")
-    is_all = (selected_site=="ALL SITE")
+    # Sidebar/Filter Site
+    site_options = ["ALL SITE"] + sites_df["id"].tolist()
+    selected_site = st.selectbox(
+        "Pilih Site:", 
+        site_options,
+        format_func=lambda x: "🌍 ALL SITE" if x == "ALL SITE" 
+        else f"{sites_df[sites_df['id']==x]['site_id'].values[0]} - {sites_df[sites_df['id']==x]['site_name'].values[0]}"
+    )
     
-    tab1,tab2,tab3,tab4,tab5 = st.tabs(["📊 Gantt","➕ Tambah","🚀 Template","✏️ Edit","📥 Import"])
+    is_all = (selected_site == "ALL SITE")
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Gantt", "➕ Tambah", "🚀 Template", "✏️ Edit", "📥 Import"])
     
-    # ===== TAB 1 =====
+    # ===== TAB 1: GANTT CHART =====
     with tab1:
-        if is_all:
-            st.subheader("📊 Gantt Chart - ALL SITE")
-            ms_df = read_sheet("milestones")
-            if not ms_df.empty:
-                ms_df["planned_start"]=pd.to_datetime(ms_df["planned_start"],errors="coerce")
-                ms_df["planned_end"]=pd.to_datetime(ms_df["planned_end"],errors="coerce")
-                grouped = ms_df.groupby("name").agg(start=("planned_start","min"),end=("planned_end","max"),total_sites=("project_id","nunique"),done_count=("status",lambda x:(x=="DONE").sum()),delayed_count=("status",lambda x:(x=="DELAYED").sum())).reset_index()
+        ms_df = read_sheet("milestones")
+        if ms_df.empty:
+            st.info("Belum ada data milestone.")
+        else:
+            ms_df["planned_start"] = pd.to_datetime(ms_df["planned_start"], errors="coerce")
+            ms_df["planned_end"] = pd.to_datetime(ms_df["planned_end"], errors="coerce")
+            
+            if is_all:
+                st.subheader("📊 Gantt Chart - ALL SITE")
+                grouped = ms_df.groupby("name").agg(
+                    start=("planned_start", "min"),
+                    end=("planned_end", "max"),
+                    total_sites=("project_id", "nunique"),
+                    done_count=("status", lambda x: (x == "DONE").sum()),
+                    delayed_count=("status", lambda x: (x == "DELAYED").sum())
+                ).reset_index()
+                
                 grouped = grouped.sort_values("start")
                 def get_status(r):
-                    if r["delayed_count"]>0: return "DELAYED"
-                    elif r["done_count"]==r["total_sites"]: return "DONE"
-                    elif r["done_count"]>0: return "ONGOING"
+                    if r["delayed_count"] > 0: return "DELAYED"
+                    elif r["done_count"] == r["total_sites"]: return "DONE"
+                    elif r["done_count"] > 0: return "ONGOING"
                     return "PENDING"
-                grouped["status"]=grouped.apply(get_status,axis=1)
-                color_map = {"PENDING":"#6c757d","ONGOING":"#0d6efd","DONE":"#28a745","DELAYED":"#dc3545"}
-                fig = px.timeline(grouped,x_start="start",x_end="end",y="name",color="status",color_discrete_map=color_map,hover_data=["total_sites","done_count","delayed_count"])
+                
+                grouped["status"] = grouped.apply(get_status, axis=1)
+                color_map = {"PENDING": "#6c757d", "ONGOING": "#0d6efd", "DONE": "#28a745", "DELAYED": "#dc3545"}
+                
+                fig = px.timeline(grouped, x_start="start", x_end="end", y="name", color="status", color_discrete_map=color_map)
                 fig.update_yaxes(autorange="reversed")
-                fig.update_layout(height=max(500,len(grouped)*35))
-                st.plotly_chart(fig,use_container_width=True)
-                st.metric("🌍 Total Site",ms_df["project_id"].nunique())
-        else:
-            st.subheader("📊 Gantt Chart")
-            ms_df = read_sheet("milestones")
-            if not ms_df.empty:
-                site_ms = ms_df[ms_df["project_id"]==selected_site]
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                site_ms = ms_df[ms_df["project_id"] == selected_site].copy()
                 if not site_ms.empty:
-                    site_ms=site_ms.copy()
-                    site_ms["planned_start"]=pd.to_datetime(site_ms["planned_start"],errors="coerce")
-                    site_ms["planned_end"]=pd.to_datetime(site_ms["planned_end"],errors="coerce")
-                    today=datetime.now().date()
-                    def is_critical(row):
-                        try: return row["planned_end"].date()<today and row["status"]!="DONE"
-                        except: return False
-                    site_ms["is_critical"]=site_ms.apply(is_critical,axis=1)
-                    site_ms["display_status"]=site_ms.apply(lambda r:"CRITICAL" if r["is_critical"] else r["status"],axis=1)
-                    color_map={"PENDING":"#6c757d","ONGOING":"#0d6efd","DONE":"#28a745","DELAYED":"#dc3545","CRITICAL":"#ff0000"}
-                    site_ms=site_ms.sort_values("planned_start")
-                    fig=px.timeline(site_ms,x_start="planned_start",x_end="planned_end",y="name",color="display_status",color_discrete_map=color_map,hover_data=["status","weight","material_status","delay_reason"])
+                    site_ms = site_ms.sort_values("planned_start")
+                    today = datetime.now().date()
+                    site_ms["is_critical"] = site_ms.apply(lambda r: r["planned_end"].date() < today and r["status"] != "DONE" if pd.notnull(r["planned_end"]) else False, axis=1)
+                    site_ms["display_status"] = site_ms.apply(lambda r: "CRITICAL" if r["is_critical"] else r["status"], axis=1)
+                    
+                    color_map = {"PENDING": "#6c757d", "ONGOING": "#0d6efd", "DONE": "#28a745", "DELAYED": "#dc3545", "CRITICAL": "#ff0000"}
+                    fig = px.timeline(site_ms, x_start="planned_start", x_end="planned_end", y="name", color="display_status", color_discrete_map=color_map)
                     fig.update_yaxes(autorange="reversed")
-                    fig.update_layout(height=max(400,len(site_ms)*30))
+                    st.plotly_chart(fig, use_container_width=True)
                     
-                    # Dependency lines
-                    for _,row in site_ms.iterrows():
-                        dep_id=row.get("dependency_id","")
-                        if dep_id and str(dep_id)!="" and str(dep_id)!="None":
-                            dep_row=site_ms[site_ms["id"]==dep_id]
-                            if not dep_row.empty:
-                                fig.add_shape(type="line",x0=dep_row.iloc[0]["planned_end"],x1=row["planned_start"],y0=dep_row.iloc[0]["name"],y1=row["name"],line=dict(color="#ff6b6b",width=1.5,dash="dot"),layer="below")
-                    
-                    st.plotly_chart(fig,use_container_width=True)
-                    
-                    done=len(site_ms[site_ms["status"]=="DONE"]); total=len(site_ms); critical=len(site_ms[site_ms["is_critical"]==True])
-                    c1,c2,c3=st.columns(3)
-                    c1.metric("Total MS",total); c2.metric("✅ Done",done); c3.metric("🔴 Critical",critical)
-                    if total>0: st.progress(done/total); st.caption(f"Progress: {(done/total*100):.1f}%")
-    
-    # ===== TAB 2: TAMBAH =====
-    with tab2:
-        st.subheader("➕ Tambah Milestone")
-        if is_all: st.warning("⚠️ Pilih site spesifik dulu!")
-        else:
-            ms_exist=read_sheet("milestones")
-            dep_options=["Tidak Ada"]; dep_map={}
-            if not ms_exist.empty:
-                for _,row in ms_exist[ms_exist["project_id"]==selected_site].iterrows(): dep_options.append(row["name"]); dep_map[row["name"]]=row["id"]
-            with st.form("add_ms"):
-                name=st.text_input("Nama Milestone")
-                c1,c2=st.columns(2)
-                with c1: ps=st.date_input("Rencana Mulai")
-                with c2: pe=st.date_input("Rencana Selesai")
-                c3,c4=st.columns(2)
-                with c3: weight=st.number_input("Bobot %",0.0,100.0,10.0)
-                with c4: status=st.selectbox("Status",["PENDING","ONGOING","DONE","DELAYED"])
-                mat_status=st.selectbox("Material",["Belum Dicek","Lengkap","Tidak Lengkap"])
-                dep_choice=st.selectbox("Dependency",dep_options)
-                delay_choice=st.selectbox("Delay Reason",DELAY_REASONS)
-                if st.form_submit_button("💾 Simpan",type="primary"):
-                    if not name: st.error("❌ Nama wajib diisi!")
-                    else:
-                        insert_row("milestones",{"id":generate_id(),"project_id":selected_site,"name":name,"planned_start":ps.strftime("%Y-%m-%d"),"planned_end":pe.strftime("%Y-%m-%d"),"weight":str(weight),"status":status,"material_status":mat_status,"dependency_id":dep_map.get(dep_choice,""),"delay_reason":delay_choice if delay_choice!="Tidak Ada" else ""})
-                        sync_milestone_to_site(selected_site)
-                        st.success(f"✅ {name} ditambahkan!"); st.rerun()
-    
-    # ===== TAB 3: TEMPLATE =====
-    with tab3:
-        st.subheader("🚀 Auto-Generate Template")
-        if is_all: st.warning("⚠️ Pilih site spesifik dulu!")
-        else:
-            c1,c2=st.columns(2)
-            with c1: start=st.date_input("Tanggal Mulai",value=datetime.now().date())
-            with c2: days=st.number_input("Durasi/Task (hari)",1,30,3)
-            phases=st.multiselect("Pilih Fase:",list(TOWER_TEMPLATE.keys()),default=list(TOWER_TEMPLATE.keys()))
-            if st.button("🚀 Generate",type="primary"):
-                if not phases: st.warning("⚠️ Pilih minimal satu fase!")
-                else:
-                    curr=start; created=0
-                    total_tasks=sum(len(TOWER_TEMPLATE[p]) for p in phases)
-                    for phase in phases:
-                        for task in TOWER_TEMPLATE[phase]:
-                            insert_row("milestones",{"id":generate_id(),"project_id":selected_site,"name":f"[{phase}] {task}","planned_start":curr.strftime("%Y-%m-%d"),"planned_end":(curr+timedelta(days=days-1)).strftime("%Y-%m-%d"),"weight":str(round(100/total_tasks,1)),"status":"PENDING","material_status":"Belum Dicek"})
-                            curr+=timedelta(days=days); created+=1
-                    sync_milestone_to_site(selected_site)
-                    st.success(f"✅ {created} milestone dibuat!"); st.balloons(); st.rerun()
-    
-    # ===== TAB 4: EDIT =====
-    with tab4:
-        st.subheader("✏️ Edit Milestone")
-        if is_all: st.warning("⚠️ Pilih site spesifik dulu!")
-        else:
-            ms_df=read_sheet("milestones")
-            if not ms_df.empty:
-                site_ms=ms_df[ms_df["project_id"]==selected_site]
-                if not site_ms.empty:
-                    sel=st.selectbox("Pilih:",site_ms["id"].tolist(),format_func=lambda x:site_ms[site_ms["id"]==x]["name"].values[0])
-                    if sel:
-                        ms=site_ms[site_ms["id"]==sel].iloc[0]
-                        dep_options=["Tidak Ada"]; dep_map={}; reverse_dep={}
-                        for _,r in site_ms.iterrows():
-                            if r["id"]!=sel: dep_options.append(r["name"]); dep_map[r["name"]]=r["id"]; reverse_dep[r["id"]]=r["name"]
-                        cur_dep_id=ms.get("dependency_id",""); cur_dep_name=reverse_dep.get(cur_dep_id,"Tidak Ada")
-                        dep_idx=dep_options.index(cur_dep_name) if cur_dep_name in dep_options else 0
-                        with st.form("edit_ms"):
-                            ename=st.text_input("Nama",value=str(ms.get("name","")))
-                            c1,c2=st.columns(2)
-                            with c1:
-                                try: ps_d=datetime.strptime(str(ms.get("planned_start",""))[:10],"%Y-%m-%d")
-                                except: ps_d=datetime.now()
-                                ps=st.date_input("Plan Start",value=ps_d)
-                            with c2:
-                                try: pe_d=datetime.strptime(str(ms.get("planned_end",""))[:10],"%Y-%m-%d")
-                                except: pe_d=datetime.now()
-                                pe=st.date_input("Plan End",value=pe_d)
-                            c3,c4=st.columns(2)
-                            with c3:
-                                av_d=None
-                                try: av_d=datetime.strptime(str(ms.get("actual_start",""))[:10],"%Y-%m-%d")
-                                except: av_d=None
-                                eas=st.date_input("Actual Start",value=av_d)
-                            with c4:
-                                av2_d=None
-                                try: av2_d=datetime.strptime(str(ms.get("actual_end",""))[:10],"%Y-%m-%d")
-                                except: av2_d=None
-                                eae=st.date_input("Actual End",value=av2_d)
-                            c5,c6,c7=st.columns(3)
-                            with c5:
-                                sl=["PENDING","ONGOING","DONE","DELAYED"]
-                                s_idx=sl.index(ms.get("status","PENDING")) if ms.get("status") in sl else 0
-                                estatus=st.selectbox("Status",sl,index=s_idx)
-                            with c6: eweight=st.number_input("Bobot %",0.0,100.0,float(ms.get("weight",0) or 0))
-                            with c7:
-                                ml=["Belum Dicek","Lengkap","Tidak Lengkap"]
-                                m_idx=ml.index(ms.get("material_status","Belum Dicek")) if ms.get("material_status") in ml else 0
-                                emat=st.selectbox("Material",ml,index=m_idx)
-                            edep=st.selectbox("Dependency",dep_options,index=dep_idx)
-                            cur_delay=ms.get("delay_reason","Tidak Ada")
-                            dr_idx=DELAY_REASONS.index(cur_delay) if cur_delay in DELAY_REASONS else 0
-                            edelay=st.selectbox("Delay Reason",DELAY_REASONS,index=dr_idx)
-                            b1,b2=st.columns(2)
-                            with b1:
-                                if st.form_submit_button("💾 Update",type="primary"):
-                                    update_row("milestones",sel,{"name":ename,"planned_start":ps.strftime("%Y-%m-%d"),"planned_end":pe.strftime("%Y-%m-%d"),"actual_start":eas.strftime("%Y-%m-%d") if eas else "","actual_end":eae.strftime("%Y-%m-%d") if eae else "","status":estatus,"weight":str(eweight),"material_status":emat,"dependency_id":dep_map.get(edep,""),"delay_reason":edelay if edelay!="Tidak Ada" else ""})
-                                    sync_milestone_to_site(selected_site)
-                                    st.success("✅ Diupdate!"); st.rerun()
-                            with b2:
-                                if st.form_submit_button("🗑️ Hapus",type="secondary"):
-                                    delete_row_by_id("milestones",sel)
-                                    sync_milestone_to_site(selected_site)
-                                    st.warning("🗑️ Dihapus!"); st.rerun()
-    
-    # ===== TAB 5: IMPORT =====
-    with tab5:
-        st.subheader("📥 Import CSV")
-        if is_all: st.warning("⚠️ Pilih site spesifik dulu!")
-        else:
-            template=pd.DataFrame({"name":["Pondasi"],"planned_start":[today_str()],"planned_end":[today_str()],"weight":[10],"status":["PENDING"],"material_status":["Belum Dicek"],"delay_reason":[""]})
-            st.download_button("📥 Template",template.to_csv(index=False),"template_ms.csv","text/csv")
-            up=st.file_uploader("Upload CSV",type=["csv"],key="ms_csv")
-            if up:
-                idf=pd.read_csv(up); st.dataframe(idf)
-                if st.button("🚀 Import",type="primary"):
-                    count=0
-                    for _,r in idf.iterrows():
-                        insert_row("milestones",{"id":generate_id(),"project_id":selected_site,"name":str(r.get("name","")),"planned_start":str(r.get("planned_start",today_str())),"planned_end":str(r.get("planned_end",today_str())),"weight":str(r.get("weight",10)),"status":str(r.get("status","PENDING")),"material_status":str(r.get("material_status","Belum Dicek")),"delay_reason":str(r.get("delay_reason",""))})
-                        count+=1
-                    sync_milestone_to_site(selected_site)
-                    st.success(f"✅ {count} milestone diimport!"); st.rerun()
+                    done = len(site_ms[site_ms["status"] == "DONE"])
+                    total = len(site_ms)
+                    st.progress(done/total if total > 0 else 0)
 
-if __name__=="__main__":
+    # ===== TAB 2: TAMBAH MANUAL =====
+    with tab2:
+        if is_all: st.warning("⚠️ Pilih site spesifik dulu!")
+        else:
+            with st.form("add_ms"):
+                name = st.text_input("Nama Milestone")
+                c1, c2 = st.columns(2)
+                ps = c1.date_input("Rencana Mulai")
+                pe = c2.date_input("Rencana Selesai")
+                weight = st.number_input("Bobot %", 0.0, 100.0, 5.0)
+                status = st.selectbox("Status", ["PENDING", "ONGOING", "DONE", "DELAYED"])
+                if st.form_submit_button("💾 Simpan"):
+                    insert_row("milestones", {
+                        "id": generate_id(), "project_id": selected_site, "name": name,
+                        "planned_start": ps.strftime("%Y-%m-%d"), "planned_end": pe.strftime("%Y-%m-%d"),
+                        "weight": str(weight), "status": status
+                    })
+                    sync_milestone_to_site(selected_site)
+                    st.success("Berhasil ditambah!"); st.rerun()
+
+    # ===== TAB 3: TEMPLATE TOWER (Fitur Andalan Kamu) =====
+    with tab3:
+        if is_all: st.warning("⚠️ Pilih site spesifik dulu!")
+        else:
+            st.subheader("🚀 Auto-Generate Template Tower")
+            c1, c2 = st.columns(2)
+            start_date = c1.date_input("Tanggal Mulai Project", value=datetime.now().date())
+            duration = c2.number_input("Durasi rata-rata per task (hari)", 1, 30, 3)
+            phases = st.multiselect("Pilih Fase:", list(TOWER_TEMPLATE.keys()), default=list(TOWER_TEMPLATE.keys()))
+            
+            if st.button("🚀 Generate Semua Task"):
+                curr = start_date
+                total_tasks = sum(len(TOWER_TEMPLATE[p]) for p in phases)
+                for phase in phases:
+                    for task in TOWER_TEMPLATE[phase]:
+                        insert_row("milestones", {
+                            "id": generate_id(),
+                            "project_id": selected_site,
+                            "name": f"[{phase}] {task}",
+                            "planned_start": curr.strftime("%Y-%m-%d"),
+                            "planned_end": (curr + timedelta(days=duration-1)).strftime("%Y-%m-%d"),
+                            "weight": str(round(100/total_tasks, 1)),
+                            "status": "PENDING"
+                        })
+                        curr += timedelta(days=duration)
+                sync_milestone_to_site(selected_site)
+                st.success("Template Berhasil di-generate!"); st.rerun()
+
+    # ===== TAB 4: EDIT & DELETE =====
+    with tab4:
+        if is_all: st.warning("⚠️ Pilih site spesifik dulu!")
+        else:
+            ms_df = read_sheet("milestones")
+            site_ms = ms_df[ms_df["project_id"] == selected_site]
+            if not site_ms.empty:
+                sel_id = st.selectbox("Pilih Milestone:", site_ms["id"].tolist(), 
+                                      format_func=lambda x: site_ms[site_ms["id"]==x]["name"].values[0])
+                ms_data = site_ms[site_ms["id"] == sel_id].iloc[0]
+                with st.form("edit_form"):
+                    enama = st.text_input("Nama", value=ms_data["name"])
+                    estatus = st.selectbox("Status", ["PENDING", "ONGOING", "DONE", "DELAYED"], 
+                                           index=["PENDING", "ONGOING", "DONE", "DELAYED"].index(ms_data["status"]))
+                    if st.form_submit_button("Update"):
+                        update_row("milestones", sel_id, {"name": enama, "status": estatus})
+                        sync_milestone_to_site(selected_site)
+                        st.success("Updated!"); st.rerun()
+                if st.button("🗑️ Hapus Milestone"):
+                    delete_row_by_id("milestones", sel_id)
+                    sync_milestone_to_site(selected_site)
+                    st.warning("Terhapus!"); st.rerun()
+
+    # ===== TAB 5: IMPORT CSV (Fitur yang Kamu Minta) =====
+    with tab5:
+        if is_all: st.warning("⚠️ Pilih site spesifik dulu!")
+        else:
+            st.subheader("📥 Import Milestone via CSV")
+            # Sediakan template download agar user tidak salah format
+            template_df = pd.DataFrame({
+                "name": ["Pondasi", "Erection"],
+                "planned_start": [today_str(), today_str()],
+                "planned_end": [today_str(), today_str()],
+                "weight": [10, 15],
+                "status": ["PENDING", "PENDING"]
+            })
+            st.download_button("📥 Download Template CSV", template_df.to_csv(index=False), "template.csv")
+            
+            up_file = st.file_uploader("Upload File CSV Kamu", type=["csv"])
+            if up_file:
+                df_import = pd.read_csv(up_file)
+                st.write("Preview Data:")
+                st.dataframe(df_import)
+                if st.button("🚀 Konfirmasi Import"):
+                    for _, r in df_import.iterrows():
+                        insert_row("milestones", {
+                            "id": generate_id(),
+                            "project_id": selected_site,
+                            "name": str(r["name"]),
+                            "planned_start": str(r["planned_start"]),
+                            "planned_end": str(r["planned_end"]),
+                            "weight": str(r["weight"]),
+                            "status": str(r["status"])
+                        })
+                    sync_milestone_to_site(selected_site)
+                    st.success(f"Berhasil mengimport {len(df_import)} task!"); st.rerun()
+
+if __name__ == "__main__":
     milestone_page()
