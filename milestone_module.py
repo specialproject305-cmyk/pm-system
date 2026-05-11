@@ -410,7 +410,8 @@ def milestone_page():
                     submitted = st.form_submit_button("💾 Update Data", type="primary")
                     
                     if submitted:
-                        success = update_row("milestones", sel_id, {
+                        # Update data milestone
+                        update_data = {
                             "name": ename,
                             "status": estatus,
                             "weight": str(eweight),
@@ -421,7 +422,24 @@ def milestone_page():
                             "actual_start": safe_date_string(eactual_start) if eactual_start else None,
                             "actual_end": safe_date_string(eactual_end) if eactual_end else None,
                             "delay_reason": edelay_reason
-                        })
+                        }
+                        
+                        success = update_row("milestones", sel_id, update_data)
+                        
+                        if success:
+                            # ✅ TRIGGER OTOMATIS: Cek jika status berubah menjadi DONE
+                            # Kita panggil fungsi sync yang sudah kita buat
+                            try:
+                                from supabase_db import trigger_sync_progress
+                                trigger_sync_progress(selected_site)
+                                st.toast("🔄 Progress site otomatis diperbarui!", icon="🔄")
+                            except Exception as e:
+                                st.warning(f"⚠️ Data terupdate, tapi sync progress manual mungkin diperlukan: {e}")
+                                
+                            st.success("✅ Data berhasil diupdate!")
+                            st.rerun()
+                        else:
+                            st.error("❌ Gagal update data!")
                         
                         if success:
                             sync_milestone_to_site(selected_site)
