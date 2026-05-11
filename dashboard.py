@@ -8,6 +8,18 @@ import time
 import io
 
 # ─────────────────────────────────────────────────────────────
+# 📱 MOBILE FRIENDLY CONFIGURATION
+# ─────────────────────────────────────────────────────────────
+
+# Set page config untuk mobile optimization
+st.set_page_config(
+    page_title="Collocation Dashboard",
+    page_icon="👷",
+    layout="wide",
+    initial_sidebar_state="auto"
+)
+
+# ─────────────────────────────────────────────────────────────
 # 🎨 THEME CONFIGURATION
 # ─────────────────────────────────────────────────────────────
 
@@ -51,7 +63,7 @@ THEMES = {
 }
 
 # ─────────────────────────────────────────────────────────────
-# 💅 CUSTOM CSS
+# 💅 CUSTOM CSS - MOBILE FRIENDLY
 # ─────────────────────────────────────────────────────────────
 
 def inject_custom_css(theme_name="Professional"):
@@ -61,18 +73,35 @@ def inject_custom_css(theme_name="Professional"):
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
     
-    * {{ font-family: 'Inter', sans-serif; }}
+    * {{ 
+        font-family: 'Inter', sans-serif;
+        -webkit-tap-highlight-color: transparent;
+    }}
     
+    /* Main container optimization */
     .stApp {{
         background: linear-gradient(135deg, {theme['bg']} 0%, #ffffff 100%);
     }}
     
+    /* Hide default Streamlit elements for better mobile view */
+    header {{
+        background-color: transparent !important;
+    }}
+    
+    /* Block container padding adjustment */
+    .block-container {{
+        padding-top: 1rem !important;
+        padding-bottom: 0rem !important;
+        max-width: 100% !important;
+    }}
+    
+    /* Header container responsive */
     .header-container {{
         background: linear-gradient(135deg, {theme['primary']} 0%, {theme['secondary']} 100%);
-        padding: 2rem;
+        padding: 1rem;
         border-radius: 20px;
         box-shadow: 0 10px 40px rgba(0,0,0,0.15);
-        margin-bottom: 2rem;
+        margin-bottom: 1rem;
         animation: slideDown 0.6s ease-out;
     }}
     
@@ -84,127 +113,193 @@ def inject_custom_css(theme_name="Professional"):
     .clock-widget {{
         background: rgba(255,255,255,0.15);
         backdrop-filter: blur(10px);
-        padding: 15px;
+        padding: 12px;
         border-radius: 15px;
         text-align: center;
         color: white;
         border: 1px solid rgba(255,255,255,0.2);
-        transition: transform 0.3s ease;
-    }}
-    
-    .clock-widget:hover {{
-        transform: scale(1.05);
+        transition: all 0.3s ease;
     }}
     
     .kpi-card {{
         background: linear-gradient(135deg, {theme['primary']} 0%, {theme['secondary']} 100%);
-        padding: 25px;
-        border-radius: 20px;
+        padding: 1rem;
+        border-radius: 15px;
         color: white;
         text-align: center;
-        box-shadow: 0 8px 30px rgba(0,0,0,0.12);
-        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+        transition: all 0.3s ease;
         animation: fadeInUp 0.6s ease-out;
-        position: relative;
-        overflow: hidden;
+        margin-bottom: 0.75rem;
+        cursor: pointer;
     }}
     
-    .kpi-card:hover {{
-        transform: translateY(-10px) scale(1.02);
-        box-shadow: 0 15px 50px rgba(0,0,0,0.2);
+    .kpi-card:active {{
+        transform: scale(0.98);
     }}
     
     @keyframes fadeInUp {{
-        from {{ opacity: 0; transform: translateY(30px); }}
+        from {{ opacity: 0; transform: translateY(20px); }}
         to {{ opacity: 1; transform: translateY(0); }}
     }}
     
+    /* Button responsive */
     .stButton > button {{
         background: linear-gradient(135deg, {theme['primary']} 0%, {theme['secondary']} 100%);
         color: white;
         border: none;
-        padding: 10px 25px;
-        border-radius: 10px;
+        padding: 0.6rem 1rem;
+        border-radius: 12px;
         font-weight: 600;
         transition: all 0.3s ease;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        width: 100%;
+        font-size: 14px;
     }}
     
-    .stButton > button:hover {{
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+    .stButton > button:active {{
+        transform: scale(0.97);
     }}
     
+    /* Filter container responsive */
     .filter-container {{
         background: white;
-        padding: 20px;
+        padding: 1rem;
         border-radius: 15px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-        margin-bottom: 2rem;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        margin-bottom: 1rem;
         animation: slideIn 0.5s ease-out;
     }}
     
     @keyframes slideIn {{
-        from {{ opacity: 0; transform: translateX(-20px); }}
+        from {{ opacity: 0; transform: translateX(-15px); }}
         to {{ opacity: 1; transform: translateX(0); }}
     }}
     
+    /* Chart container responsive */
     .chart-container {{
         background: white;
-        padding: 20px;
+        padding: 1rem;
         border-radius: 15px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-        margin-bottom: 2rem;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        margin-bottom: 1rem;
         transition: all 0.3s ease;
-    }}
-    
-    .chart-container:hover {{
-        box-shadow: 0 8px 30px rgba(0,0,0,0.12);
     }}
     
     .last-update-badge {{
         background: rgba(255,255,255,0.95);
-        padding: 8px 15px;
+        padding: 6px 12px;
         border-radius: 20px;
-        font-size: 12px;
+        font-size: 11px;
         font-weight: 600;
         color: {theme['primary']};
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         display: inline-flex;
         align-items: center;
         gap: 5px;
-        animation: pulse 2s infinite;
-    }}
-    
-    @keyframes pulse {{
-        0%, 100% {{ opacity: 1; }}
-        50% {{ opacity: 0.7; }}
     }}
     
     .insight-card {{
         background: white;
-        border-left: 5px solid {theme['primary']};
-        padding: 15px;
+        border-left: 4px solid {theme['primary']};
+        padding: 0.75rem;
         border-radius: 10px;
-        margin: 10px 0;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        margin: 0.5rem 0;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         transition: all 0.3s ease;
+        font-size: 13px;
     }}
     
-    .insight-card:hover {{
-        transform: translateX(5px);
-        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-    }}
-    
+    /* Responsive Design - Mobile First */
     @media (max-width: 768px) {{
-        .kpi-card {{ margin-bottom: 15px; }}
-        .header-container {{ padding: 1rem; }}
+        .kpi-card {{
+            margin-bottom: 0.5rem;
+            padding: 0.75rem;
+        }}
+        
+        .kpi-card div[style*="font-size: 48px"] {{
+            font-size: 32px !important;
+            margin-bottom: 5px !important;
+        }}
+        
+        .kpi-card div[style*="font-size: 42px"] {{
+            font-size: 28px !important;
+        }}
+        
+        .kpi-card div[style*="font-size: 14px"] {{
+            font-size: 11px !important;
+        }}
+        
+        .header-container h1 {{
+            font-size: 1.2rem !important;
+        }}
+        
+        .header-container p {{
+            font-size: 0.75rem !important;
+            margin-top: 5px !important;
+        }}
+        
+        .clock-widget {{
+            padding: 8px 12px !important;
+            margin-left: 10px !important;
+        }}
+        
+        .clock-widget div[style*="font-size: 32px"] {{
+            font-size: 20px !important;
+        }}
+        
+        .clock-widget div[style*="font-size: 13px"] {{
+            font-size: 10px !important;
+        }}
+        
+        .filter-container {{
+            padding: 0.75rem !important;
+        }}
+        
+        .chart-container {{
+            padding: 0.75rem !important;
+        }}
+        
+        .stMarkdown h3 {{
+            font-size: 1rem !important;
+            margin-bottom: 0.5rem !important;
+        }}
+        
+        .insight-card h3 {{
+            font-size: 0.9rem !important;
+        }}
+    }}
+    
+    /* Touch-friendly inputs */
+    input, select, textarea {{
+        font-size: 16px !important; /* Prevent zoom on focus in iOS */
+    }}
+    
+    /* Sidebar responsive */
+    @media (max-width: 768px) {{
+        section[data-testid="stSidebar"] {{
+            width: 280px !important;
+        }}
+    }}
+    
+    /* Improve scrollbar for mobile */
+    ::-webkit-scrollbar {{
+        width: 4px;
+        height: 4px;
+    }}
+    
+    ::-webkit-scrollbar-track {{
+        background: #f1f1f1;
+    }}
+    
+    ::-webkit-scrollbar-thumb {{
+        background: {theme['primary']};
+        border-radius: 3px;
     }}
     </style>
     """, unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────────────────────
-# 📊 CHART FUNCTIONS (sama seperti sebelumnya)
+# 📊 CHART FUNCTIONS (Responsive)
 # ─────────────────────────────────────────────────────────────
 
 def create_interactive_progress_chart(filtered, theme):
@@ -219,6 +314,9 @@ def create_interactive_progress_chart(filtered, theme):
     
     hover_col = 'site_name' if 'site_name' in filtered.columns else 'site_id'
     
+    # Responsive height calculation
+    chart_height = min(400, max(250, len(filtered) * 35))
+    
     fig = go.Figure()
     fig.add_trace(go.Bar(
         y=filtered['site_id'],
@@ -227,6 +325,7 @@ def create_interactive_progress_chart(filtered, theme):
         marker=dict(color=colors, line=dict(color='rgba(0,0,0,0.3)', width=1)),
         text=filtered['progress'].apply(lambda x: f'{x:.1f}%'),
         textposition='outside',
+        textfont=dict(size=10),
         hovertext=[f"<b>{filtered[hover_col].iloc[i]}</b><br>Status: {filtered['status'].iloc[i]}<br>PM: {filtered['pm'].iloc[i]}" 
                   for i in range(len(filtered))],
         hovertemplate='<b>%{y}</b><br>%{hovertext}<br>Progress: %{x}%<extra></extra>',
@@ -234,10 +333,10 @@ def create_interactive_progress_chart(filtered, theme):
     ))
     
     fig.update_layout(
-        height=max(350, len(filtered)*45),
-        xaxis=dict(range=[0, 105], title='Progress (%)', gridcolor='rgba(0,0,0,0.1)'),
-        yaxis=dict(title='Site ID', gridcolor='rgba(0,0,0,0.1)'),
-        margin=dict(l=10, r=30, t=20, b=10),
+        height=chart_height,
+        xaxis=dict(range=[0, 105], title='Progress (%)', gridcolor='rgba(0,0,0,0.1)', title_font=dict(size=12)),
+        yaxis=dict(title='Site ID', gridcolor='rgba(0,0,0,0.1)', title_font=dict(size=12), tickfont=dict(size=10)),
+        margin=dict(l=5, r=20, t=20, b=5),
         showlegend=False,
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
@@ -269,10 +368,11 @@ def create_s_curve_with_targets(filtered, theme):
         y=actual_values,
         mode='lines+markers+text',
         name='Actual',
-        line=dict(color=theme['primary'], width=4, shape='spline'),
-        marker=dict(size=12, color=theme['secondary'], line=dict(color='white', width=2)),
+        line=dict(color=theme['primary'], width=3, shape='spline'),
+        marker=dict(size=8, color=theme['secondary'], line=dict(color='white', width=1.5)),
         text=[f'{v:.1f}%' for v in actual_values],
         textposition='top center',
+        textfont=dict(size=9),
         hovertemplate='<b>Actual</b><br>Cumulative: %{y:.1f}%<extra></extra>'
     ))
     
@@ -287,13 +387,14 @@ def create_s_curve_with_targets(filtered, theme):
     ))
     
     fig.update_layout(
-        height=400,
-        yaxis=dict(range=[0, 105], title='Cumulative Sites (%)', gridcolor='rgba(0,0,0,0.1)'),
-        xaxis=dict(title='Progress Threshold', gridcolor='rgba(0,0,0,0.1)'),
+        height=350,
+        yaxis=dict(range=[0, 105], title='Cumulative Sites (%)', gridcolor='rgba(0,0,0,0.1)', title_font=dict(size=12)),
+        xaxis=dict(title='Progress Threshold', gridcolor='rgba(0,0,0,0.1)', title_font=dict(size=12), tickfont=dict(size=10)),
+        margin=dict(l=5, r=5, t=30, b=5),
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
         hovermode='x unified',
-        legend=dict(orientation='h', y=1.05, x=0.5, xanchor='center')
+        legend=dict(orientation='h', y=1.08, x=0.5, xanchor='center', font=dict(size=11))
     )
     
     return fig
@@ -314,6 +415,9 @@ def create_material_comparison_chart(materials_df, theme):
             bar_colors.append(theme['warning'])
         else:
             bar_colors.append(theme['success'])
+    
+    # Responsive height
+    chart_height = min(450, max(300, len(mat_disp) * 30))
     
     fig = go.Figure()
     
@@ -337,13 +441,14 @@ def create_material_comparison_chart(materials_df, theme):
         ))
     
     fig.update_layout(
-        height=max(400, len(mat_disp)*40),
+        height=chart_height,
         barmode='group',
-        xaxis=dict(title='Quantity', gridcolor='rgba(0,0,0,0.1)'),
-        yaxis=dict(title='Material', gridcolor='rgba(0,0,0,0.1)'),
+        xaxis=dict(title='Quantity', gridcolor='rgba(0,0,0,0.1)', title_font=dict(size=12)),
+        yaxis=dict(title='Material', gridcolor='rgba(0,0,0,0.1)', title_font=dict(size=12), tickfont=dict(size=10)),
+        margin=dict(l=5, r=5, t=20, b=5),
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
-        legend=dict(orientation='h', y=1.02, x=0.5, xanchor='center'),
+        legend=dict(orientation='h', y=1.05, x=0.5, xanchor='center', font=dict(size=11)),
         hovermode='closest'
     )
     
@@ -381,11 +486,11 @@ def dashboard_page():
     # Inject custom CSS
     inject_custom_css(st.session_state.theme)
     
-    # ── SIDEBAR CONTROLS ──
+    # ── MOBILE SIDEBAR CONTROLS ──
     with st.sidebar:
         st.markdown("### ⚙️ Dashboard Settings")
         
-        # Theme Selector - FIXED
+        # Theme Selector
         selected_theme = st.selectbox(
             "🎨 Theme:",
             list(THEMES.keys()),
@@ -409,7 +514,7 @@ def dashboard_page():
             st.session_state.last_refresh = datetime.now()
             st.rerun()
         
-        # Display last update time - FIXED
+        # Display last update time
         st.markdown("---")
         st.markdown("### ⏰ Last Update")
         st.markdown(f"""
@@ -421,7 +526,7 @@ def dashboard_page():
         
         st.divider()
         
-        # Export Options - FIXED
+        # Export Options
         st.markdown("### 📥 Export Data")
         
         # Button Export Excel
@@ -466,35 +571,35 @@ def dashboard_page():
             st.success("✅ Data berhasil di-refresh!")
             st.rerun()
     
-        # ── MAIN CONTENT ──
+    # ── MAIN CONTENT ──
     now = datetime.now()
     
-    # Enhanced Header - SATU KOTAK, WARNA TERLIHAT
+    # Enhanced Header - Mobile Friendly
     st.markdown(f"""
-    <div class='header-container' style='display: flex; justify-content: space-between; align-items: center; padding: 1.5rem 2rem;'>
+    <div class='header-container' style='display: flex; justify-content: space-between; align-items: center; padding: 1rem;'>
         <div style='flex: 1;'>
-            <h1 style='margin:0; color: #ffffff; font-size:2rem; font-weight:700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;'>
-                👷 Dashboard Collocation Project
+            <h1 style='margin:0; color: #ffffff; font-size: 1.3rem; font-weight:700;'>
+                👷 Collocation Project
             </h1>
-            <p style='margin:80px 0 0 0; color: rgba(255,255,255,0.95); font-size:0.95rem; font-weight:500;'>
+            <p style='margin:5px 0 0 0; color: rgba(255,255,255,0.95); font-size: 0.8rem; font-weight:500;'>
                 Real-time monitoring
             </p>
         </div>
-        <div style='background: rgba(255,255,255,0.25); padding: 15px 25px; border-radius: 12px; text-align: center; backdrop-filter: blur(10px); border: 2px solid rgba(255,255,255,0.3); margin-left: 20px;'>
-            <div style='color: #ffffff; font-size: 13px; font-weight: 600; margin-bottom: 5px;'>
-                📅 {now.strftime('%A, %d %B %Y')}
+        <div class='clock-widget' style='background: rgba(255,255,255,0.25); padding: 10px 15px; border-radius: 12px; text-align: center; backdrop-filter: blur(10px); margin-left: 10px;'>
+            <div style='color: #ffffff; font-size: 11px; font-weight: 600; margin-bottom: 3px;'>
+                📅 {now.strftime('%d/%m/%Y')}
             </div>
-            <div style='color: #ffffff; font-size: 32px; font-weight: 700; line-height: 1;'>
-                🕐 {now.strftime('%H:%M:%S')}
+            <div style='color: #ffffff; font-size: 20px; font-weight: 700; line-height: 1;'>
+                🕐 {now.strftime('%H:%M')}
             </div>
-            <div style='color: rgba(255,255,255,0.9); font-size: 11px; margin-top: 3px; font-weight: 500;'>
+            <div style='color: rgba(255,255,255,0.9); font-size: 9px; margin-top: 2px; font-weight: 500;'>
                 WIB
             </div>
         </div>
     </div>
     """, unsafe_allow_html=True)
     
-    st.markdown("---")
+    st.markdown("<hr style='margin: 0.5rem 0;'>", unsafe_allow_html=True)
     
     # ── LOAD DATA WITH TIMESTAMP UPDATE ──
     try:
@@ -550,30 +655,30 @@ def dashboard_page():
             if c in materials_df.columns:
                 materials_df[c] = pd.to_numeric(materials_df[c], errors='coerce').fillna(0)
     
-    # ── FILTERS ──
+    # ── FILTERS (Mobile friendly - stacked on mobile) ──
     st.markdown("<div class='filter-container'>", unsafe_allow_html=True)
     st.markdown("### 🔍 Filter Data")
     
-    col_f1, col_f2, col_f3, col_f4 = st.columns([2, 2, 2, 1])
+    # Responsive column layout
+    col_f1, col_f2 = st.columns(2)
     
     with col_f1:
         pm_list = df['pm'].dropna().unique().tolist() if not df.empty and 'pm' in df.columns else []
-        filter_pm = st.multiselect("👤 Filter PM:", pm_list, default=[], placeholder="Semua PM")
+        filter_pm = st.multiselect("👤 PM:", pm_list, default=[], placeholder="Semua PM")
     
     with col_f2:
         vendor_list = df['vendor'].dropna().unique().tolist() if not df.empty and 'vendor' in df.columns else []
-        filter_vendor = st.multiselect("🏢 Filter Vendor:", vendor_list, default=[], placeholder="Semua Vendor")
+        filter_vendor = st.multiselect("🏢 Vendor:", vendor_list, default=[], placeholder="Semua Vendor")
     
-    with col_f3:
-        try:
-            default_start = date.today() - timedelta(days=30)
-            date_range = st.date_input("📅 Periode:", value=(default_start, date.today()), max_value=date.today())
-        except:
-            date_range = (date.today() - timedelta(days=30), date.today())
+    # Date filter on new row
+    try:
+        default_start = date.today() - timedelta(days=30)
+        date_range = st.date_input("📅 Periode:", value=(default_start, date.today()), max_value=date.today())
+    except:
+        date_range = (date.today() - timedelta(days=30), date.today())
     
-    with col_f4:
-        st.markdown("<br>", unsafe_allow_html=True)
-        apply_filter = st.button("🔄 Apply", type="primary", use_container_width=True)
+    # Apply button
+    apply_filter = st.button("🔄 Terapkan Filter", type="primary", use_container_width=True)
     
     st.markdown("</div>", unsafe_allow_html=True)
     
@@ -585,9 +690,9 @@ def dashboard_page():
         if filter_vendor and 'vendor' in filtered.columns:
             filtered = filtered[filtered['vendor'].isin(filter_vendor)]
     
-    st.markdown("---")
+    st.markdown("<hr style='margin: 0.5rem 0;'>", unsafe_allow_html=True)
     
-    # ── KPI CARDS ──
+    # ── KPI CARDS (2x2 grid for mobile) ──
     total_sites = len(filtered)
     avg_progress = filtered['progress'].mean() if not filtered.empty and 'progress' in filtered.columns else 0
     
@@ -605,14 +710,15 @@ def dashboard_page():
     
     theme = THEMES[st.session_state.theme]
     
-    col1, col2, col3, col4 = st.columns(4)
+    # 2x2 grid for mobile
+    col1, col2 = st.columns(2)
     
     with col1:
         st.markdown(f"""
         <div class='kpi-card' style='background: linear-gradient(135deg, {theme['primary']} 0%, {theme['secondary']} 100%);'>
-            <div style='font-size: 48px; margin-bottom: 10px;'>📁</div>
-            <div style='font-size: 42px; font-weight: bold;'>{total_sites}</div>
-            <div style='font-size: 14px; opacity: 0.9;'>Total Site</div>
+            <div style='font-size: 32px; margin-bottom: 5px;'>📁</div>
+            <div style='font-size: 28px; font-weight: bold;'>{total_sites}</div>
+            <div style='font-size: 11px; opacity: 0.9;'>Total Site</div>
         </div>
         """, unsafe_allow_html=True)
     
@@ -620,131 +726,128 @@ def dashboard_page():
         prog_color = theme['success'] if avg_progress >= 70 else (theme['warning'] if avg_progress >= 40 else theme['danger'])
         st.markdown(f"""
         <div class='kpi-card' style='background: linear-gradient(135deg, {prog_color} 0%, {theme['info']} 100%);'>
-            <div style='font-size: 48px; margin-bottom: 10px;'>📈</div>
-            <div style='font-size: 42px; font-weight: bold;'>{avg_progress:.1f}%</div>
-            <div style='font-size: 14px; opacity: 0.9;'>Avg Progress</div>
+            <div style='font-size: 32px; margin-bottom: 5px;'>📈</div>
+            <div style='font-size: 28px; font-weight: bold;'>{avg_progress:.1f}%</div>
+            <div style='font-size: 11px; opacity: 0.9;'>Avg Progress</div>
         </div>
         """, unsafe_allow_html=True)
+    
+    col3, col4 = st.columns(2)
     
     with col3:
         st.markdown(f"""
         <div class='kpi-card' style='background: linear-gradient(135deg, {theme['danger']} 0%, #c0392b 100%);'>
-            <div style='font-size: 48px; margin-bottom: 10px;'>⚠️</div>
-            <div style='font-size: 42px; font-weight: bold;'>{delayed_ms}</div>
-            <div style='font-size: 14px; opacity: 0.9;'>MS Terlambat</div>
+            <div style='font-size: 32px; margin-bottom: 5px;'>⚠️</div>
+            <div style='font-size: 28px; font-weight: bold;'>{delayed_ms}</div>
+            <div style='font-size: 11px; opacity: 0.9;'>MS Terlambat</div>
         </div>
         """, unsafe_allow_html=True)
     
     with col4:
         st.markdown(f"""
         <div class='kpi-card' style='background: linear-gradient(135deg, {theme['warning']} 0%, #f39c12 100%);'>
-            <div style='font-size: 48px; margin-bottom: 10px;'>🔴</div>
-            <div style='font-size: 42px; font-weight: bold;'>{critical_mat}</div>
-            <div style='font-size: 14px; opacity: 0.9;'>Mat. Kritis</div>
+            <div style='font-size: 32px; margin-bottom: 5px;'>🔴</div>
+            <div style='font-size: 28px; font-weight: bold;'>{critical_mat}</div>
+            <div style='font-size: 11px; opacity: 0.9;'>Mat. Kritis</div>
         </div>
         """, unsafe_allow_html=True)
     
-    st.markdown("---")
+    st.markdown("<hr style='margin: 0.5rem 0;'>", unsafe_allow_html=True)
     
-    # ── ROW 1: PROGRESS BAR + S-CURVE ──
-    col_left, col_right = st.columns([1, 1])
+    # ── ROW 1: PROGRESS BAR + S-CURVE (Stacked on mobile) ──
+    st.markdown("<div class='chart-container'>", unsafe_allow_html=True)
+    st.markdown("### 📊 Progress per Site")
     
-    with col_left:
-        st.markdown("<div class='chart-container'>", unsafe_allow_html=True)
-        st.markdown("### 📊 Progress per Site")
-        
-        if not filtered.empty:
-            fig_progress = create_interactive_progress_chart(filtered, theme)
-            if fig_progress:
-                st.plotly_chart(fig_progress, use_container_width=True)
-        else:
-            st.info("📋 Tidak ada data.")
-        
-        st.markdown("</div>", unsafe_allow_html=True)
+    if not filtered.empty:
+        fig_progress = create_interactive_progress_chart(filtered, theme)
+        if fig_progress:
+            st.plotly_chart(fig_progress, use_container_width=True, config={'displayModeBar': False})
+    else:
+        st.info("📋 Tidak ada data.")
     
-    with col_right:
-        st.markdown("<div class='chart-container'>", unsafe_allow_html=True)
-        st.markdown("### 📈 S-Curve Progress")
-        
-        if not filtered.empty:
-            fig_scurve = create_s_curve_with_targets(filtered, theme)
-            if fig_scurve:
-                st.plotly_chart(fig_scurve, use_container_width=True)
-        else:
-            st.info("📋 Tidak ada data.")
-        
-        st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
     
-    st.markdown("---")
+    st.markdown("<div class='chart-container'>", unsafe_allow_html=True)
+    st.markdown("### 📈 S-Curve Progress")
     
-    # ── ROW 2: MATERIAL + WEEKLY ──
-    col_left2, col_right2 = st.columns([1, 1])
+    if not filtered.empty:
+        fig_scurve = create_s_curve_with_targets(filtered, theme)
+        if fig_scurve:
+            st.plotly_chart(fig_scurve, use_container_width=True, config={'displayModeBar': False})
+    else:
+        st.info("📋 Tidak ada data.")
     
-    with col_left2:
-        st.markdown("<div class='chart-container'>", unsafe_allow_html=True)
-        st.markdown("### 📦 Material: Kebutuhan vs Stok")
-        
-        if not materials_df.empty:
-            fig_material = create_material_comparison_chart(materials_df, theme)
-            if fig_material:
-                st.plotly_chart(fig_material, use_container_width=True)
-        else:
-            st.info("📋 Tidak ada data material.")
-        
-        st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
     
-    with col_right2:
-        st.markdown("<div class='chart-container'>", unsafe_allow_html=True)
-        st.markdown("### 📊 Progress per Minggu")
-        
-        if not milestones_df.empty and 'planned_end' in milestones_df.columns:
-            try:
-                milestones_df['week'] = pd.to_datetime(milestones_df['planned_end'], errors='coerce').dt.strftime('%Y-W%W')
-                weekly = milestones_df.groupby('week').agg(
-                    ms_done=('status', lambda x: (x=='DONE').sum()),
-                    ms_delayed=('status', lambda x: (x=='DELAYED').sum())
-                ).reset_index().tail(12)
-                
-                if not weekly.empty:
-                    fig_weekly = go.Figure()
-                    fig_weekly.add_trace(go.Bar(
-                        name='MS Selesai',
-                        x=weekly['week'],
-                        y=weekly['ms_done'],
-                        marker=dict(color=theme['success'])
-                    ))
-                    fig_weekly.add_trace(go.Bar(
-                        name='MS Terlambat',
-                        x=weekly['week'],
-                        y=weekly['ms_delayed'],
-                        marker=dict(color=theme['danger'])
-                    ))
-                    fig_weekly.update_layout(
-                        height=350,
-                        barmode='group',
-                        plot_bgcolor='rgba(0,0,0,0)',
-                        paper_bgcolor='rgba(0,0,0,0)',
-                        legend=dict(orientation='h', y=1.02),
-                        xaxis=dict(gridcolor='rgba(0,0,0,0.1)'),
-                        yaxis=dict(gridcolor='rgba(0,0,0,0.1)')
-                    )
-                    st.plotly_chart(fig_weekly, use_container_width=True)
-            except:
-                st.info("ℹ️ Grafik mingguan tidak dapat ditampilkan")
-        
-        st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("<hr style='margin: 0.5rem 0;'>", unsafe_allow_html=True)
     
-    st.markdown("---")
+    # ── ROW 2: MATERIAL + WEEKLY (Stacked on mobile) ──
+    st.markdown("<div class='chart-container'>", unsafe_allow_html=True)
+    st.markdown("### 📦 Material: Kebutuhan vs Stok")
     
-    # ── MINI INSIGHTS ──
+    if not materials_df.empty:
+        fig_material = create_material_comparison_chart(materials_df, theme)
+        if fig_material:
+            st.plotly_chart(fig_material, use_container_width=True, config={'displayModeBar': False})
+    else:
+        st.info("📋 Tidak ada data material.")
+    
+    st.markdown("</div>", unsafe_allow_html=True)
+    
+    st.markdown("<div class='chart-container'>", unsafe_allow_html=True)
+    st.markdown("### 📊 Progress per Minggu")
+    
+    if not milestones_df.empty and 'planned_end' in milestones_df.columns:
+        try:
+            milestones_df['week'] = pd.to_datetime(milestones_df['planned_end'], errors='coerce').dt.strftime('%Y-W%W')
+            weekly = milestones_df.groupby('week').agg(
+                ms_done=('status', lambda x: (x=='DONE').sum()),
+                ms_delayed=('status', lambda x: (x=='DELAYED').sum())
+            ).reset_index().tail(12)
+            
+            if not weekly.empty:
+                fig_weekly = go.Figure()
+                fig_weekly.add_trace(go.Bar(
+                    name='MS Selesai',
+                    x=weekly['week'],
+                    y=weekly['ms_done'],
+                    marker=dict(color=theme['success'])
+                ))
+                fig_weekly.add_trace(go.Bar(
+                    name='MS Terlambat',
+                    x=weekly['week'],
+                    y=weekly['ms_delayed'],
+                    marker=dict(color=theme['danger'])
+                ))
+                fig_weekly.update_layout(
+                    height=300,
+                    barmode='group',
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    legend=dict(orientation='h', y=1.08, font=dict(size=10)),
+                    xaxis=dict(gridcolor='rgba(0,0,0,0.1)', tickangle=45),
+                    yaxis=dict(gridcolor='rgba(0,0,0,0.1)'),
+                    margin=dict(l=5, r=5, t=30, b=50)
+                )
+                st.plotly_chart(fig_weekly, use_container_width=True, config={'displayModeBar': False})
+        except:
+            st.info("ℹ️ Grafik mingguan tidak dapat ditampilkan")
+    else:
+        st.info("📋 Tidak ada data milestone.")
+    
+    st.markdown("</div>", unsafe_allow_html=True)
+    
+    st.markdown("<hr style='margin: 0.5rem 0;'>", unsafe_allow_html=True)
+    
+    # ── MINI INSIGHTS (Stacked on mobile) ──
     st.markdown("### 🤖 Mini Insights")
     
-    col_m1, col_m2, col_m3 = st.columns(3)
+    col_m1, col_m2 = st.columns(2)
     
     with col_m1:
         st.markdown(f"""
         <div class='insight-card' style='border-left-color: {theme['warning']};'>
-            <h3 style='margin-top:0; color: {theme['warning']};'>⚠️ Site Perlu Perhatian</h3>
+            <strong style='color: {theme['warning']};'>⚠️ Site Perlu Perhatian</strong>
         </div>
         """, unsafe_allow_html=True)
         
@@ -767,7 +870,7 @@ def dashboard_page():
     with col_m2:
         st.markdown(f"""
         <div class='insight-card' style='border-left-color: {theme['danger']};'>
-            <h3 style='margin-top:0; color: {theme['danger']};'>📦 Top Material Kritis</h3>
+            <strong style='color: {theme['danger']};'>📦 Material Kritis</strong>
         </div>
         """, unsafe_allow_html=True)
         
@@ -787,24 +890,24 @@ def dashboard_page():
             except:
                 st.info("ℹ️ Data material tidak konsisten")
     
-    with col_m3:
-        st.markdown(f"""
-        <div class='insight-card' style='border-left-color: {theme['info']};'>
-            <h3 style='margin-top:0; color: {theme['info']};'>🎯 Rekomendasi Cepat</h3>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        try:
-            if delayed_ms > 5:
-                st.markdown("<div class='insight-card'>⚠️ Banyak milestone terlambat</div>", unsafe_allow_html=True)
-            if critical_mat > 3:
-                st.markdown("<div class='insight-card'>📦 >3 material kritis</div>", unsafe_allow_html=True)
-            if delayed_sites > 0:
-                st.markdown(f"<div class='insight-card'>🔴 {delayed_sites} site terlambat</div>", unsafe_allow_html=True)
-            if total_sites > 0 and on_track/total_sites >= 0.8:
-                st.markdown("<div class='insight-card'>✅ Performa bagus!</div>", unsafe_allow_html=True)
-        except:
-            pass
+    # Third insight on new row
+    st.markdown(f"""
+    <div class='insight-card' style='border-left-color: {theme['info']}; margin-top: 0.5rem;'>
+        <strong style='color: {theme['info']};'>🎯 Rekomendasi Cepat</strong>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    try:
+        if delayed_ms > 5:
+            st.markdown("<div class='insight-card'>⚠️ Banyak milestone terlambat</div>", unsafe_allow_html=True)
+        if critical_mat > 3:
+            st.markdown("<div class='insight-card'>📦 >3 material kritis</div>", unsafe_allow_html=True)
+        if delayed_sites > 0:
+            st.markdown(f"<div class='insight-card'>🔴 {delayed_sites} site terlambat</div>", unsafe_allow_html=True)
+        if total_sites > 0 and on_track/total_sites >= 0.8:
+            st.markdown("<div class='insight-card'>✅ Performa bagus!</div>", unsafe_allow_html=True)
+    except:
+        pass
 
 if __name__ == "__main__":
     dashboard_page()
