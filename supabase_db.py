@@ -101,11 +101,19 @@ def read_sheet_no_cache(table_name: str) -> pd.DataFrame:
 
 
 def read_all_sheets(table_names: Optional[List[str]] = None) -> Dict[str, pd.DataFrame]:
-    """Baca multiple tabel sekaligus."""
+    """Membaca multiple tabel sekaligus."""
     if table_names is None:
-        table_names = ['projects', 'milestones', 'materials', 'inventory_transactions']
+        table_names = [
+            'projects', 'milestones', 'materials', 
+            'inventory_transactions', 'chat_messages', 
+            'notifications', 'ai_insights', 'users'
+        ]
     
-    return {t: read_sheet(t) for t in table_names}
+    result = {}
+    for t in table_names:
+        result[t] = read_sheet(t)  # Pakai cached version
+    return result
+    
 
 # ─────────────────────────────────────────────────────────────
 # ✍️ WRITE FUNCTIONS (dengan return value + error handling)
