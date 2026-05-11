@@ -132,11 +132,11 @@ def generate_ai_pdf(site_name, health_score, avg_progress, on_track, total_sites
             # Fallback: skip baris bermasalah, lanjutkan
             pdf.set_x(pdf.l_margin)
     
-    # ── Return PDF Bytes ──
+    # ── Return PDF Bytes (fpdf2 compatible) ──
     try:
-        return pdf.output(dest='S').encode('latin-1')
+        return pdf.output(dest='S')
     except Exception as e:
-        raise Exception(f"Gagal encode PDF: {str(e)}")
+        raise Exception(f"Gagal generate PDF: {str(e)}")
     
     # 1. Executive Summary
     pdf.set_font('Helvetica', 'B', 12)
