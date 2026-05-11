@@ -453,40 +453,45 @@ def milestone_page():
                     # Ganti bagian if submitted: di TAB 4 dengan kode ini:
 
                     if submitted:
-                        success = update_row("milestones", sel_id, {
-                            "name": ename,
-                            "status": estatus,
-                            "weight": str(eweight),
-                            "assigned_to": eassigned,
-                            "sla_days": esla,
-                            "planned_start": safe_date_string(eplanned_start),
-                            "planned_end": safe_date_string(eplanned_end),
-                            "actual_start": safe_date_string(eactual_start) if eactual_start else None,
-                            "actual_end": safe_date_string(eactual_end) if eactual_end else None,
-                            "delay_reason": edelay_reason
-                        })
-                        
-                        if success:
-                            # ✅ AUTO-SCHEDULE SHIFTING LOGIC
-                            shifted_count = 0
-                            if eactual_end:
-                                try:
-                                    actual_dt = pd.to_datetime(eactual_end)
-                                    planned_dt = pd.to_datetime(eplanned_end)
-                                    delay_days = (actual_dt - planned_dt).days
-                                    
-                                    if delay_days > 0:
-                                        shifted_count = cascade_schedule_shift(selected_site, eplanned_end, delay_days)
-                                        if shifted_count > 0:
-                                            st.info(f"🔄 {shifted_count} task berikutnya otomatis di-shift +{delay_days} hari!")
-                                except Exception as e:
-                                    st.warning(f"⚠️ Kalkulasi shift jadwal gagal: {e}")
+                        try:
+                            # Siapkan data update
+                            update_data = {
+                                "name": ename,
+                                "status": estatus,
+                                "weight": str(eweight),
+                                "assigned_to": eassigned,
+                                "sla_days": esla,
+                                "planned_start": safe_date_string(eplanned_start),
+                                "planned_end": safe_date_string(eplanned_end),
+                                "actual_start": safe_date_string(eactual_start) if eactual_start else None,
+                                "actual_end": safe_date_string(eactual_end) if eactual_end else None,
+                                "delay_reason": edelay_reason
+                            }
                             
-                            sync_milestone_to_site(selected_site)
-                            st.success("✅ Data berhasil diupdate!")
-                            st.rerun()
-                        else:
-                            st.error("❌ Gagal update data!")
+                            # Eksekusi update
+                            success = update_row("milestones", sel_id, update_data)
+                            
+                            if success:
+                                # ✅ Tampilkan notifikasi ganda (toast + success) agar lebih terlihat
+                                st.toast("✅ Milestone berhasil diupdate!", icon="🎉")
+                                st.success("✅ Data berhasil diupdate!")
+                                
+                                # Auto-sync progress site
+                                sync_milestone_to_site(selected_site)
+                                
+                                # Clear cache agar data fresh
+                                st.cache_data.clear()
+                                
+                                # Beri jeda kecil agar user lihat notifikasi sebelum rerun
+                                time.sleep(0.5)
+                                st.rerun()
+                            else:
+                                st.error("❌ Gagal update: Database tidak merespon")
+                                st.info("💡 Cek koneksi internet atau permission database")
+                                
+                        except Exception as e:
+                            st.error(f"💥 Error: {str(e)[:100]}")
+                            st.exception(e)  # Tampilkan detail error untuk debugging
                 
                 # Tombol hapus
                 st.divider()
