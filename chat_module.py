@@ -75,6 +75,81 @@ def chat_notif_page():
                 
     except Exception:
         pass # Gagal otomatisasi tidak mengganggu UI utama
+
+    # ==========================================
+    # 📊 AUTOMASI 2: WEEKLY REPORT BOT (Setiap Senin 1x)
+    # ==========================================
+    try:
+        today = date.today()
+        # Cek apakah hari Senin
+        if today.weekday() == 0:
+            # Tentukan awal minggu ini (Senin)
+            week_start = today - timedelta(days=today.weekday())
+            week_start_str = week_start.strftime('%Y-%m-%d')
+            
+            # Cek apakah bot sudah kirim laporan minggu ini
+            report_sent_this_week = False
+            if not messages.empty and 'created_at' in messages.columns:
+                bot_reports = messages[
+                    (messages['sender'] == 'Weekly Report Bot') & 
+                    (messages['created_at'] >= week_start_str)
+                ]
+                if not bot_reports.empty:
+                    report_sent_this_week = True
+            
+            # Jika belum, generate & kirim laporan
+            if not report_sent_this_week:
+                # 1. Hitung Metrik
+                total_sites = len(sites_df)
+                avg_prog = pd.to_numeric(sites_df.get('progress', pd.Series(dtype=float)), errors='coerce').mean() if 'progress' in sites_df.columns else 0
+                on_track = len(sites_df[sites_df['status']=='ON_TRACK']) if 'status' in sites_df.columns else 0
+                delayed = len(sites_df[sites_df['status'].isin(['DELAYED','CRITICAL'])]) if 'status' in sites_df.columns else 0
+                
+                # Milestone DONE (cek actual_end 7 hari terakhir, fallback ke total DONE jika kosong)
+                recent_done = 0
+                if not ms_df.empty:
+                    if 'actual_end' in ms_df.columns:
+                        ms_df['ae_dt'] = pd.to_datetime(ms_df['actual_end'], errors='coerce')
+                        recent_done = len(ms_df[(ms_df['status']=='DONE') & (ms_df['ae_dt'] >= week_start)])
+                    if recent_done == 0:
+                        recent_done = len(ms_df[ms_df['status']=='DONE'])
+                
+                # Top Delay Reason
+                top_delay = "-"
+                if not ms_df.empty and 'delay_reason' in ms_df.columns:
+                    delays = ms_df[ms_df['delay_reason'].notna() & (ms_df['delay_reason'] != 'Tidak Ada')]
+                    if not delays.empty:
+                        top_delay = delays['delay_reason'].value_counts().index[0]
+                
+                # Material Kritis
+                mat_alerts = 0
+                if not mat_df.empty and 'current_stock' in mat_df.columns and 'min_stock' in mat_df.columns:
+                    mat_df['cur'] = pd.to_numeric(mat_df['current_stock'], errors='coerce').fillna(0)
+                    mat_df['min'] = pd.to_numeric(mat_df['min_stock'], errors='coerce').fillna(0)
+                    mat_alerts = len(mat_df[mat_df['cur'] < mat_df['min']])
+                
+                # 2. Format Pesan
+                report_msg = f"""🤖 [AUTO] 📊 **LAPORAN MINGGUAN** ({today.strftime('%d %b %Y')})
+📁 Total Site: {total_sites} | 🟢 On Track: {on_track} | 🔴 Delayed: {delayed}
+📈 Rata-rata Progress: {avg_prog:.1f}%
+✅ Milestone Selesai (Minggu Ini): {recent_done}
+⚠️ Penyebab Delay Utama: {top_delay}
+📦 Material Kritis: {mat_alerts} item
+💡 *Rekomendasi: Fokus percepat {delayed} site terlambat & reorder material kritis.*
+"""
+                # 3. Kirim ke Global Chat
+                insert_row('chat_messages', {
+                    'id': generate_id(), 
+                    'site_id': 'GLOBAL', 
+                    'sender': 'Weekly Report Bot',
+                    'message': report_msg, 
+                    'created_at': now_str()
+                })
+                st.toast("📊 Laporan mingguan otomatis dikirim ke Global Chat!", icon="📈")
+                
+    except Exception:
+        pass # Gagal generate laporan tidak mengganggu UI
+    # ==========================================
     # ==========================================
 
     # Floating bell notification
