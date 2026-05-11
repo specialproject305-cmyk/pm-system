@@ -466,32 +466,33 @@ def dashboard_page():
             st.success("✅ Data berhasil di-refresh!")
             st.rerun()
     
-    # ── MAIN CONTENT ──
+        # ── MAIN CONTENT ──
     now = datetime.now()
     
-    # Enhanced Header
-    col_header1, col_header2 = st.columns([3, 1])
-    
-    with col_header1:
-        st.markdown(f"""
-        <div class='header-container'>
-            <h1 style='margin:0; color:white; font-size:2.5rem;'>👷 Dashboard Collocation Project</h1>
-            <p style='margin:5px 0 0 0; color:rgba(255,255,255,0.9); font-size:1rem;'>
+    # Enhanced Header - SATU KOTAK, WARNA TERLIHAT
+    st.markdown(f"""
+    <div class='header-container' style='display: flex; justify-content: space-between; align-items: center; padding: 1.5rem 2rem;'>
+        <div style='flex: 1;'>
+            <h1 style='margin:0; color: #ffffff; font-size:2rem; font-weight:700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;'>
+                👷 Dashboard Collocation Project
+            </h1>
+            <p style='margin:5px 0 0 0; color: rgba(255,255,255,0.95); font-size:0.95rem; font-weight:500;'>
                 Real-time monitoring & analytics
             </p>
         </div>
-        """, unsafe_allow_html=True)
-    
-    with col_header2:
-        st.markdown(f"""
-        <div class='clock-widget'>
-            <div style='font-size: 14px;'>📅 {now.strftime('%A, %d %B %Y')}</div>
-            <div style='font-size: 28px; font-weight: bold; margin: 8px 0;'>
+        <div style='background: rgba(255,255,255,0.25); padding: 15px 25px; border-radius: 12px; text-align: center; backdrop-filter: blur(10px); border: 2px solid rgba(255,255,255,0.3); margin-left: 20px;'>
+            <div style='color: #ffffff; font-size: 13px; font-weight: 600; margin-bottom: 5px;'>
+                📅 {now.strftime('%A, %d %B %Y')}
+            </div>
+            <div style='color: #ffffff; font-size: 32px; font-weight: 700; line-height: 1;'>
                 🕐 {now.strftime('%H:%M:%S')}
             </div>
-            <div style='font-size: 11px;'>WIB</div>
+            <div style='color: rgba(255,255,255,0.9); font-size: 11px; margin-top: 3px; font-weight: 500;'>
+                WIB
+            </div>
         </div>
-        """, unsafe_allow_html=True)
+    </div>
+    """, unsafe_allow_html=True)
     
     st.markdown("---")
     
