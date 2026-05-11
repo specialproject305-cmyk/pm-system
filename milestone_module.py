@@ -71,6 +71,47 @@ DELAY_REASONS = ["Tidak Ada", "Material Terlambat", "Cuaca Buruk", "Manpower Kur
 # 🔄 HELPER FUNCTIONS
 # ─────────────────────────────────────────────────────────────
 
+# ─────────────────────────────────────────────────────────────
+# 🔄 AUTO-SCHEDULE SHIFTING HELPER
+# ─────────────────────────────────────────────────────────────
+def cascade_schedule_shift(site_id, new_planned_end, delay_days):
+    """Otomatis geser jadwal task berikutnya jika ada keterlambatan."""
+    if delay_days <= 0 or not new_planned_end:
+        return 0
+    
+    try:
+        ms_df = read_sheet("milestones")
+        if ms_df.empty: 
+            return 0
+            
+        # Konversi tanggal
+        ms_df['ps_dt'] = pd.to_datetime(ms_df['planned_start'], errors='coerce')
+        ms_df['pe_dt'] = pd.to_datetime(ms_df['planned_end'], errors='coerce')
+        ref_date = pd.to_datetime(new_planned_end)
+        
+        # Filter: task di site yang sama, dijadwalkan SETELAH task yang delay, dan belum DONE
+        future_tasks = ms_df[
+            (ms_df['project_id'] == site_id) & 
+            (ms_df['ps_dt'] > ref_date) & 
+            (ms_df['status'] != 'DONE')
+        ]
+        
+        shifted_count = 0
+        for _, t in future_tasks.iterrows():
+            new_ps = t['ps_dt'] + timedelta(days=delay_days)
+            new_pe = t['pe_dt'] + timedelta(days=delay_days)
+            
+            update_row("milestones", t['id'], {
+                "planned_start": safe_date_string(new_ps),
+                "planned_end": safe_date_string(new_pe)
+            })
+            shifted_count += 1
+            
+        return shifted_count
+    except Exception as e:
+        st.warning(f"⚠️ Gagal shift jadwal otomatis: {e}")
+        return 0
+
 def sync_milestone_to_site(site_id):
     """Hitung ulang progress dan status site berdasarkan milestone."""
     try:
