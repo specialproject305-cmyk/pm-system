@@ -8,6 +8,7 @@ from ai_insights import ai_insights_page
 from chat_module import chat_notif_page
 from export_module import export_page
 from settings_page import settings_page
+from kanban_board import kanban_page
 
 st.set_page_config(page_title="PM System", page_icon="🏗️", layout="wide", initial_sidebar_state="expanded")
 
@@ -28,7 +29,7 @@ with st.sidebar:
     st.markdown("---")
     
     menu_options = [
-        "📊 Dashboard", "📁 Site Tracker", "🧱 Milestones",
+        "📊 Dashboard", "📁 Site Tracker", "🧱 Milestones","📋 Kanban Board",
         "📦 Inventory", "🤖 AI Insights", "💬 Chat & Notif", "📄 Export Report"
     ]
     if role == 'admin':
@@ -51,6 +52,7 @@ def main():
     elif menu == "🧱 Milestones":
         if check_permission('editor'): milestone_page()
         else: show_permission_denied()
+    elif menu == "📋 Kanban Board":
     elif menu == "📦 Inventory":
         if check_permission('editor'): inventory_page()
         else: show_permission_denied()
