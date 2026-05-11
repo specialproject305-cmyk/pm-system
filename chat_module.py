@@ -1,18 +1,83 @@
 import streamlit as st
 import pandas as pd
+from datetime import datetime, date
 from supabase_db import read_all_sheets, insert_row, generate_id, now_str, delete_row_by_id
 
 def chat_notif_page():
     st.title("💬 Diskusi & Notifikasi")
     
+    # Load semua data sekali di awal
     all_data = read_all_sheets()
     messages = all_data.get('chat_messages', pd.DataFrame())
     notifs = all_data.get('notifications', pd.DataFrame())
     sites_df = all_data.get('projects', pd.DataFrame())
-    
+    ms_df = all_data.get('milestones', pd.DataFrame())
+    mat_df = all_data.get('materials', pd.DataFrame())
+
     unread = len(notifs[notifs['is_read'] == '0']) if not notifs.empty and 'is_read' in notifs.columns else 0
-    
-    # Floating bell
+
+    # ==========================================
+    # 🤖 AUTOMASI SMART REMINDER BOT (1x/Hari)
+    # ==========================================
+    try:
+        today = date.today()
+        today_str = today.strftime('%Y-%m-%d')
+        
+        # 1. Cek apakah bot sudah kirim reminder hari ini
+        already_sent_today = False
+        if not messages.empty and 'created_at' in messages.columns:
+            bot_msgs_today = messages[
+                (messages['site_id'] == 'GLOBAL') & 
+                (messages['sender'] == 'System Bot') &
+                (messages['created_at'].astype(str).str.startswith(today_str))
+            ]
+            if not bot_msgs_today.empty:
+                already_sent_today = True
+        
+        # 2. Jika belum, scan data & kirim reminder
+        if not already_sent_today:
+            reminders = []
+            
+            # A. Cek Deadline Milestone (Status PENDING/ONGOING, sisa 0-2 hari)
+            if not ms_df.empty and 'planned_end' in ms_df.columns:
+                ms_df['planned_end_dt'] = pd.to_datetime(ms_df['planned_end'], errors='coerce')
+                site_map = dict(zip(sites_df['id'], sites_df['site_name'])) if not sites_df.empty else {}
+                
+                active_ms = ms_df[ms_df['status'].isin(['PENDING', 'ONGOING'])]
+                for _, r in active_ms.iterrows():
+                    if pd.notna(r.get('planned_end_dt')):
+                        days_left = (r['planned_end_dt'].date() - today).days
+                        if 0 <= days_left <= 2:
+                            site_name = site_map.get(r.get('project_id'), 'Site')
+                            pic = r.get('assigned_to', '-')
+                            reminders.append(f"🤖 [AUTO] ⏳ **Deadline Mendekati**: {r['name']} di {site_name} (Sisa {days_left} hari). PIC: {pic}")
+            
+            # B. Cek Stok Material Kritis
+            if not mat_df.empty and 'current_stock' in mat_df.columns and 'min_stock' in mat_df.columns:
+                mat_df['cur'] = pd.to_numeric(mat_df['current_stock'], errors='coerce').fillna(0)
+                mat_df['min'] = pd.to_numeric(mat_df['min_stock'], errors='coerce').fillna(0)
+                critical_mat = mat_df[mat_df['cur'] < mat_df['min']]
+                for _, r in critical_mat.iterrows():
+                    reminders.append(f"🤖 [AUTO] 📦 **Stok Kritis**: {r['name']} (Stok: {int(r['cur'])} < Min: {int(r['min'])}). Segera reorder!")
+            
+            # C. Kirim ke Global Chat
+            if reminders:
+                ts = now_str()
+                for msg in reminders:
+                    insert_row('chat_messages', {
+                        'id': generate_id(), 
+                        'site_id': 'GLOBAL', 
+                        'sender': 'System Bot',
+                        'message': msg, 
+                        'created_at': ts
+                    })
+                st.toast(f"🤖 {len(reminders)} Reminder otomatis dikirim ke Global Chat!", icon="🔔")
+                
+    except Exception:
+        pass # Gagal otomatisasi tidak mengganggu UI utama
+    # ==========================================
+
+    # Floating bell notification
     st.markdown(f"""
     <style>
         .notif-container {{ position: fixed; top: 15px; right: 20px; z-index: 9999; }}
@@ -22,9 +87,9 @@ def chat_notif_page():
     </style>
     <div class="notif-container"><span class="notif-bell">🔔</span><span class="notif-badge">{unread}</span></div>
     """, unsafe_allow_html=True)
-    
+
     tab1, tab2, tab3 = st.tabs(["🌍 Global", "📁 Site Chat", "🔔 Notifications"])
-    
+
     # ===== TAB 1: GLOBAL =====
     with tab1:
         st.subheader("🌍 Global Discussion Room")
@@ -49,7 +114,7 @@ def chat_notif_page():
                 if msg:
                     insert_row("chat_messages", {'id': generate_id(), 'site_id': 'GLOBAL', 'sender': sender, 'message': msg, 'created_at': now_str()})
                     st.rerun()
-    
+
     # ===== TAB 2: SITE CHAT =====
     with tab2:
         st.subheader("📁 Site Discussion")
@@ -72,7 +137,6 @@ def chat_notif_page():
                 
                 if not site_msgs.empty:
                     for _, msg in site_msgs.tail(30).iterrows():
-                        # Cari site name
                         sname = sites_df[sites_df['id']==msg.get('site_id','')]['site_id'].values[0] if not sites_df.empty and msg.get('site_id','') != '' else ''
                         with st.chat_message("user"):
                             c1, c2 = st.columns([15, 1])
@@ -94,7 +158,7 @@ def chat_notif_page():
                         if msg:
                             insert_row("chat_messages", {'id': generate_id(), 'site_id': selected_site, 'sender': sender2, 'message': msg, 'created_at': now_str()})
                             st.rerun()
-    
+
     # ===== TAB 3: NOTIF =====
     with tab3:
         st.subheader("🔔 Notifications")
