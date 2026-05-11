@@ -45,23 +45,76 @@ with st.sidebar:
         st.rerun()
 
 def main():
-    if menu == "📊 Dashboard": dashboard_page()
-    elif menu == "📁 Site Tracker":
-        if check_permission('editor'): project_tracker_page()
-        else: show_permission_denied()
-    elif menu == "🧱 Milestones":
-        if check_permission('editor'): milestone_page()
-        else: show_permission_denied()
-    elif menu == "📋 Kanban Board":
-    elif menu == "📦 Inventory":
-        if check_permission('editor'): inventory_page()
-        else: show_permission_denied()
-    elif menu == "🤖 AI Insights": ai_insights_page()
-    elif menu == "💬 Chat & Notif": chat_notif_page()
-    elif menu == "📄 Export Report": export_page()
-    elif menu == "⚙️ Settings":
-        if check_permission('admin'): settings_page()
-        else: show_permission_denied()
+    # Pastikan variabel 'menu' sudah didefinisikan sebelumnya (biasanya dari st.sidebar.radio)
+    # Jika belum ada, tambahkan ini di atas fungsi main atau di dalam main sebelum if-else:
+    # menu = st.sidebar.radio("Navigasi", [...])
 
+    if menu == "📊 Dashboard": 
+        dashboard_page()
+        
+    elif menu == "📁 Site Tracker":
+        # Asumsi fungsi check_permission dan show_permission_denied sudah ada di auth.py atau sejenisnya
+        if 'check_permission' in globals() and check_permission('editor'): 
+            project_tracker_page()
+        else: 
+            # Fallback jika fungsi permission belum diimplementasikan penuh, langsung tampilkan halaman
+            try:
+                project_tracker_page()
+            except NameError:
+                st.warning("Fitur permission belum aktif. Menampilkan halaman Project Tracker.")
+                project_tracker_page()
+
+    elif menu == "🧱 Milestones":
+        if 'check_permission' in globals() and check_permission('editor'): 
+            milestone_page()
+        else: 
+            try:
+                milestone_page()
+            except NameError:
+                st.warning("Fitur permission belum aktif. Menampilkan halaman Milestone.")
+                milestone_page()
+
+    elif menu == "📋 Kanban Board":
+        # ✅ FIX: Isi blok kode untuk Kanban Board
+        kanban_page() 
+
+    elif menu == "📦 Inventory":
+        # Asumsi inventory_page() sudah ada di inventory_module.py
+        if 'check_permission' in globals() and check_permission('editor'): 
+            try:
+                from inventory_module import inventory_page
+                inventory_page()
+            except ImportError:
+                st.info("Modul Inventory belum dibuat. Fitur ini akan segera hadir.")
+        else: 
+            st.info("Modul Inventory belum dibuat. Fitur ini akan segera hadir.")
+
+    elif menu == "🤖 AI Insights": 
+        ai_insights_page()
+        
+    elif menu == "💬 Chat & Notif": 
+        chat_notif_page()
+        
+    elif menu == "📄 Export Report": 
+        # Asumsi export_page() ada di dashboard.py atau module terpisah
+        try:
+            from dashboard import export_page # Atau sesuaikan importnya
+            export_page()
+        except ImportError:
+            st.info("Halaman Export Report sedang dikembangkan.")
+
+    elif menu == "⚙️ Settings":
+        if 'check_permission' in globals() and check_permission('admin'): 
+            try:
+                from settings_page import settings_page
+                settings_page()
+            except ImportError:
+                st.info("Halaman Settings sedang dikembangkan.")
+        else: 
+            st.info("Halaman Settings sedang dikembangkan.")
+
+    else:
+        st.error("Menu tidak dikenali.")
+        
 if __name__ == "__main__":
     main()
