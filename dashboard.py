@@ -181,7 +181,7 @@ def generate_site_pdf(site_id: str) -> bytes:
 # 📊 EXPORT PAGE
 # ─────────────────────────────────────────────────────────────
 
-def export_page():
+def dashboard_page():
     """Halaman Export Report."""
     st.title("📄 Export Report")
     st.markdown("Generate dan download report dalam format PDF.")
