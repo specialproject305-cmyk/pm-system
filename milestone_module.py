@@ -442,18 +442,21 @@ def milestone_page():
                             success = update_row("milestones", sel_id, update_data)
                             
                             if success:
-                                st.success("✅ Data berhasil diupdate!")
-                                
-                                # Trigger auto-sync
+                                # 1. Sinkronisasi Progress (Sudah ada di fungsi Anda)
                                 try:
                                     sync_milestone_to_site(selected_site)
-                                    st.info("🔄 Progress site otomatis diperbarui")
-                                except Exception as sync_error:
-                                    st.warning(f"⚠️ Data terupdate tapi sync progress gagal: {sync_error}")
+                                    
+                                    # 2. ✅ INI PENTING: Hapus Cache agar data langsung fresh!
+                                    st.cache_data.clear()
+                                    st.toast("🔄 Progress site otomatis diperbarui!", icon="✅")
+                                    
+                                except Exception as sync_err:
+                                    st.warning(f"⚠️ Data terupdate, tapi sync progress gagal: {sync_err}")
                                 
+                                st.success("✅ Data berhasil diupdate!")
                                 st.rerun()
                             else:
-                                st.error("❌ Gagal update data - database tidak merespon")
+                                st.error("❌ Gagal update data!")
                                 st.info("💡 Kemungkinan penyebab:")
                                 st.markdown("""
                                 - Koneksi internet terputus
