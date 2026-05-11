@@ -29,7 +29,7 @@ def get_supabase_client() -> Client:
         # Fallback untuk development local tanpa secrets.toml
         # ⚠️ Hanya untuk testing! Jangan hardcode key di production.
         url = "https://evwvnjwrsnsjrzoyrsum.supabase.co"
-        key = st.secrets.get("SUPABASE_KEY", "") if hasattr(st, "secrets") else ""
+        key = st.secrets.get("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2d3Zuandyc25zanJ6b3lyc3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxNDY3OTEsImV4cCI6MjA5MzcyMjc5MX0.o2YCZVWLrUy2Zi4Yxsmg2kkakhv4wTQTSzJZcfUks6c", "") if hasattr(st, "secrets") else ""
         
         if not key or key == "":
             st.error("🔐 SUPABASE_KEY tidak ditemukan. Silakan tambahkan di Streamlit Cloud → Secrets.")
