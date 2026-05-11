@@ -17,7 +17,7 @@ from io import BytesIO
 
 def generate_ai_pdf(site_name, health_score, avg_progress, on_track, total_sites, 
                    delayed, forecast_end, delay_reasons, summary, pic_stats=None, sla_stats=None):
-    """Generate PDF report dengan BytesIO (tanpa temp file)."""
+    """Generate PDF report - FIXED tanpa emoji."""
     try:
         from fpdf import FPDF
     except ImportError:
@@ -27,12 +27,33 @@ def generate_ai_pdf(site_name, health_score, avg_progress, on_track, total_sites
     pdf.add_page()
     pdf.set_auto_page_break(auto=True, margin=15)
     
+    # Helper function untuk sanitize text (hapus emoji)
+    def sanitize_text(text):
+        """Hapus emoji dan karakter non-ASCII dari text."""
+        if not text:
+            return ""
+        # Hapus emoji dan karakter Unicode non-ASCII
+        import re
+        # Pattern untuk menghapus emoji
+        emoji_pattern = re.compile("["
+            u"\U0001F600-\U0001F64F"  # emoticons
+            u"\U0001F300-\U0001F5FF"  # symbols & pictographs
+            u"\U0001F680-\U0001F6FF"  # transport & map symbols
+            u"\U0001F1E0-\U0001F1FF"  # flags
+            u"\U00002702-\U000027B0"
+            u"\U000024C2-\U0001F251"
+            "]+", flags=re.UNICODE)
+        text = emoji_pattern.sub(r'', text)
+        # Hapus karakter non-ASCII lainnya
+        text = ''.join(char for char in text if ord(char) < 128)
+        return text
+    
     # Header
     pdf.set_font('Helvetica', 'B', 16)
     pdf.cell(0, 10, 'AI Analytics Report', 0, 1, 'C')
     pdf.set_font('Helvetica', 'I', 10)
     pdf.cell(0, 5, f'Generated: {datetime.now().strftime("%d %b %Y, %H:%M")}', 0, 1, 'C')
-    pdf.cell(0, 5, f'Site: {site_name}', 0, 1, 'C')
+    pdf.cell(0, 5, f'Site: {sanitize_text(site_name)}', 0, 1, 'C')
     pdf.ln(8)
     
     # 1. Executive Summary
@@ -47,27 +68,72 @@ def generate_ai_pdf(site_name, health_score, avg_progress, on_track, total_sites
     pdf.ln(5)
     
     # 2. PIC Assignment Performance
-    if pic_stats and not pic_stats.empty:
+    if pic_stats is not None and not pic_stats.empty:
         pdf.set_font('Helvetica', 'B', 12)
         pdf.cell(0, 8, '2. PIC Assignment Performance', 0, 1)
         pdf.set_font('Helvetica', '', 9)
         
         # Header table
         pdf.set_font('Helvetica', 'B', 8)
-        for col, w in [('PIC', 40), ('Tasks', 20), ('Done', 20), ('SLA Score', 30), ('Avg Delay', 30)]:
+        headers = ['PIC', 'Tasks', 'Done', 'SLA Score', 'Avg Delay']
+        widths = [40, 20, 20, 30, 30]
+        for col, w in zip(headers, widths):
             pdf.cell(w, 6, col, 1, 0, 'C')
         pdf.ln()
         
         # Rows
         pdf.set_font('Helvetica', '', 8)
         for _, row in pic_stats.head(10).iterrows():
-            pdf.cell(40, 5, str(row.get('assigned_to', 'N/A'))[:20], 1, 0)
+            pic_name = sanitize_text(str(row.get('assigned_to', 'N/A')))[:20]
+            pdf.cell(40, 5, pic_name, 1, 0)
             pdf.cell(20, 5, str(row.get('total_tasks', 0)), 1, 0, 'C')
             pdf.cell(20, 5, str(row.get('done_tasks', 0)), 1, 0, 'C')
             pdf.cell(30, 5, f"{row.get('sla_score', 0):.1f}%", 1, 0, 'C')
-            pdf.cell(30, 5, f"{row.get('avg_delay', 0):.1f} hari", 1, 0, 'C')
+            pdf.cell(30, 5, f"{row.get('avg_delay', 0):.1f} days", 1, 0, 'C')
             pdf.ln()
         pdf.ln(5)
+    
+    # 3. SLA Compliance Analysis
+    if sla_stats:
+        pdf.set_font('Helvetica', 'B', 12)
+        pdf.cell(0, 8, '3. SLA Compliance Analysis', 0, 1)
+        pdf.set_font('Helvetica', '', 10)
+        pdf.cell(0, 6, f'Total Tasks Analyzed: {sla_stats.get("total", 0)}', 0, 1)
+        pdf.cell(0, 6, f'On SLA: {sla_stats.get("on_sla", 0)} ({sla_stats.get("on_sla_pct", 0):.1f}%)', 0, 1)
+        pdf.cell(0, 6, f'Breach SLA: {sla_stats.get("breach", 0)} ({sla_stats.get("breach_pct", 0):.1f}%)', 0, 1)
+        pdf.cell(0, 6, f'Avg Delay: {sla_stats.get("avg_delay", 0):.1f} days', 0, 1)
+        pdf.ln(5)
+    
+    # 4. Delay Reason Analysis
+    if delay_reasons:
+        pdf.set_font('Helvetica', 'B', 12)
+        pdf.cell(0, 8, '4. Delay Reason Analysis', 0, 1)
+        pdf.set_font('Helvetica', '', 10)
+        for reason, count in delay_reasons.items():
+            clean_reason = sanitize_text(str(reason))
+            pdf.cell(0, 6, f'- {clean_reason}: {count} milestone', 0, 1)
+        pdf.ln(5)
+    
+    # 5. Recommendations
+    pdf.set_font('Helvetica', 'B', 12)
+    pdf.cell(0, 8, '5. Recommendations', 0, 1)
+    pdf.set_font('Helvetica', '', 10)
+    
+    # Sanitasi summary
+    clean_summary = sanitize_text(summary)
+    for line in clean_summary.split('\n'):
+        clean_line = line.strip()
+        if clean_line:
+            # Hapus markdown bold/italic
+            clean_line = clean_line.replace('**', '').replace('*', '').replace('__', '')
+            pdf.multi_cell(0, 5, clean_line)
+    
+    # Return PDF as bytes
+    try:
+        pdf_bytes = pdf.output(dest='S').encode('latin-1')
+        return pdf_bytes
+    except Exception as e:
+        raise Exception(f"Gagal encode PDF: {str(e)}")
     
     # 3. SLA Compliance Analysis
     if sla_stats:
