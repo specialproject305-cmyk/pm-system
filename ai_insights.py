@@ -1,6 +1,6 @@
 """
 ai_insights.py - AI-Powered Analytics Center
-Dengan PIC Assignment Review & SLA Compliance Analysis
+Versi Stabil (PDF Export Dihapus Sementara)
 """
 
 import streamlit as st
@@ -8,248 +8,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
-from supabase_db import read_all_sheets, insert_row, generate_id, now_str
-from io import BytesIO
-
-# ─────────────────────────────────────────────────────────────
-# 📄 PDF GENERATOR (FIXED - BytesIO)
-# ─────────────────────────────────────────────────────────────
-
-def generate_ai_pdf(site_name, health_score, avg_progress, on_track, total_sites, 
-                   delayed, forecast_end, delay_reasons, summary, pic_stats=None, sla_stats=None):
-    """Generate PDF report - FIXED untuk fpdf2 compatibility."""
-    try:
-        from fpdf import FPDF
-    except ImportError:
-        raise ImportError("Library fpdf tidak terinstall. Install dengan: pip install fpdf")
-    
-    pdf = FPDF()
-    pdf.add_page()
-    
-    # Set margin standar agar perhitungan lebar akurat
-    pdf.set_left_margin(10)
-    pdf.set_right_margin(10)
-    pdf.set_top_margin(15)
-    pdf.set_auto_page_break(auto=True, margin=15)
-    
-    # ── Helper: Sanitize Text (Hapus Emoji & Non-ASCII) ──
-    def sanitize_text(text):
-        if not text: return ""
-        import re
-        emoji_pattern = re.compile("["
-            u"\U0001F600-\U0001F64F" u"\U0001F300-\U0001F5FF" 
-            u"\U0001F680-\U0001F6FF" u"\U0001F1E0-\U0001F1FF" 
-            u"\U00002702-\U000027B0" u"\U000024C2-\U0001F251"
-        "]+", flags=re.UNICODE)
-        text = emoji_pattern.sub(r'', text)
-        return ''.join(char for char in text if ord(char) < 128)
-
-    # ── Header ──
-    pdf.set_font('Helvetica', 'B', 16)
-    pdf.cell(0, 10, 'AI Analytics Report', 0, 1, 'C')
-    pdf.set_font('Helvetica', 'I', 10)
-    pdf.cell(0, 5, f'Generated: {datetime.now().strftime("%d %b %Y, %H:%M")}', 0, 1, 'C')
-    pdf.cell(0, 5, f'Site: {sanitize_text(site_name)}', 0, 1, 'C')
-    pdf.ln(8)
-    
-    # ── 1. Executive Summary ──
-    pdf.set_font('Helvetica', 'B', 12)
-    pdf.cell(0, 8, '1. Executive Summary', 0, 1)
-    pdf.set_font('Helvetica', '', 10)
-    pdf.cell(0, 6, f'Health Score: {health_score}%', 0, 1)
-    pdf.cell(0, 6, f'Average Progress: {avg_progress:.1f}%', 0, 1)
-    pdf.cell(0, 6, f'On Track: {on_track}/{total_sites} sites', 0, 1)
-    pdf.cell(0, 6, f'Delayed: {delayed} sites', 0, 1)
-    pdf.cell(0, 6, f'Forecast Completion: {forecast_end}', 0, 1)
-    pdf.ln(5)
-    
-    # ── 2. PIC Assignment Performance ──
-    if pic_stats is not None and not pic_stats.empty:
-        pdf.set_font('Helvetica', 'B', 12)
-        pdf.cell(0, 8, '2. PIC Assignment Performance', 0, 1)
-        pdf.set_font('Helvetica', '', 9)
-        
-        pdf.set_font('Helvetica', 'B', 8)
-        headers = ['PIC', 'Tasks', 'Done', 'SLA Score', 'Avg Delay']
-        widths = [40, 20, 20, 30, 30]
-        for col, w in zip(headers, widths):
-            pdf.cell(w, 6, col, 1, 0, 'C')
-        pdf.ln()
-        
-        pdf.set_font('Helvetica', '', 8)
-        for _, row in pic_stats.head(10).iterrows():
-            pdf.cell(40, 5, sanitize_text(str(row.get('assigned_to', 'N/A')))[:20], 1, 0)
-            pdf.cell(20, 5, str(row.get('total_tasks', 0)), 1, 0, 'C')
-            pdf.cell(20, 5, str(row.get('done_tasks', 0)), 1, 0, 'C')
-            pdf.cell(30, 5, f"{row.get('sla_score', 0):.1f}%", 1, 0, 'C')
-            pdf.cell(30, 5, f"{row.get('avg_delay', 0):.1f} days", 1, 0, 'C')
-            pdf.ln()
-        pdf.ln(5)
-    
-    # ── 3. SLA Compliance Analysis ──
-    if sla_stats:
-        pdf.set_font('Helvetica', 'B', 12)
-        pdf.cell(0, 8, '3. SLA Compliance Analysis', 0, 1)
-        pdf.set_font('Helvetica', '', 10)
-        pdf.cell(0, 6, f'Total Tasks Analyzed: {sla_stats.get("total", 0)}', 0, 1)
-        pdf.cell(0, 6, f'On SLA: {sla_stats.get("on_sla", 0)} ({sla_stats.get("on_sla_pct", 0):.1f}%)', 0, 1)
-        pdf.cell(0, 6, f'Breach SLA: {sla_stats.get("breach", 0)} ({sla_stats.get("breach_pct", 0):.1f}%)', 0, 1)
-        pdf.cell(0, 6, f'Avg Delay: {sla_stats.get("avg_delay", 0):.1f} days', 0, 1)
-        pdf.ln(5)
-    
-    # ── 4. Delay Reason Analysis ─
-    if delay_reasons:
-        pdf.set_font('Helvetica', 'B', 12)
-        pdf.cell(0, 8, '4. Delay Reason Analysis', 0, 1)
-        pdf.set_font('Helvetica', '', 10)
-        for reason, count in delay_reasons.items():
-            clean_reason = sanitize_text(str(reason))
-            if clean_reason:
-                pdf.cell(0, 6, f'- {clean_reason}: {count} milestone', 0, 1)
-        pdf.ln(5)
-    
-    # ── 5. Recommendations (FIXED AREA) ──
-    pdf.set_font('Helvetica', 'B', 12)
-    pdf.cell(0, 8, '5. Recommendations', 0, 1)
-    pdf.set_font('Helvetica', '', 10)
-    
-    # Reset kursor ke margin kiri & hitung lebar aman
-    pdf.set_x(pdf.l_margin)
-    safe_width = pdf.w - pdf.l_margin - pdf.r_margin
-    
-    clean_summary = sanitize_text(summary)
-    for line in clean_summary.split('\n'):
-        # Hapus markdown, simbol aneh, & whitespace
-        clean_line = line.strip().replace('**', '').replace('*', '').replace('__', '').replace('#', '').replace('>', '')
-        if not clean_line:
-            continue
-            
-        try:
-            # Gunakan lebar eksplisit agar tidak error "Not enough horizontal space"
-            pdf.multi_cell(safe_width, 5, clean_line)
-            pdf.ln(2)
-        except Exception:
-            # Fallback: skip baris bermasalah, lanjutkan
-            pdf.set_x(pdf.l_margin)
-    
-    # ── Return PDF Bytes (fpdf2 compatible) ──
-    try:
-        return pdf.output(dest='S')
-    except Exception as e:
-        raise Exception(f"Gagal generate PDF: {str(e)}")
-    
-    # 1. Executive Summary
-    pdf.set_font('Helvetica', 'B', 12)
-    pdf.cell(0, 8, '1. Executive Summary', 0, 1)
-    pdf.set_font('Helvetica', '', 10)
-    pdf.cell(0, 6, f'Health Score: {health_score}%', 0, 1)
-    pdf.cell(0, 6, f'Average Progress: {avg_progress:.1f}%', 0, 1)
-    pdf.cell(0, 6, f'On Track: {on_track}/{total_sites} sites', 0, 1)
-    pdf.cell(0, 6, f'Delayed: {delayed} sites', 0, 1)
-    pdf.cell(0, 6, f'Forecast Completion: {forecast_end}', 0, 1)
-    pdf.ln(5)
-    
-    # 2. PIC Assignment Performance
-    if pic_stats is not None and not pic_stats.empty:
-        pdf.set_font('Helvetica', 'B', 12)
-        pdf.cell(0, 8, '2. PIC Assignment Performance', 0, 1)
-        pdf.set_font('Helvetica', '', 9)
-        
-        # Header table
-        pdf.set_font('Helvetica', 'B', 8)
-        headers = ['PIC', 'Tasks', 'Done', 'SLA Score', 'Avg Delay']
-        widths = [40, 20, 20, 30, 30]
-        for col, w in zip(headers, widths):
-            pdf.cell(w, 6, col, 1, 0, 'C')
-        pdf.ln()
-        
-        # Rows
-        pdf.set_font('Helvetica', '', 8)
-        for _, row in pic_stats.head(10).iterrows():
-            pic_name = sanitize_text(str(row.get('assigned_to', 'N/A')))[:20]
-            pdf.cell(40, 5, pic_name, 1, 0)
-            pdf.cell(20, 5, str(row.get('total_tasks', 0)), 1, 0, 'C')
-            pdf.cell(20, 5, str(row.get('done_tasks', 0)), 1, 0, 'C')
-            pdf.cell(30, 5, f"{row.get('sla_score', 0):.1f}%", 1, 0, 'C')
-            pdf.cell(30, 5, f"{row.get('avg_delay', 0):.1f} days", 1, 0, 'C')
-            pdf.ln()
-        pdf.ln(5)
-    
-    # 3. SLA Compliance Analysis
-    if sla_stats:
-        pdf.set_font('Helvetica', 'B', 12)
-        pdf.cell(0, 8, '3. SLA Compliance Analysis', 0, 1)
-        pdf.set_font('Helvetica', '', 10)
-        pdf.cell(0, 6, f'Total Tasks Analyzed: {sla_stats.get("total", 0)}', 0, 1)
-        pdf.cell(0, 6, f'On SLA: {sla_stats.get("on_sla", 0)} ({sla_stats.get("on_sla_pct", 0):.1f}%)', 0, 1)
-        pdf.cell(0, 6, f'Breach SLA: {sla_stats.get("breach", 0)} ({sla_stats.get("breach_pct", 0):.1f}%)', 0, 1)
-        pdf.cell(0, 6, f'Avg Delay: {sla_stats.get("avg_delay", 0):.1f} days', 0, 1)
-        pdf.ln(5)
-    
-    # 4. Delay Reason Analysis
-    if delay_reasons:
-        pdf.set_font('Helvetica', 'B', 12)
-        pdf.cell(0, 8, '4. Delay Reason Analysis', 0, 1)
-        pdf.set_font('Helvetica', '', 10)
-        for reason, count in delay_reasons.items():
-            clean_reason = sanitize_text(str(reason))
-            pdf.cell(0, 6, f'- {clean_reason}: {count} milestone', 0, 1)
-        pdf.ln(5)
-    
-    # 5. Recommendations
-    pdf.set_font('Helvetica', 'B', 12)
-    pdf.cell(0, 8, '5. Recommendations', 0, 1)
-    pdf.set_font('Helvetica', '', 10)
-    
-    # Sanitasi summary
-    clean_summary = sanitize_text(summary)
-    for line in clean_summary.split('\n'):
-        clean_line = line.strip()
-        if clean_line:
-            # Hapus markdown bold/italic
-            clean_line = clean_line.replace('**', '').replace('*', '').replace('__', '')
-            pdf.multi_cell(0, 5, clean_line)
-    
-    # Return PDF as bytes
-    try:
-        pdf_bytes = pdf.output(dest='S').encode('latin-1')
-        return pdf_bytes
-    except Exception as e:
-        raise Exception(f"Gagal encode PDF: {str(e)}")
-    
-    # 3. SLA Compliance Analysis
-    if sla_stats:
-        pdf.set_font('Helvetica', 'B', 12)
-        pdf.cell(0, 8, '3. SLA Compliance Analysis', 0, 1)
-        pdf.set_font('Helvetica', '', 10)
-        pdf.cell(0, 6, f'Total Tasks Analyzed: {sla_stats.get("total", 0)}', 0, 1)
-        pdf.cell(0, 6, f'On SLA: {sla_stats.get("on_sla", 0)} ({sla_stats.get("on_sla_pct", 0):.1f}%)', 0, 1)
-        pdf.cell(0, 6, f'Breach SLA: {sla_stats.get("breach", 0)} ({sla_stats.get("breach_pct", 0):.1f}%)', 0, 1)
-        pdf.cell(0, 6, f'Avg Delay: {sla_stats.get("avg_delay", 0):.1f} hari', 0, 1)
-        pdf.ln(5)
-    
-    # 4. Delay Reason Analysis
-    if delay_reasons:
-        pdf.set_font('Helvetica', 'B', 12)
-        pdf.cell(0, 8, '4. Delay Reason Analysis', 0, 1)
-        pdf.set_font('Helvetica', '', 10)
-        for reason, count in delay_reasons.items():
-            pdf.cell(0, 6, f'- {reason}: {count} milestone', 0, 1)
-        pdf.ln(5)
-    
-    # 5. Recommendations
-    pdf.set_font('Helvetica', 'B', 12)
-    pdf.cell(0, 8, '5. Recommendations', 0, 1)
-    pdf.set_font('Helvetica', '', 10)
-    for line in summary.split('\n'):
-        clean = line.replace('**','').replace('*','').strip()
-        if clean and clean != summary.split('\n')[0]:
-            pdf.multi_cell(0, 5, clean)
-    
-    # Return PDF as bytes
-    pdf_bytes = pdf.output(dest='S').encode('latin-1')
-    return pdf_bytes
-
+from supabase_db import read_all_sheets
 
 # ─────────────────────────────────────────────────────────────
 # 📊 HELPER FUNCTIONS FOR PIC & SLA ANALYSIS
@@ -267,10 +26,9 @@ def analyze_pic_performance(ms_df):
         return pd.DataFrame()
     
     # Konversi tanggal untuk kalkulasi
-    assigned['planned_start'] = pd.to_datetime(assigned['planned_start'], errors='coerce')
-    assigned['planned_end'] = pd.to_datetime(assigned['planned_end'], errors='coerce')
-    assigned['actual_start'] = pd.to_datetime(assigned['actual_start'], errors='coerce')
-    assigned['actual_end'] = pd.to_datetime(assigned['actual_end'], errors='coerce')
+    for col in ['planned_start', 'planned_end', 'actual_start', 'actual_end']:
+        if col in assigned.columns:
+            assigned[col] = pd.to_datetime(assigned[col], errors='coerce')
     
     # Group by assigned_to
     pic_stats = assigned.groupby('assigned_to').agg(
@@ -280,7 +38,7 @@ def analyze_pic_performance(ms_df):
         avg_weight=('weight', 'mean')
     ).reset_index()
     
-    # Hitung SLA Score (% tasks on-time)
+    # Hitung SLA Score (% tasks on-time/done)
     pic_stats['sla_score'] = round(
         (pic_stats['done_tasks'] / pic_stats['total_tasks']) * 100, 1
     ).fillna(0)
@@ -471,8 +229,7 @@ def ai_insights_page():
                 # Prediksi selesai berdasarkan velocity
                 if progress < 100 and progress > 0:
                     remaining = 100 - progress
-                    # Asumsi velocity 2% per hari (bisa disesuaikan)
-                    predicted_days = int(remaining / 2)
+                    predicted_days = int(remaining / 2) # Asumsi 2% per hari
                     predicted_end = datetime.now() + timedelta(days=predicted_days)
                 else:
                     predicted_end = datetime.now()
@@ -541,7 +298,7 @@ def ai_insights_page():
         st.divider()
         
         # =============================================
-        # 2. PIC ASSIGNMENT PERFORMANCE (BARU!)
+        # 2. PIC ASSIGNMENT PERFORMANCE
         # =============================================
         st.header("👤 2. PIC Assignment Performance")
         st.markdown("*Analisis performa berdasarkan Person In Charge (Assigned To)*")
@@ -591,7 +348,7 @@ def ai_insights_page():
         st.divider()
         
         # =============================================
-        # 3. SLA COMPLIANCE ANALYSIS (BARU!)
+        # 3. SLA COMPLIANCE ANALYSIS
         # =============================================
         st.header("⏱️ 3. SLA Compliance Analysis")
         st.markdown("*Perbandingan SLA (target) vs Actual Duration*")
@@ -713,7 +470,7 @@ def ai_insights_page():
         st.divider()
         
         # =============================================
-        # 5. RESOURCE / VENDOR ANALYSIS
+        # 5. RESOURCE & VENDOR ANALYSIS
         # =============================================
         st.header("🏢 5. Resource & Vendor Analysis")
         
@@ -816,115 +573,40 @@ def ai_insights_page():
                 st.error("🔴 Critical - Perlu intervensi segera")
             
             # Forecast
+            forecast_end_str = "Completed"
             if avg_progress < 100:
                 forecast_days = int((100 - avg_progress) * 3)
                 forecast_end = datetime.now() + timedelta(days=forecast_days)
-                st.metric("📅 Forecast Completion", forecast_end.strftime('%d %b %Y'))
+                forecast_end_str = forecast_end.strftime('%d %b %Y')
+                st.metric("📅 Forecast Completion", forecast_end_str)
             
             # Auto-generated summary
-            summary = f"""
+            summary_text = f"""
             **Executive Summary - {datetime.now().strftime('%d %B %Y')}**
             
             📊 **{total_sites}** site dalam monitoring.
             📈 Progress rata-rata: **{avg_progress:.1f}%**
             🟢 **{on_track}** site On Track | 🔴 **{delayed}** site perlu perhatian.
-            📅 Prediksi selesai: **{forecast_end.strftime('%d %b %Y') if avg_progress < 100 else 'Completed'}**
+            📅 Prediksi selesai: **{forecast_end_str}**
             
             **Top Actions:**
             """
             
             if delayed > 0:
-                summary += f"\n⚠️ Prioritaskan {delayed} site yang terlambat."
+                summary_text += f"\n⚠️ Prioritaskan {delayed} site yang terlambat."
             if avg_progress < 50:
-                summary += "\n🚀 Percepat eksekusi milestone untuk meningkatkan progress."
+                summary_text += "\n🚀 Percepat eksekusi milestone untuk meningkatkan progress."
             if delay_reason_filter:
-                summary += f"\n🔍 Fokus pada delay: **{delay_reason_filter}**"
+                summary_text += f"\n🔍 Fokus pada delay: **{delay_reason_filter}**"
             
-            st.markdown(summary)
+            st.markdown(summary_text)
         
         st.divider()
         
         # =============================================
-        # EXPORT PDF (FIXED!)
+        # INFO EXPORT (PDF Disabled)
         # =============================================
-        st.divider()
-        st.subheader("📥 Export Report")
-        
-        # Prepare data for PDF
-        try:
-            pic_stats = analyze_pic_performance(site_ms) if (not site_ms.empty and 'assigned_to' in site_ms.columns) else None
-        except:
-            pic_stats = None
-        
-        try:
-            sla_stats = analyze_sla_compliance(site_ms) if (not site_ms.empty and 'sla_days' in site_ms.columns) else None
-        except:
-            sla_stats = None
-        
-        delay_reasons = {}
-        if not site_ms.empty and 'delay_reason' in site_ms.columns:
-            try:
-                delays = site_ms[site_ms['delay_reason'].notna() & (site_ms['delay_reason'] != 'Tidak Ada')]
-                if not delays.empty:
-                    delay_reasons = delays['delay_reason'].value_counts().to_dict()
-            except:
-                pass
-        
-        # Tombol download PDF
-        try:
-            pdf_bytes = generate_ai_pdf(
-                site_name=site_name,
-                health_score=health_score,
-                avg_progress=avg_progress,
-                on_track=on_track,
-                total_sites=total_sites,
-                delayed=delayed,
-                forecast_end=forecast_end.strftime('%d %b %Y') if 'forecast_end' in locals() else datetime.now().strftime('%d %b %Y'),
-                delay_reasons=delay_reasons,
-                summary=summary if 'summary' in locals() else "No summary available",
-                pic_stats=pic_stats,
-                sla_stats=sla_stats
-            )
-            
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            safe_site_name = site_name.replace(' ', '_').replace('/', '_')[:30]
-            filename = f"AI_Report_{safe_site_name}_{timestamp}.pdf"
-            
-            st.download_button(
-                label="📄 Download PDF Report",
-                data=pdf_bytes,
-                file_name=filename,
-                mime="application/pdf",
-                use_container_width=True,
-                type="primary"
-            )
-            
-            st.success("✅ Klik tombol di atas untuk download PDF")
-            st.info(f"📄 Filename: `{filename}`")
-            
-        except ImportError as e:
-            st.error("❌ Library fpdf tidak terinstall")
-            st.code("pip install fpdf", language="bash")
-            st.error(f"Detail: {str(e)}")
-            
-        except Exception as e:
-            st.error("❌ Gagal generate PDF")
-            st.error(f"Error type: {type(e).__name__}")
-            st.error(f"Error message: {str(e)[:500]}")
-            
-            # Tampilkan debug info
-            with st.expander("🔍 Debug Information"):
-                st.write("**Variables:**")
-                st.write(f"- site_name: {site_name}")
-                st.write(f"- health_score: {health_score}")
-                st.write(f"- total_sites: {total_sites}")
-                st.write(f"- pic_stats: {pic_stats.shape if pic_stats is not None else 'None'}")
-                st.write(f"- sla_stats: {sla_stats}")
-                st.write(f"- delay_reasons: {delay_reasons}")
-                
-                st.write("**Traceback:**")
-                import traceback
-                st.code(traceback.format_exc())
+        st.info("🚧 Fitur Export PDF sedang dalam pengembangan untuk meningkatkan stabilitas sistem. Silakan gunakan screenshot browser atau copy-paste data untuk laporan sementara.")
 
 if __name__ == "__main__":
     ai_insights_page()
