@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 from supabase_db import read_sheet, update_row, delete_row_by_id
 
 # ─────────────────────────────────────────────────────────────
@@ -10,60 +10,54 @@ from supabase_db import read_sheet, update_row, delete_row_by_id
 def inject_kanban_css():
     st.markdown("""
     <style>
-    /* Kanban Board Styles */
     .kanban-column {
         background-color: #f0f2f6;
-        border-radius: 10px;
-        padding: 10px;
+        border-radius: 12px;
+        padding: 12px;
         min-height: 400px;
         display: flex;
         flex-direction: column;
-        gap: 10px;
+        gap: 12px;
     }
-    
     .kanban-card {
         background-color: white;
-        border-radius: 8px;
-        padding: 10px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        border-radius: 10px;
+        padding: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         cursor: pointer;
-        transition: transform 0.2s, box-shadow 0.2s;
-        border-left: 5px solid #ccc;
+        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        border-left: 6px solid #ccc;
+        position: relative;
+        overflow: hidden;
     }
+    .kanban-card:hover { transform: translateY(-4px); box-shadow: 0 6px 20px rgba(0,0,0,0.12); }
     
-    .kanban-card:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+    /* Status Border Colors */
+    .border-pending { border-left-color: #6c757d !important; }
+    .border-material { border-left-color: #fd7e14 !important; }
+    .border-ongoing { border-left-color: #0d6efd !important; }
+    .border-delayed { border-left-color: #dc3545 !important; }
+    .border-done { border-left-color: #28a745 !important; }
+
+    /* SLA Badge */
+    .sla-badge {
+        position: absolute; top: 8px; right: 8px;
+        font-size: 0.7rem; font-weight: bold; padding: 2px 6px;
+        border-radius: 4px; color: white;
     }
+    .sla-ok { background: #28a745; }
+    .sla-warn { background: #ffc107; color: #333 !important; }
+    .sla-breach { background: #dc3545; }
+
+    .card-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 6px; padding-right: 40px; }
+    .card-meta { font-size: 0.8rem; color: #555; display: flex; justify-content: space-between; align-items: center; }
     
-    /* Status Colors for Border Left */
-    .border-pending { border-left-color: #6c757d !important; } /* Gray - Planned */
-    .border-material { border-left-color: #fd7e14 !important; } /* Orange - Mat. Ready */
-    .border-ongoing { border-left-color: #0d6efd !important; } /* Blue - In Progress */
-    .border-delayed { border-left-color: #dc3545 !important; } /* Red - Waiting */
-    .border-done { border-left-color: #28a745 !important; } /* Green - Done */
-
-    /* Card Content */
-    .card-title { font-weight: bold; font-size: 0.9rem; margin-bottom: 5px; }
-    .card-meta { font-size: 0.75rem; color: #666; display: flex; justify-content: space-between; }
-    .card-sla { font-weight: bold; }
-    .sla-ok { color: green; }
-    .sla-warn { color: orange; }
-    .sla-breach { color: red; }
-
-    /* Mobile Optimization for Kanban */
+    /* Mobile Stack */
     @media (max-width: 768px) {
-        .kanban-column {
-            min-height: auto;
-            margin-bottom: 20px;
-        }
-        .stColumn {
-            width: 100% !important; /* Stack columns vertically on mobile */
-        }
-        .kanban-card {
-            padding: 15px; /* Larger touch target */
-        }
-        .card-title { font-size: 1rem; }
+        .kanban-column { min-height: auto; margin-bottom: 15px; }
+        .stColumn { width: 100% !important; }
+        .kanban-card { padding: 15px; }
+        .card-title { font-size: 1.05rem; }
     }
     </style>
     """, unsafe_allow_html=True)
@@ -72,99 +66,62 @@ def inject_kanban_css():
 # 🛠️ HELPER FUNCTIONS
 # ─────────────────────────────────────────────────────────────
 
-def get_status_color(status):
-    """Map status to CSS class for border color."""
-    mapping = {
-        'PENDING': 'border-pending',
-        'MATERIAL_READY': 'border-material',
-        'ONGOING': 'border-ongoing',
-        'DELAYED': 'border-delayed',
-        'DONE': 'border-done'
-    }
-    return mapping.get(status, 'border-pending')
-
-def get_sla_class(planned_end, status):
-    """Determine SLA status color."""
-    if status == 'DONE':
-        return 'sla-ok'
-    if not planned_end or pd.isna(planned_end):
-        return ''
+def get_sla_info(planned_end, status):
+    """Return SLA days left & CSS class."""
+    if status == 'DONE': return 0, 'sla-ok'
+    if not planned_end or pd.isna(planned_end): return None, ''
     
-    today = datetime.now().date()
     end_date = planned_end.date() if hasattr(planned_end, 'date') else pd.to_datetime(planned_end).date()
+    days_left = (end_date - datetime.now().date()).days
     
-    days_left = (end_date - today).days
-    
-    if days_left < 0:
-        return 'sla-breach'
-    elif days_left <= 3:
-        return 'sla-warn'
-    else:
-        return 'sla-ok'
+    if days_left < 0: return days_left, 'sla-breach'
+    elif days_left <= 2: return days_left, 'sla-warn'
+    return days_left, 'sla-ok'
 
 def render_card(task):
-    """Render a single Kanban card HTML with safe value handling."""
     status = task.get('status', 'PENDING')
-    border_class = get_status_color(status)
+    border_class = f"border-{status.lower().replace('material_ready', 'material')}"
     
     name = task.get('name', 'No Name')
-    assigned = task.get('assigned_to', '-')
+    assigned = task.get('assigned_to', '-') or '-'
     sla_days = task.get('sla_days', '-')
     planned_end = task.get('planned_end')
+    card_id = str(task.get('id'))
     
-    # Determine SLA Color
-    sla_class = get_sla_class(planned_end, status)
-    sla_text = f"{sla_days} Days" if sla_days != '-' else '-'
+    days_left, sla_class = get_sla_info(planned_end, status)
+    sla_text = f"{days_left}d" if days_left is not None else sla_days
     
-    # Create unique key for modal trigger
-    card_id = str(task.get('id')) # Pastikan ID adalah string
-    
-    # Safe handling for actual_end date value
-    actual_end_val = task.get('actual_end', '')
-    if actual_end_val and pd.notna(actual_end_val):
-        # Jika sudah string, ambil 10 karakter pertama (YYYY-MM-DD)
-        if isinstance(actual_end_val, str):
-            actual_end_str = actual_end_val[:10]
-        else:
-            # Jika objek datetime, convert ke string
-            try:
-                actual_end_str = pd.to_datetime(actual_end_val).strftime('%Y-%m-%d')
-            except:
-                actual_end_str = ''
-    else:
-        actual_end_str = ''
-
     html = f"""
     <div class="kanban-card {border_class}" onclick="document.getElementById('modal-{card_id}').showModal()">
+        <div class="sla-badge {sla_class}">{sla_text}</div>
         <div class="card-title">{name}</div>
         <div class="card-meta">
             <span>👤 {assigned}</span>
-            <span class="card-sla {sla_class}">⏳ {sla_text}</span>
+            <span style="font-size:0.75rem; color:#888;">{task.get('weight','0')}%</span>
         </div>
     </div>
     
-    <!-- Hidden Modal for Editing -->
-    <dialog id="modal-{card_id}" style="border:none; border-radius:10px; padding:0; box-shadow:0 10px 25px rgba(0,0,0,0.2); max-width:90%; width:400px;">
-        <div style="padding:20px; background:white; border-radius:10px;">
-            <h3 style="margin-top:0;">Update Task</h3>
-            <p><strong>{name}</strong></p>
+    <dialog id="modal-{card_id}" style="border:none; border-radius:12px; padding:0; box-shadow:0 15px 40px rgba(0,0,0,0.25); max-width:95%; width:380px; overflow:hidden;">
+        <div style="padding:20px; background:white;">
+            <h3 style="margin:0 0 15px 0; font-size:1.1rem;">Update Task</h3>
+            <p style="margin:0 0 15px 0; color:#555; font-size:0.95rem;">{name}</p>
             
-            <form method="dialog" style="display:flex; flex-direction:column; gap:10px;">
-                <label>Status:</label>
-                <select name="status" style="padding:10px; border-radius:5px; border:1px solid #ccc;">
+            <form method="dialog" style="display:flex; flex-direction:column; gap:12px;">
+                <label style="font-size:0.85rem; font-weight:500;">Status:</label>
+                <select name="status" style="padding:10px; border-radius:8px; border:1px solid #ddd; font-size:0.95rem;">
                     <option value="PENDING" {'selected' if status=='PENDING' else ''}>📋 Planned</option>
-                    <option value="MATERIAL_READY" {'selected' if status=='MATERIAL_READY' else ''}>📦 Material Ready</option>
+                    <option value="MATERIAL_READY" {'selected' if status=='MATERIAL_READY' else ''}>📦 Mat. Ready</option>
                     <option value="ONGOING" {'selected' if status=='ONGOING' else ''}>🚧 In Progress</option>
-                    <option value="DELAYED" {'selected' if status=='DELAYED' else ''}>⏳ Waiting/Blocked</option>
+                    <option value="DELAYED" {'selected' if status=='DELAYED' else ''}>⏳ Waiting</option>
                     <option value="DONE" {'selected' if status=='DONE' else ''}>✅ Done</option>
                 </select>
                 
-                <label>Actual End Date (if Done):</label>
-                <input type="date" name="actual_end" value="{actual_end_str}" style="padding:10px; border-radius:5px; border:1px solid #ccc;">
+                <label style="font-size:0.85rem; font-weight:500;">Actual End (if Done):</label>
+                <input type="date" name="actual_end" value="{task.get('actual_end','')[:10] if task.get('actual_end') else ''}" style="padding:10px; border-radius:8px; border:1px solid #ddd; font-size:0.95rem;">
                 
-                <div style="display:flex; gap:10px; margin-top:10px;">
-                    <button value="cancel" style="flex:1; padding:10px; background:#eee; border:none; border-radius:5px; cursor:pointer;">Cancel</button>
-                    <button value="save" style="flex:1; padding:10px; background:#0d6efd; color:white; border:none; border-radius:5px; cursor:pointer;">Save</button>
+                <div style="display:flex; gap:10px; margin-top:15px;">
+                    <button value="cancel" style="flex:1; padding:10px; background:#f0f2f6; border:none; border-radius:8px; cursor:pointer; font-weight:500;">Cancel</button>
+                    <button value="save" style="flex:1; padding:10px; background:#0d6efd; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:500;">Save</button>
                 </div>
             </form>
         </div>
@@ -173,119 +130,89 @@ def render_card(task):
     return html
 
 # ─────────────────────────────────────────────────────────────
-# 🎯 MAIN PAGE FUNCTION
+#  MAIN PAGE FUNCTION
 # ─────────────────────────────────────────────────────────────
 
 def kanban_page():
     inject_kanban_css()
-    
     st.title("📋 Kanban Board")
     
-    # Filter Site
     sites_df = read_sheet("projects")
     if sites_df.empty:
-        st.warning("⚠️ Belum ada data site. Silakan tambah site di Project Tracker.")
+        st.warning("⚠️ Belum ada data site.")
         return
         
     site_options = ["ALL SITE"] + sites_df["id"].tolist()
     selected_site = st.selectbox(
-        "🎯 Pilih Site:", 
-        site_options,
+        "🎯 Pilih Site:", site_options,
         format_func=lambda x: "🌍 ALL SITE" if x == "ALL SITE" 
         else f"{sites_df[sites_df['id']==x]['site_id'].values[0]} - {sites_df[sites_df['id']==x]['site_name'].values[0]}"
     )
-    
     is_all = (selected_site == "ALL SITE")
     
-    # Load Milestones
     ms_df = read_sheet("milestones")
     if ms_df.empty:
-        st.info("ℹ️ Belum ada milestone. Generate template di menu Milestone Monitoring.")
+        st.info("ℹ️ Belum ada milestone.")
         return
         
-    # Filter by Site
     if not is_all:
         ms_df = ms_df[ms_df['project_id'] == selected_site].copy()
-        
-    # Convert Dates
     if 'planned_end' in ms_df.columns:
         ms_df['planned_end'] = pd.to_datetime(ms_df['planned_end'], errors='coerce')
         
-    # Define Columns Mapping - URUTAN BARU SESUAI PERMINTAAN
     col_mapping = [
-        ('PENDING', '📋 Planned'),
-        ('MATERIAL_READY', '📦 Mat. Ready'),
-        ('ONGOING', '🚧 In Progress'),
-        ('DELAYED', '⏳ Waiting'),
-        ('DONE', '✅ Done')
+        ('PENDING', '📋 Planned'), ('MATERIAL_READY', '📦 Mat. Ready'),
+        ('ONGOING', '🚧 In Progress'), ('DELAYED', '⏳ Waiting'), ('DONE', '✅ Done')
     ]
     
-    # Render Kanban Columns
-    # On Desktop: 5 columns side-by-side. On Mobile: Stacked via CSS.
     cols = st.columns(5)
-    
     for i, (status_key, col_name) in enumerate(col_mapping):
         with cols[i]:
-            st.markdown(f"<h4 style='text-align:center; border-bottom:2px solid #ddd; padding-bottom:10px;'>{col_name}</h4>", unsafe_allow_html=True)
-            
-            # Filter tasks for this column
-            if 'status' in ms_df.columns:
-                tasks = ms_df[ms_df['status'] == status_key]
-            else:
-                tasks = pd.DataFrame()
-                    
-            # Render Cards
+            st.markdown(f"<h4 style='text-align:center; margin:0 0 15px 0; color:#333;'>{col_name}</h4>", unsafe_allow_html=True)
+            tasks = ms_df[ms_df['status'] == status_key] if 'status' in ms_df.columns else pd.DataFrame()
             if not tasks.empty:
                 for _, task in tasks.iterrows():
-                    card_html = render_card(task)
-                    st.markdown(card_html, unsafe_allow_html=True)
+                    st.markdown(render_card(task), unsafe_allow_html=True)
     
-    # --- SECTION UNTUK UPDATE STATUS (Mobile Friendly) ---
+    # Quick Update Section (Mobile Optimized)
     st.divider()
-    st.markdown("### ✏️ Update Task Status")
-    st.info("💡 Pilih task di bawah untuk mengubah statusnya.")
+    st.markdown("### ✏️ Quick Update")
     
-    # Select Task to Edit
     if not ms_df.empty:
-        # Create a readable label for selectbox
         ms_df['label'] = ms_df.apply(lambda x: f"{x['name']} ({x.get('status','?')}) - {x.get('assigned_to','?')}", axis=1)
+        selected_label = st.selectbox("Pilih Task:", ms_df['label'].tolist(), index=0)
+        task_row = ms_df[ms_df['label'] == selected_label].iloc[0]
         
-        selected_task_label = st.selectbox(
-            "Pilih Task untuk Update:",
-            ms_df['label'].tolist(),
-            index=0
-        )
-        
-        # Get original ID from label
-        selected_task_row = ms_df[ms_df['label'] == selected_task_label].iloc[0]
-        task_id = selected_task_row['id']
-        
-        col_e1, col_e2 = st.columns(2)
-        with col_e1:
-            new_status = st.selectbox(
-                "Ubah Status Ke:",
-                ['PENDING', 'MATERIAL_READY', 'ONGOING', 'DELAYED', 'DONE'],
-                index=['PENDING', 'MATERIAL_READY', 'ONGOING', 'DELAYED', 'DONE'].index(selected_task_row.get('status', 'PENDING'))
-            )
-        with col_e2:
-            new_actual_end = st.date_input(
-                "Actual End Date (Opsional)",
-                value=None,
-                help="Isi jika status diubah ke DONE"
-            )
+        c1, c2 = st.columns(2)
+        with c1:
+            new_status = st.selectbox("Status Baru:", ['PENDING', 'MATERIAL_READY', 'ONGOING', 'DELAYED', 'DONE'],
+                                      index=['PENDING', 'MATERIAL_READY', 'ONGOING', 'DELAYED', 'DONE'].index(task_row.get('status', 'PENDING')))
+        with c2:
+            new_actual = st.date_input("Actual End", value=None)
             
-        if st.button("💾 Simpan Perubahan", type="primary", use_container_width=True):
+        if st.button("💾 Simpan & Sync", type="primary", use_container_width=True):
             update_data = {'status': new_status}
-            if new_actual_end:
+            if new_actual:
                 from supabase_db import safe_date_string
-                update_data['actual_end'] = safe_date_string(new_actual_end)
+                update_data['actual_end'] = safe_date_string(new_actual)
                 
-            success = update_row("milestones", task_id, update_data)
-            if success:
-                st.success("✅ Status berhasil diupdate!")
+            if update_row("milestones", task_row['id'], update_data):
+                # Auto Sync Progress
+                try:
+                    site_ms = read_sheet("milestones")
+                    site_ms = site_ms[site_ms['project_id'] == selected_site].copy()
+                    site_ms["weight"] = pd.to_numeric(site_ms["weight"], errors="coerce").fillna(0)
+                    total_w = site_ms["weight"].sum()
+                    done_w = site_ms[site_ms["status"]=="DONE"]["weight"].sum()
+                    prog = round((done_w/total_w)*100, 1) if total_w > 0 else 0
+                    delayed = len(site_ms[site_ms["status"]=="DELAYED"])
+                    sts = "CRITICAL" if delayed > 3 else ("DELAYED" if delayed > 0 else "ON_TRACK")
+                    update_row("projects", selected_site, {"progress": str(prog), "status": sts})
+                    st.cache_data.clear()
+                except: pass
+                
+                st.success("✅ Updated & Synced!")
                 st.rerun()
-            else:
-                st.error("❌ Gagal update status.")
 
 if __name__ == "__main__":
     kanban_page()
