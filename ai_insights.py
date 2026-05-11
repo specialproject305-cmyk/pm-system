@@ -699,54 +699,84 @@ def ai_insights_page():
         # =============================================
         # EXPORT PDF (FIXED!)
         # =============================================
+        st.divider()
         st.subheader("📥 Export Report")
         
         # Prepare data for PDF
-        pic_stats = analyze_pic_performance(site_ms) if not site_ms.empty and 'assigned_to' in site_ms.columns else None
-        sla_stats = analyze_sla_compliance(site_ms) if not site_ms.empty and 'sla_days' in site_ms.columns else None
+        try:
+            pic_stats = analyze_pic_performance(site_ms) if (not site_ms.empty and 'assigned_to' in site_ms.columns) else None
+        except:
+            pic_stats = None
+        
+        try:
+            sla_stats = analyze_sla_compliance(site_ms) if (not site_ms.empty and 'sla_days' in site_ms.columns) else None
+        except:
+            sla_stats = None
         
         delay_reasons = {}
         if not site_ms.empty and 'delay_reason' in site_ms.columns:
-            delays = site_ms[site_ms['delay_reason'].notna() & (site_ms['delay_reason'] != 'Tidak Ada')]
-            if not delays.empty:
-                delay_reasons = delays['delay_reason'].value_counts().to_dict()
+            try:
+                delays = site_ms[site_ms['delay_reason'].notna() & (site_ms['delay_reason'] != 'Tidak Ada')]
+                if not delays.empty:
+                    delay_reasons = delays['delay_reason'].value_counts().to_dict()
+            except:
+                pass
         
-        if st.button("📄 Download PDF Report", type="secondary", use_container_width=True):
-            with st.spinner("🔄 Generating PDF..."):
-                try:
-                    pdf_bytes = generate_ai_pdf(
-                        site_name=site_name,
-                        health_score=health_score,
-                        avg_progress=avg_progress,
-                        on_track=on_track,
-                        total_sites=total_sites,
-                        delayed=delayed,
-                        forecast_end=forecast_end.strftime('%d %b %Y') if avg_progress < 100 else 'Completed',
-                        delay_reasons=delay_reasons,
-                        summary=summary,
-                        pic_stats=pic_stats,
-                        sla_stats=sla_stats
-                    )
-                    
-                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                    filename = f"AI_Report_{site_name.replace(' ', '_')}_{timestamp}.pdf"
-                    
-                    st.download_button(
-                        label="⬇️ Download PDF Report",
-                        data=pdf_bytes,
-                        file_name=filename,
-                        mime="application/pdf",
-                        use_container_width=True,
-                        type="primary"
-                    )
-                    st.success("✅ PDF siap download!")
-                    
-                except ImportError:
-                    st.error("❌ Library fpdf tidak terinstall.")
-                    st.info("💡 Hubungi admin untuk install: `pip install fpdf`")
-                except Exception as e:
-                    st.error(f"❌ Gagal generate PDF: {str(e)}")
-                    st.exception(e)
+        # Tombol download PDF
+        try:
+            pdf_bytes = generate_ai_pdf(
+                site_name=site_name,
+                health_score=health_score,
+                avg_progress=avg_progress,
+                on_track=on_track,
+                total_sites=total_sites,
+                delayed=delayed,
+                forecast_end=forecast_end.strftime('%d %b %Y') if 'forecast_end' in locals() else datetime.now().strftime('%d %b %Y'),
+                delay_reasons=delay_reasons,
+                summary=summary if 'summary' in locals() else "No summary available",
+                pic_stats=pic_stats,
+                sla_stats=sla_stats
+            )
+            
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            safe_site_name = site_name.replace(' ', '_').replace('/', '_')[:30]
+            filename = f"AI_Report_{safe_site_name}_{timestamp}.pdf"
+            
+            st.download_button(
+                label="📄 Download PDF Report",
+                data=pdf_bytes,
+                file_name=filename,
+                mime="application/pdf",
+                use_container_width=True,
+                type="primary"
+            )
+            
+            st.success("✅ Klik tombol di atas untuk download PDF")
+            st.info(f"📄 Filename: `{filename}`")
+            
+        except ImportError as e:
+            st.error("❌ Library fpdf tidak terinstall")
+            st.code("pip install fpdf", language="bash")
+            st.error(f"Detail: {str(e)}")
+            
+        except Exception as e:
+            st.error("❌ Gagal generate PDF")
+            st.error(f"Error type: {type(e).__name__}")
+            st.error(f"Error message: {str(e)[:500]}")
+            
+            # Tampilkan debug info
+            with st.expander("🔍 Debug Information"):
+                st.write("**Variables:**")
+                st.write(f"- site_name: {site_name}")
+                st.write(f"- health_score: {health_score}")
+                st.write(f"- total_sites: {total_sites}")
+                st.write(f"- pic_stats: {pic_stats.shape if pic_stats is not None else 'None'}")
+                st.write(f"- sla_stats: {sla_stats}")
+                st.write(f"- delay_reasons: {delay_reasons}")
+                
+                st.write("**Traceback:**")
+                import traceback
+                st.code(traceback.format_exc())
 
 if __name__ == "__main__":
     ai_insights_page()
