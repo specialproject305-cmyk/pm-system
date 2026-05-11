@@ -203,6 +203,40 @@ def safe_date_string(date_input) -> Optional[str]:
     except Exception:
         return None
 
+# Tambahkan fungsi ini di supabase_db.py
+def trigger_sync_progress(site_id):
+    """
+    Fungsi otomatis untuk menghitung ulang progress site
+    setiap kali milestone diupdate.
+    """
+    try:
+        # 1. Ambil semua milestone untuk site ini
+        ms_df = read_sheet("milestones")
+        if ms_df.empty or "project_id" not in ms_df.columns:
+            return
+            
+        site_ms = ms_df[ms_df["project_id"] == site_id].copy()
+        if site_ms.empty:
+            return
+
+        # 2. Hitung Weighted Progress
+        site_ms["weight"] = pd.to_numeric(site_ms["weight"], errors="coerce").fillna(0)
+        total_weight = site_ms["weight"].sum()
+        done_weight = site_ms[site_ms["status"] == "DONE"]["weight"].sum()
+        
+        progress = round((done_weight / total_weight) * 100, 1) if total_weight > 0 else 0
+        
+        # 3. Hitung Status (Critical/Delayed/On Track)
+        delayed_count = len(site_ms[site_ms["status"] == "DELAYED"])
+        status = "CRITICAL" if delayed_count > 3 else ("DELAYED" if delayed_count > 0 else "ON_TRACK")
+        
+        # 4. Update ke tabel projects
+        update_row("projects", site_id, {"progress": str(progress), "status": status})
+        
+    except Exception as e:
+        # Jika sync gagal, kita tidak ingin app crash, cukup log warning
+        import logging
+        logging.warning(f"Auto-sync progress gagal untuk site {site_id}: {e}")
 
 def clear_cache():
     """Clear read_sheet cache (untuk debugging)."""
