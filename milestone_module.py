@@ -440,13 +440,6 @@ def milestone_page():
                             st.rerun()
                         else:
                             st.error("❌ Gagal update data!")
-                        
-                        if success:
-                            sync_milestone_to_site(selected_site)
-                            st.success("✅ Data berhasil diupdate!")
-                            st.rerun()
-                        else:
-                            st.error("❌ Gagal update data!")
                 
                 # Tombol hapus
                 st.divider()
