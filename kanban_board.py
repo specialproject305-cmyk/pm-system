@@ -37,11 +37,11 @@ def inject_kanban_css():
     }
     
     /* Status Colors for Border Left */
-    .border-pending { border-left-color: #6c757d !important; } /* Gray */
-    .border-ongoing { border-left-color: #0d6efd !important; } /* Blue */
-    .border-delayed { border-left-color: #dc3545 !important; } /* Red */
-    .border-material { border-left-color: #fd7e14 !important; } /* Orange */
-    .border-done { border-left-color: #28a745 !important; } /* Green */
+    .border-pending { border-left-color: #6c757d !important; } /* Gray - Planned */
+    .border-material { border-left-color: #fd7e14 !important; } /* Orange - Mat. Ready */
+    .border-ongoing { border-left-color: #0d6efd !important; } /* Blue - In Progress */
+    .border-delayed { border-left-color: #dc3545 !important; } /* Red - Waiting */
+    .border-done { border-left-color: #28a745 !important; } /* Green - Done */
 
     /* Card Content */
     .card-title { font-weight: bold; font-size: 0.9rem; margin-bottom: 5px; }
@@ -76,9 +76,9 @@ def get_status_color(status):
     """Map status to CSS class for border color."""
     mapping = {
         'PENDING': 'border-pending',
+        'MATERIAL_READY': 'border-material',
         'ONGOING': 'border-ongoing',
         'DELAYED': 'border-delayed',
-        'MATERIAL_READY': 'border-material',
         'DONE': 'border-done'
     }
     return mapping.get(status, 'border-pending')
@@ -153,9 +153,9 @@ def render_card(task):
                 <label>Status:</label>
                 <select name="status" style="padding:10px; border-radius:5px; border:1px solid #ccc;">
                     <option value="PENDING" {'selected' if status=='PENDING' else ''}>📋 Planned</option>
+                    <option value="MATERIAL_READY" {'selected' if status=='MATERIAL_READY' else ''}>📦 Material Ready</option>
                     <option value="ONGOING" {'selected' if status=='ONGOING' else ''}>🚧 In Progress</option>
                     <option value="DELAYED" {'selected' if status=='DELAYED' else ''}>⏳ Waiting/Blocked</option>
-                    <option value="MATERIAL_READY" {'selected' if status=='MATERIAL_READY' else ''}>📦 Material Ready</option>
                     <option value="DONE" {'selected' if status=='DONE' else ''}>✅ Done</option>
                 </select>
                 
@@ -211,57 +211,36 @@ def kanban_page():
     if 'planned_end' in ms_df.columns:
         ms_df['planned_end'] = pd.to_datetime(ms_df['planned_end'], errors='coerce')
         
-    # Define Columns Mapping
-    # Note: We map DB Status to Kanban Column Names
-    col_mapping = {
-        'PENDING': '📋 Planned',
-        'ONGOING': '🚧 In Progress',
-        'DELAYED': '⏳ Waiting',
-        'MATERIAL_READY': '📦 Mat. Ready',
-        'DONE': '✅ Done'
-    }
-    
-    # If 'MATERIAL_READY' doesn't exist in DB yet, we treat it as a visual state or add it.
-    # For now, let's assume we might need to handle cases where status is not exactly matching.
-    # But based on previous code, statuses are PENDING, ONGOING, DONE, DELAYED.
-    # We will add logic to treat specific conditions as Material Ready if needed, 
-    # OR simply allow user to select it in dropdown and save it to DB.
+    # Define Columns Mapping - URUTAN BARU SESUAI PERMINTAAN
+    col_mapping = [
+        ('PENDING', '📋 Planned'),
+        ('MATERIAL_READY', '📦 Mat. Ready'),
+        ('ONGOING', '🚧 In Progress'),
+        ('DELAYED', '⏳ Waiting'),
+        ('DONE', '✅ Done')
+    ]
     
     # Render Kanban Columns
     # On Desktop: 5 columns side-by-side. On Mobile: Stacked via CSS.
     cols = st.columns(5)
     
-    for i, (status_key, col_name) in enumerate(col_mapping.items()):
+    for i, (status_key, col_name) in enumerate(col_mapping):
         with cols[i]:
             st.markdown(f"<h4 style='text-align:center; border-bottom:2px solid #ddd; padding-bottom:10px;'>{col_name}</h4>", unsafe_allow_html=True)
             
             # Filter tasks for this column
-            if status_key == 'MATERIAL_READY':
-                # Check if column exists in DF, if not create dummy filter
-                if 'status' in ms_df.columns:
-                    tasks = ms_df[ms_df['status'] == status_key]
-                else:
-                    tasks = pd.DataFrame()
+            if 'status' in ms_df.columns:
+                tasks = ms_df[ms_df['status'] == status_key]
             else:
-                if 'status' in ms_df.columns:
-                    tasks = ms_df[ms_df['status'] == status_key]
-                else:
-                    tasks = pd.DataFrame()
+                tasks = pd.DataFrame()
                     
             # Render Cards
             if not tasks.empty:
                 for _, task in tasks.iterrows():
                     card_html = render_card(task)
                     st.markdown(card_html, unsafe_allow_html=True)
-                    
-                    # Handle Modal Submission (Hack for Streamlit Dialog)
-                    # Since Streamlit doesn't natively support HTML dialog forms easily without JS,
-                    # We will use a simpler approach: Click Card -> Show Expander/Form below
-                    
-    # --- ALTERNATIVE MOBILE-FRIENDLY APPROACH FOR EDITING ---
-    # Because HTML Dialogs can be tricky in Streamlit without custom components,
-    # Let's use a "Click to Edit" section at the bottom or sidebar for simplicity and stability.
     
+    # --- SECTION UNTUK UPDATE STATUS (Mobile Friendly) ---
     st.divider()
     st.markdown("### ✏️ Update Task Status")
     st.info("💡 Pilih task di bawah untuk mengubah statusnya.")
@@ -285,8 +264,8 @@ def kanban_page():
         with col_e1:
             new_status = st.selectbox(
                 "Ubah Status Ke:",
-                ['PENDING', 'ONGOING', 'DELAYED', 'MATERIAL_READY', 'DONE'],
-                index=['PENDING', 'ONGOING', 'DELAYED', 'MATERIAL_READY', 'DONE'].index(selected_task_row.get('status', 'PENDING'))
+                ['PENDING', 'MATERIAL_READY', 'ONGOING', 'DELAYED', 'DONE'],
+                index=['PENDING', 'MATERIAL_READY', 'ONGOING', 'DELAYED', 'DONE'].index(selected_task_row.get('status', 'PENDING'))
             )
         with col_e2:
             new_actual_end = st.date_input(
