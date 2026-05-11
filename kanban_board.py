@@ -103,7 +103,7 @@ def get_sla_class(planned_end, status):
         return 'sla-ok'
 
 def render_card(task):
-    """Render a single Kanban card HTML."""
+    """Render a single Kanban card HTML with safe value handling."""
     status = task.get('status', 'PENDING')
     border_class = get_status_color(status)
     
@@ -117,8 +117,23 @@ def render_card(task):
     sla_text = f"{sla_days} Days" if sla_days != '-' else '-'
     
     # Create unique key for modal trigger
-    card_id = task.get('id')
+    card_id = str(task.get('id')) # Pastikan ID adalah string
     
+    # Safe handling for actual_end date value
+    actual_end_val = task.get('actual_end', '')
+    if actual_end_val and pd.notna(actual_end_val):
+        # Jika sudah string, ambil 10 karakter pertama (YYYY-MM-DD)
+        if isinstance(actual_end_val, str):
+            actual_end_str = actual_end_val[:10]
+        else:
+            # Jika objek datetime, convert ke string
+            try:
+                actual_end_str = pd.to_datetime(actual_end_val).strftime('%Y-%m-%d')
+            except:
+                actual_end_str = ''
+    else:
+        actual_end_str = ''
+
     html = f"""
     <div class="kanban-card {border_class}" onclick="document.getElementById('modal-{card_id}').showModal()">
         <div class="card-title">{name}</div>
@@ -145,7 +160,7 @@ def render_card(task):
                 </select>
                 
                 <label>Actual End Date (if Done):</label>
-                <input type="date" name="actual_end" value="{task.get('actual_end', '')[:10] if task.get('actual_end') else ''}" style="padding:10px; border-radius:5px; border:1px solid #ccc;">
+                <input type="date" name="actual_end" value="{actual_end_str}" style="padding:10px; border-radius:5px; border:1px solid #ccc;">
                 
                 <div style="display:flex; gap:10px; margin-top:10px;">
                     <button value="cancel" style="flex:1; padding:10px; background:#eee; border:none; border-radius:5px; cursor:pointer;">Cancel</button>
