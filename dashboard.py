@@ -476,8 +476,8 @@ def dashboard_page():
             <h1 style='margin:0; color: #ffffff; font-size:2rem; font-weight:700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;'>
                 👷 Dashboard Collocation Project
             </h1>
-            <p style='margin:5px 0 0 0; color: rgba(255,255,255,0.95); font-size:0.95rem; font-weight:500;'>
-                Real-time monitoring & analytics
+            <p style='margin:80px 0 0 0; color: rgba(255,255,255,0.95); font-size:0.95rem; font-weight:500;'>
+                Real-time monitoring
             </p>
         </div>
         <div style='background: rgba(255,255,255,0.25); padding: 15px 25px; border-radius: 12px; text-align: center; backdrop-filter: blur(10px); border: 2px solid rgba(255,255,255,0.3); margin-left: 20px;'>
