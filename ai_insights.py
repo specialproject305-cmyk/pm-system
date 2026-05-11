@@ -17,7 +17,7 @@ from io import BytesIO
 
 def generate_ai_pdf(site_name, health_score, avg_progress, on_track, total_sites, 
                    delayed, forecast_end, delay_reasons, summary, pic_stats=None, sla_stats=None):
-    """Generate PDF report - FIXED tanpa emoji."""
+    """Generate PDF report - FIXED untuk fpdf2 compatibility."""
     try:
         from fpdf import FPDF
     except ImportError:
@@ -25,36 +25,118 @@ def generate_ai_pdf(site_name, health_score, avg_progress, on_track, total_sites
     
     pdf = FPDF()
     pdf.add_page()
+    
+    # Set margin standar agar perhitungan lebar akurat
+    pdf.set_left_margin(10)
+    pdf.set_right_margin(10)
+    pdf.set_top_margin(15)
     pdf.set_auto_page_break(auto=True, margin=15)
     
-    # Helper function untuk sanitize text (hapus emoji)
+    # ── Helper: Sanitize Text (Hapus Emoji & Non-ASCII) ──
     def sanitize_text(text):
-        """Hapus emoji dan karakter non-ASCII dari text."""
-        if not text:
-            return ""
-        # Hapus emoji dan karakter Unicode non-ASCII
+        if not text: return ""
         import re
-        # Pattern untuk menghapus emoji
         emoji_pattern = re.compile("["
-            u"\U0001F600-\U0001F64F"  # emoticons
-            u"\U0001F300-\U0001F5FF"  # symbols & pictographs
-            u"\U0001F680-\U0001F6FF"  # transport & map symbols
-            u"\U0001F1E0-\U0001F1FF"  # flags
-            u"\U00002702-\U000027B0"
-            u"\U000024C2-\U0001F251"
-            "]+", flags=re.UNICODE)
+            u"\U0001F600-\U0001F64F" u"\U0001F300-\U0001F5FF" 
+            u"\U0001F680-\U0001F6FF" u"\U0001F1E0-\U0001F1FF" 
+            u"\U00002702-\U000027B0" u"\U000024C2-\U0001F251"
+        "]+", flags=re.UNICODE)
         text = emoji_pattern.sub(r'', text)
-        # Hapus karakter non-ASCII lainnya
-        text = ''.join(char for char in text if ord(char) < 128)
-        return text
-    
-    # Header
+        return ''.join(char for char in text if ord(char) < 128)
+
+    # ── Header ──
     pdf.set_font('Helvetica', 'B', 16)
     pdf.cell(0, 10, 'AI Analytics Report', 0, 1, 'C')
     pdf.set_font('Helvetica', 'I', 10)
     pdf.cell(0, 5, f'Generated: {datetime.now().strftime("%d %b %Y, %H:%M")}', 0, 1, 'C')
     pdf.cell(0, 5, f'Site: {sanitize_text(site_name)}', 0, 1, 'C')
     pdf.ln(8)
+    
+    # ── 1. Executive Summary ──
+    pdf.set_font('Helvetica', 'B', 12)
+    pdf.cell(0, 8, '1. Executive Summary', 0, 1)
+    pdf.set_font('Helvetica', '', 10)
+    pdf.cell(0, 6, f'Health Score: {health_score}%', 0, 1)
+    pdf.cell(0, 6, f'Average Progress: {avg_progress:.1f}%', 0, 1)
+    pdf.cell(0, 6, f'On Track: {on_track}/{total_sites} sites', 0, 1)
+    pdf.cell(0, 6, f'Delayed: {delayed} sites', 0, 1)
+    pdf.cell(0, 6, f'Forecast Completion: {forecast_end}', 0, 1)
+    pdf.ln(5)
+    
+    # ── 2. PIC Assignment Performance ──
+    if pic_stats is not None and not pic_stats.empty:
+        pdf.set_font('Helvetica', 'B', 12)
+        pdf.cell(0, 8, '2. PIC Assignment Performance', 0, 1)
+        pdf.set_font('Helvetica', '', 9)
+        
+        pdf.set_font('Helvetica', 'B', 8)
+        headers = ['PIC', 'Tasks', 'Done', 'SLA Score', 'Avg Delay']
+        widths = [40, 20, 20, 30, 30]
+        for col, w in zip(headers, widths):
+            pdf.cell(w, 6, col, 1, 0, 'C')
+        pdf.ln()
+        
+        pdf.set_font('Helvetica', '', 8)
+        for _, row in pic_stats.head(10).iterrows():
+            pdf.cell(40, 5, sanitize_text(str(row.get('assigned_to', 'N/A')))[:20], 1, 0)
+            pdf.cell(20, 5, str(row.get('total_tasks', 0)), 1, 0, 'C')
+            pdf.cell(20, 5, str(row.get('done_tasks', 0)), 1, 0, 'C')
+            pdf.cell(30, 5, f"{row.get('sla_score', 0):.1f}%", 1, 0, 'C')
+            pdf.cell(30, 5, f"{row.get('avg_delay', 0):.1f} days", 1, 0, 'C')
+            pdf.ln()
+        pdf.ln(5)
+    
+    # ── 3. SLA Compliance Analysis ──
+    if sla_stats:
+        pdf.set_font('Helvetica', 'B', 12)
+        pdf.cell(0, 8, '3. SLA Compliance Analysis', 0, 1)
+        pdf.set_font('Helvetica', '', 10)
+        pdf.cell(0, 6, f'Total Tasks Analyzed: {sla_stats.get("total", 0)}', 0, 1)
+        pdf.cell(0, 6, f'On SLA: {sla_stats.get("on_sla", 0)} ({sla_stats.get("on_sla_pct", 0):.1f}%)', 0, 1)
+        pdf.cell(0, 6, f'Breach SLA: {sla_stats.get("breach", 0)} ({sla_stats.get("breach_pct", 0):.1f}%)', 0, 1)
+        pdf.cell(0, 6, f'Avg Delay: {sla_stats.get("avg_delay", 0):.1f} days', 0, 1)
+        pdf.ln(5)
+    
+    # ── 4. Delay Reason Analysis ─
+    if delay_reasons:
+        pdf.set_font('Helvetica', 'B', 12)
+        pdf.cell(0, 8, '4. Delay Reason Analysis', 0, 1)
+        pdf.set_font('Helvetica', '', 10)
+        for reason, count in delay_reasons.items():
+            clean_reason = sanitize_text(str(reason))
+            if clean_reason:
+                pdf.cell(0, 6, f'- {clean_reason}: {count} milestone', 0, 1)
+        pdf.ln(5)
+    
+    # ── 5. Recommendations (FIXED AREA) ──
+    pdf.set_font('Helvetica', 'B', 12)
+    pdf.cell(0, 8, '5. Recommendations', 0, 1)
+    pdf.set_font('Helvetica', '', 10)
+    
+    # Reset kursor ke margin kiri & hitung lebar aman
+    pdf.set_x(pdf.l_margin)
+    safe_width = pdf.w - pdf.l_margin - pdf.r_margin
+    
+    clean_summary = sanitize_text(summary)
+    for line in clean_summary.split('\n'):
+        # Hapus markdown, simbol aneh, & whitespace
+        clean_line = line.strip().replace('**', '').replace('*', '').replace('__', '').replace('#', '').replace('>', '')
+        if not clean_line:
+            continue
+            
+        try:
+            # Gunakan lebar eksplisit agar tidak error "Not enough horizontal space"
+            pdf.multi_cell(safe_width, 5, clean_line)
+            pdf.ln(2)
+        except Exception:
+            # Fallback: skip baris bermasalah, lanjutkan
+            pdf.set_x(pdf.l_margin)
+    
+    # ── Return PDF Bytes ──
+    try:
+        return pdf.output(dest='S').encode('latin-1')
+    except Exception as e:
+        raise Exception(f"Gagal encode PDF: {str(e)}")
     
     # 1. Executive Summary
     pdf.set_font('Helvetica', 'B', 12)
