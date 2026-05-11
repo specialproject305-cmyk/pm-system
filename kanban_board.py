@@ -91,6 +91,19 @@ def render_card(task):
     days_left, sla_class = get_sla_info(planned_end, status)
     sla_text = f"{days_left}d" if days_left is not None else sla_days
     
+    # ✅ FIX: Konversi aman untuk actual_end agar tidak error [:10]
+    actual_end_val = task.get('actual_end')
+    if actual_end_val and pd.notna(actual_end_val):
+        if isinstance(actual_end_val, str):
+            actual_end_str = actual_end_val[:10]
+        else:
+            try:
+                actual_end_str = pd.to_datetime(actual_end_val).strftime('%Y-%m-%d')
+            except:
+                actual_end_str = ''
+    else:
+        actual_end_str = ''
+
     html = f"""
     <div class="kanban-card {border_class}" onclick="document.getElementById('modal-{card_id}').showModal()">
         <div class="sla-badge {sla_class}">{sla_text}</div>
@@ -117,7 +130,7 @@ def render_card(task):
                 </select>
                 
                 <label style="font-size:0.85rem; font-weight:500;">Actual End (if Done):</label>
-                <input type="date" name="actual_end" value="{task.get('actual_end','')[:10] if task.get('actual_end') else ''}" style="padding:10px; border-radius:8px; border:1px solid #ddd; font-size:0.95rem;">
+                <input type="date" name="actual_end" value="{actual_end_str}" style="padding:10px; border-radius:8px; border:1px solid #ddd; font-size:0.95rem;">
                 
                 <div style="display:flex; gap:10px; margin-top:15px;">
                     <button value="cancel" style="flex:1; padding:10px; background:#f0f2f6; border:none; border-radius:8px; cursor:pointer; font-weight:500;">Cancel</button>
