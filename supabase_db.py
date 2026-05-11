@@ -238,6 +238,21 @@ def trigger_sync_progress(site_id):
         import logging
         logging.warning(f"Auto-sync progress gagal untuk site {site_id}: {e}")
 
+def test_update_connection():
+    """Test apakah bisa update data"""
+    try:
+        # Test dengan query sederhana
+        result = supabase.table("milestones").select("id").limit(1).execute()
+        if result.data:
+            st.success("✅ Koneksi database OK!")
+            return True
+        else:
+            st.warning("⚠️ Tabel milestones kosong atau tidak bisa diakses")
+            return False
+    except Exception as e:
+        st.error(f"❌ Error koneksi: {str(e)}")
+        return False
+
 def clear_cache():
     """Clear read_sheet cache (untuk debugging)."""
     read_sheet.clear()
