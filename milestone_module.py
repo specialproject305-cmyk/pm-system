@@ -453,62 +453,40 @@ def milestone_page():
                     # Ganti bagian if submitted: di TAB 4 dengan kode ini:
 
                     if submitted:
-                        try:
-                            # Validasi ID
-                            if not sel_id:
-                                st.error("❌ Error: ID milestone kosong!")
-                                st.stop()
-                            
-                            # Siapkan data update
-                            update_data = {
-                                "name": ename,
-                                "status": estatus,
-                                "weight": str(eweight),
-                                "assigned_to": eassigned,
-                                "sla_days": esla,
-                                "planned_start": safe_date_string(eplanned_start),
-                                "planned_end": safe_date_string(eplanned_end),
-                                "actual_start": safe_date_string(eactual_start) if eactual_start else None,
-                                "actual_end": safe_date_string(eactual_end) if eactual_end else None,
-                                "delay_reason": edelay_reason
-                            }
-                            
-                            # Debug info
-                            with st.expander("🔍 Debug Info (untuk developer)"):
-                                st.write("**ID yang akan diupdate:**", sel_id)
-                                st.write("**Data yang akan diupdate:**")
-                                st.json(update_data)
-                            
-                            # Eksekusi update
-                            success = update_row("milestones", sel_id, update_data)
-                            
-                            if success:
-                                # 1. Sinkronisasi Progress (Sudah ada di fungsi Anda)
+                        success = update_row("milestones", sel_id, {
+                            "name": ename,
+                            "status": estatus,
+                            "weight": str(eweight),
+                            "assigned_to": eassigned,
+                            "sla_days": esla,
+                            "planned_start": safe_date_string(eplanned_start),
+                            "planned_end": safe_date_string(eplanned_end),
+                            "actual_start": safe_date_string(eactual_start) if eactual_start else None,
+                            "actual_end": safe_date_string(eactual_end) if eactual_end else None,
+                            "delay_reason": edelay_reason
+                        })
+                        
+                        if success:
+                            # ✅ AUTO-SCHEDULE SHIFTING LOGIC
+                            shifted_count = 0
+                            if eactual_end:
                                 try:
-                                    sync_milestone_to_site(selected_site)
+                                    actual_dt = pd.to_datetime(eactual_end)
+                                    planned_dt = pd.to_datetime(eplanned_end)
+                                    delay_days = (actual_dt - planned_dt).days
                                     
-                                    # 2. ✅ INI PENTING: Hapus Cache agar data langsung fresh!
-                                    st.cache_data.clear()
-                                    st.toast("🔄 Progress site otomatis diperbarui!", icon="✅")
-                                    
-                                except Exception as sync_err:
-                                    st.warning(f"⚠️ Data terupdate, tapi sync progress gagal: {sync_err}")
-                                
-                                st.success("✅ Data berhasil diupdate!")
-                                st.rerun()
-                            else:
-                                st.error("❌ Gagal update data!")
-                                st.info("💡 Kemungkinan penyebab:")
-                                st.markdown("""
-                                - Koneksi internet terputus
-                                - Database Supabase sedang maintenance
-                                - Permission key tidak memiliki akses UPDATE
-                                - ID milestone tidak ditemukan di database
-                                """)
-                                
-                        except Exception as e:
-                            st.error(f"💥 Terjadi error: {str(e)}")
-                            st.exception(e)  # Tampilkan detail error lengkap
+                                    if delay_days > 0:
+                                        shifted_count = cascade_schedule_shift(selected_site, eplanned_end, delay_days)
+                                        if shifted_count > 0:
+                                            st.info(f"🔄 {shifted_count} task berikutnya otomatis di-shift +{delay_days} hari!")
+                                except Exception as e:
+                                    st.warning(f"⚠️ Kalkulasi shift jadwal gagal: {e}")
+                            
+                            sync_milestone_to_site(selected_site)
+                            st.success("✅ Data berhasil diupdate!")
+                            st.rerun()
+                        else:
+                            st.error("❌ Gagal update data!")
                 
                 # Tombol hapus
                 st.divider()
