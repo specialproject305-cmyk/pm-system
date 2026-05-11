@@ -1,277 +1,271 @@
+"""
+dashboard.py - Export & Report Module
+Production-ready dengan BytesIO (tanpa temp file)
+"""
+
 import streamlit as st
 import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
-from datetime import datetime, timedelta, date
-from supabase_db import read_all_sheets
+from datetime import datetime
+from io import BytesIO
+from supabase_db import read_sheet
 
-def dashboard_page():
-    now = datetime.now()
+# ─────────────────────────────────────────────────────────────
+# 📄 PDF GENERATOR (FPDF)
+# ─────────────────────────────────────────────────────────────
+
+try:
+    from fpdf import FPDF
+    FPDF_AVAILABLE = True
+except ImportError:
+    FPDF_AVAILABLE = False
+    st.warning("⚠️ Library fpdf tidak terinstall. Install dengan: `pip install fpdf`")
+
+class PDFReport(FPDF):
+    """Custom PDF Report dengan header."""
     
-    # ===== HEADER DENGAN JAM =====
-    col_header, col_clock = st.columns([3, 1])
-    with col_header:
-        st.title("👷 Dashboard Collocation Project")
-    with col_clock:
-        st.markdown(f"""
-        <div style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); 
-                    padding: 15px; border-radius: 10px; text-align: center; color: white;">
-            <div style="font-size: 14px;">📅 {now.strftime('%A, %d %B %Y')}</div>
-            <div style="font-size: 28px; font-weight: bold;">🕐 {now.strftime('%H:%M:%S')}</div>
-            <div style="font-size: 11px;">WIB</div>
-        </div>
-        """, unsafe_allow_html=True)
+    def header(self):
+        """Header di setiap halaman."""
+        # Logo (opsional)
+        # self.image('logo.png', 10, 8, 33)
+        
+        # Judul
+        self.set_font('Helvetica', 'B', 14)
+        self.cell(0, 10, 'Site Management Report', 0, 1, 'C')
+        
+        # Subtitle
+        self.set_font('Helvetica', 'I', 9)
+        generated_time = datetime.now().strftime("%d %b %Y, %H:%M")
+        self.cell(0, 5, f'Generated: {generated_time}', 0, 1, 'C')
+        
+        self.ln(5)
     
-    st.markdown("---")
+    def footer(self):
+        """Footer di setiap halaman."""
+        self.set_y(-15)
+        self.set_font('Helvetica', 'I', 8)
+        self.cell(0, 10, f'Page {self.page_no()}', 0, 0, 'C')
+
+
+def generate_site_pdf(site_id: str) -> bytes:
+    """
+    Generate PDF report untuk site tertentu.
+    Returns: Bytes PDF (bukan file fisik)
+    """
+    if not FPDF_AVAILABLE:
+        raise ImportError("FPDF library tidak tersedia")
     
-    # ===== LOAD DATA =====
-    all_data = read_all_sheets()
-    df = all_data.get('projects', pd.DataFrame())
-    materials_df = all_data.get('materials', pd.DataFrame())
-    milestones_df = all_data.get('milestones', pd.DataFrame())
-    
-    # ===== TOAST NOTIFICATIONS =====
-    messages = all_data.get('chat_messages', pd.DataFrame())
-    
-    if not messages.empty and 'sender' in messages.columns:
-        latest_msg = messages.iloc[-1]
-        st.toast(f"💬 {latest_msg.get('sender','')}: {str(latest_msg.get('message',''))[:50]}...", icon="💬")
-    
-    if not milestones_df.empty and 'status' in milestones_df.columns:
-        delayed = milestones_df[milestones_df['status'] == 'DELAYED']
-        if not delayed.empty:
-            st.toast(f"⚠️ {len(delayed)} milestone terlambat!", icon="⚠️")
-    
-    if not materials_df.empty:
-        for c in ['current_stock', 'min_stock']:
-            if c in materials_df.columns:
-                materials_df[c] = pd.to_numeric(materials_df[c], errors='coerce').fillna(0)
-        critical = materials_df[materials_df['current_stock'] < materials_df['min_stock']]
-        if not critical.empty:
-            st.toast(f"🔴 {len(critical)} material stok kritis!", icon="🔴")
-    
-    # Konversi numerik
-    if not df.empty:
-        if 'progress' in df.columns:
-            df['progress'] = pd.to_numeric(df['progress'], errors='coerce').fillna(0)
-        df['start_date'] = pd.to_datetime(df['start_date'], errors='coerce')
-        df['end_date'] = pd.to_datetime(df['end_date'], errors='coerce')
-    
-    # ===== FILTERS =====
-    st.markdown("### 🔍 Filter Data")
-    col_f1, col_f2, col_f3, col_f4 = st.columns([2, 2, 2, 1])
-    
-    with col_f1:
-        pm_list = df['pm'].dropna().unique().tolist() if not df.empty and 'pm' in df.columns else []
-        filter_pm = st.multiselect("👤 Filter PM:", pm_list, default=[], placeholder="Semua PM")
-    
-    with col_f2:
-        vendor_list = df['vendor'].dropna().unique().tolist() if not df.empty and 'vendor' in df.columns else []
-        filter_vendor = st.multiselect("🏢 Filter Vendor:", vendor_list, default=[], placeholder="Semua Vendor")
-    
-    with col_f3:
-        date_range = st.date_input("📅 Periode:", value=(date.today() - timedelta(days=30), date.today()), max_value=date.today())
-    
-    with col_f4:
-        st.markdown("<br>", unsafe_allow_html=True)
-        apply_filter = st.button("🔄 Terapkan", type="primary", use_container_width=True)
-    
-    # Filter dataframe
-    filtered = df.copy()
-    if not filtered.empty:
-        if filter_pm:
-            filtered = filtered[filtered['pm'].isin(filter_pm)]
-        if filter_vendor:
-            filtered = filtered[filtered['vendor'].isin(filter_vendor)]
-    
-    st.markdown("---")
-    
-    # ===== KPI CARDS =====
-    total_sites = len(filtered)
-    avg_progress = filtered['progress'].mean() if not filtered.empty else 0
-    on_track = len(filtered[filtered['status']=='ON_TRACK']) if not filtered.empty and 'status' in filtered.columns else 0
-    delayed_sites = len(filtered[filtered['status'].isin(['DELAYED','CRITICAL'])]) if not filtered.empty and 'status' in filtered.columns else 0
-    critical_mat = len(materials_df[materials_df['current_stock'] < materials_df['min_stock']]) if not materials_df.empty else 0
-    delayed_ms = len(milestones_df[milestones_df['status']=='DELAYED']) if not milestones_df.empty and 'status' in milestones_df.columns else 0
-    
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        st.markdown(f"""
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    padding: 20px; border-radius: 15px; color: white; text-align: center;
-                    box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
-            <div style="font-size: 40px;">📁</div>
-            <div style="font-size: 36px; font-weight: bold;">{total_sites}</div>
-            <div style="font-size: 14px;">Total Site</div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col2:
-        prog_color = '#28a745' if avg_progress >= 70 else ('#ffc107' if avg_progress >= 40 else '#dc3545')
-        st.markdown(f"""
-        <div style="background: linear-gradient(135deg, {prog_color} 0%, #17a2b8 100%);
-                    padding: 20px; border-radius: 15px; color: white; text-align: center;
-                    box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
-            <div style="font-size: 40px;">📈</div>
-            <div style="font-size: 36px; font-weight: bold;">{avg_progress:.1f}%</div>
-            <div style="font-size: 14px;">Avg Progress</div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col3:
-        st.markdown(f"""
-        <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-                    padding: 20px; border-radius: 15px; color: white; text-align: center;
-                    box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
-            <div style="font-size: 40px;">⚠️</div>
-            <div style="font-size: 36px; font-weight: bold;">{delayed_ms}</div>
-            <div style="font-size: 14px;">MS Terlambat</div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col4:
-        st.markdown(f"""
-        <div style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-                    padding: 20px; border-radius: 15px; color: white; text-align: center;
-                    box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
-            <div style="font-size: 40px;">🔴</div>
-            <div style="font-size: 36px; font-weight: bold;">{critical_mat}</div>
-            <div style="font-size: 14px;">Mat. Kritis</div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    # Mini Insight Bar
-    st.markdown("---")
-    col_i1, col_i2, col_i3, col_i4 = st.columns(4)
-    col_i1.metric("🟢 On Track", on_track)
-    col_i2.metric("🟡 Delayed", delayed_sites)
-    col_i3.metric("🔴 Critical", len(filtered[filtered['status']=='CRITICAL']) if not filtered.empty and 'status' in filtered.columns else 0)
-    col_i4.metric("📦 Mat. Kritis", critical_mat)
-    
-    st.markdown("---")
-    
-    # ===== ROW 1: PROGRESS BAR + S-CURVE =====
-    col_left, col_right = st.columns([1, 1])
-    
-    with col_left:
-        st.subheader("📊 Progress per Site")
-        if not filtered.empty:
-            colors = []
-            for _, s in filtered.iterrows():
-                st_val = s.get('status', '')
-                colors.append('#28a745' if st_val == 'ON_TRACK' else ('#ffc107' if st_val == 'DELAYED' else '#dc3545'))
+    try:
+        # Load data
+        sites_df = read_sheet("projects")
+        ms_df = read_sheet("milestones")
+        
+        # Cari data site
+        if sites_df.empty:
+            raise ValueError("Data projects kosong")
+        
+        site_row = sites_df[sites_df['id'] == site_id]
+        
+        if site_row.empty:
+            raise ValueError(f"Site dengan ID {site_id} tidak ditemukan")
+        
+        site = site_row.iloc[0]
+        
+        # Buat PDF
+        pdf = PDFReport()
+        pdf.add_page()
+        pdf.set_auto_page_break(auto=True, margin=15)
+        
+        # ── Header Site Info ──
+        pdf.set_font('Helvetica', 'B', 12)
+        site_name = site.get('site_name', 'N/A')
+        site_id_str = site.get('site_id', 'N/A')
+        pdf.cell(0, 8, f"Site: {site_id_str} - {site_name}", 0, 1)
+        pdf.ln(3)
+        
+        # ── Detail Info ──
+        pdf.set_font('Helvetica', '', 9)
+        
+        info_fields = [
+            ('Status', site.get('status', '-')),
+            ('Progress', f"{site.get('progress', '0')}%"),
+            ('Project Manager', site.get('pm', '-')),
+            ('Vendor', site.get('vendor', '-')),
+            ('Plan Start', site.get('start_date', '-')),
+            ('Plan End', site.get('end_date', '-'))
+        ]
+        
+        for label, value in info_fields:
+            pdf.set_font('Helvetica', 'B', 9)
+            pdf.cell(40, 6, f"{label}:", 0, 0)
+            pdf.set_font('Helvetica', '', 9)
+            pdf.cell(0, 6, str(value), 0, 1)
+        
+        pdf.ln(5)
+        
+        # ── Milestones Table ──
+        pdf.set_font('Helvetica', 'B', 11)
+        pdf.cell(0, 8, 'Milestones:', 0, 1)
+        pdf.ln(2)
+        
+        # Filter milestone untuk site ini
+        site_ms = ms_df[ms_df['project_id'] == site_id] if not ms_df.empty else pd.DataFrame()
+        
+        if not site_ms.empty:
+            # Header tabel
+            pdf.set_font('Helvetica', 'B', 7)
+            columns = [
+                ('Name', 70),
+                ('Status', 25),
+                ('Planned End', 25),
+                ('Weight', 15),
+                ('Delay Reason', 45)
+            ]
             
-            fig = go.Figure()
-            fig.add_trace(go.Bar(
-                y=filtered['site_id'], x=filtered['progress'], orientation='h',
-                marker=dict(color=colors, line=dict(color='rgba(0,0,0,0.3)', width=1)),
-                text=filtered['progress'].apply(lambda x: f'{x:.0f}%'), textposition='outside',
-                hovertext=filtered.get('site_name', filtered['site_id']),
-                hovertemplate='<b>%{hovertext}</b><br>Progress: %{x}%<extra></extra>'
-            ))
-            fig.update_layout(height=max(300, len(filtered)*40), xaxis=dict(range=[0, 105]),
-                            margin=dict(l=10, r=30, t=20, b=10), showlegend=False,
-                            plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
-            st.plotly_chart(fig, use_container_width=True)
+            # Draw header
+            for col_name, width in columns:
+                pdf.cell(width, 6, col_name.upper(), 1, 0, 'C')
+            pdf.ln()
+            
+            # Draw rows
+            pdf.set_font('Helvetica', '', 7)
+            
+            for _, ms in site_ms.iterrows():
+                # Name (potong jika terlalu panjang)
+                name = str(ms.get('name', ''))[:35]
+                pdf.cell(70, 5, name, 1, 0)
+                
+                # Status
+                status = str(ms.get('status', ''))
+                pdf.cell(25, 5, status, 1, 0, 'C')
+                
+                # Planned End
+                end_date = str(ms.get('planned_end', ''))[:10]
+                pdf.cell(25, 5, end_date, 1, 0, 'C')
+                
+                # Weight
+                weight = str(ms.get('weight', '0'))
+                pdf.cell(15, 5, f"{weight}%", 1, 0, 'R')
+                
+                # Delay Reason
+                reason = str(ms.get('delay_reason', '-'))[:20]
+                pdf.cell(45, 5, reason, 1, 0, 'L')
+                
+                pdf.ln()
         else:
-            st.info("📋 Tidak ada data.")
-    
-    with col_right:
-        st.subheader("📈 S-Curve Progress")
-        if not filtered.empty:
-            total = len(filtered)
-            m_labels = ['0%', '10%', '25%', '50%', '75%', '90%', '100%']
-            values = [0,
-                     (len(filtered[filtered['progress']>=10])/total)*100 if total>0 else 0,
-                     (len(filtered[filtered['progress']>=25])/total)*100 if total>0 else 0,
-                     (len(filtered[filtered['progress']>=50])/total)*100 if total>0 else 0,
-                     (len(filtered[filtered['progress']>=75])/total)*100 if total>0 else 0,
-                     (len(filtered[filtered['progress']>=90])/total)*100 if total>0 else 0,
-                     (len(filtered[filtered['progress']>=100])/total)*100 if total>0 else 0]
+            pdf.set_font('Helvetica', 'I', 9)
+            pdf.cell(0, 6, "Belum ada milestone untuk site ini.", 0, 1)
+        
+        # ── Summary Section ──
+        pdf.ln(5)
+        pdf.set_font('Helvetica', 'B', 11)
+        pdf.cell(0, 8, 'Summary:', 0, 1)
+        
+        if not site_ms.empty:
+            total_ms = len(site_ms)
+            done_ms = len(site_ms[site_ms['status'] == 'DONE'])
+            delayed_ms = len(site_ms[site_ms['status'] == 'DELAYED'])
             
-            fig_sc = go.Figure()
-            fig_sc.add_trace(go.Scatter(x=m_labels, y=values, mode='lines+markers',
-                line=dict(color='#667eea', width=3, shape='spline'),
-                marker=dict(size=10, color='#764ba2'), fill='tozeroy', fillcolor='rgba(102,126,234,0.2)'))
-            fig_sc.update_layout(height=350, yaxis=dict(range=[0,105]),
-                               plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
-            st.plotly_chart(fig_sc, use_container_width=True)
+            pdf.set_font('Helvetica', '', 9)
+            pdf.cell(0, 6, f"Total Milestones: {total_ms}", 0, 1)
+            pdf.cell(0, 6, f"Completed: {done_ms} ({done_ms/total_ms:.1%} if total_ms > 0 else 0)", 0, 1)
+            pdf.cell(0, 6, f"Delayed: {delayed_ms}", 0, 1)
+        
+        # Return PDF sebagai bytes
+        pdf_bytes = pdf.output(dest='S').encode('latin-1')
+        return pdf_bytes
     
-    st.markdown("---")
+    except Exception as e:
+        raise Exception(f"Gagal generate PDF: {str(e)}")
+
+# ─────────────────────────────────────────────────────────────
+# 📊 EXPORT PAGE
+# ─────────────────────────────────────────────────────────────
+
+def export_page():
+    """Halaman Export Report."""
+    st.title("📄 Export Report")
+    st.markdown("Generate dan download report dalam format PDF.")
     
-    # ===== ROW 2: MATERIAL + WEEKLY =====
-    col_left2, col_right2 = st.columns([1, 1])
+    if not FPDF_AVAILABLE:
+        st.error("❌ Library fpdf tidak terinstall.")
+        st.info("💡 Install dengan command: `pip install fpdf`")
+        st.stop()
     
-    with col_left2:
-        st.subheader("📦 Material: Kebutuhan vs Stok")
-        if not materials_df.empty:
-            mat_disp = materials_df.head(12).copy()
-            fig_mat = go.Figure()
-            fig_mat.add_trace(go.Bar(name='Stok Saat Ini', y=mat_disp['name'], x=mat_disp['current_stock'],
-                                    orientation='h', marker=dict(color='#28a745')))
-            fig_mat.add_trace(go.Bar(name='Stok Minimum', y=mat_disp['name'], x=mat_disp['min_stock'],
-                                    orientation='h', marker=dict(color='#dc3545', opacity=0.5)))
-            fig_mat.update_layout(height=max(300, len(mat_disp)*35), barmode='group',
-                                plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
-                                legend=dict(orientation='h', y=1.02))
-            st.plotly_chart(fig_mat, use_container_width=True)
+    # Load data projects
+    sites_df = read_sheet("projects")
     
-    with col_right2:
-        st.subheader("📊 Progress per Minggu")
-        if not milestones_df.empty and 'planned_end' in milestones_df.columns:
-            milestones_df['week'] = pd.to_datetime(milestones_df['planned_end'], errors='coerce').dt.strftime('%Y-W%W')
-            weekly = milestones_df.groupby('week').agg(
-                ms_done=('status', lambda x: (x=='DONE').sum()),
-                ms_delayed=('status', lambda x: (x=='DELAYED').sum())
-            ).reset_index().tail(12)
-            
-            if not weekly.empty:
-                fig_w = go.Figure()
-                fig_w.add_trace(go.Bar(name='MS Selesai', x=weekly['week'], y=weekly['ms_done'], marker=dict(color='#28a745')))
-                fig_w.add_trace(go.Bar(name='MS Terlambat', x=weekly['week'], y=weekly['ms_delayed'], marker=dict(color='#dc3545')))
-                fig_w.update_layout(height=350, barmode='group',
-                                  plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
-                                  legend=dict(orientation='h', y=1.02))
-                st.plotly_chart(fig_w, use_container_width=True)
+    if sites_df.empty:
+        st.warning("⚠️ Tambahkan site dulu di menu Project Tracker!")
+        return
     
-    st.markdown("---")
+    # ── Sidebar: Pilih Site ──
+    st.sidebar.header("🔍 Filter")
     
-    # ===== MINI INSIGHTS =====
-    st.subheader("🤖 Mini Insights")
-    col_m1, col_m2, col_m3 = st.columns(3)
+    selected = st.sidebar.selectbox(
+        "Pilih Site:",
+        sites_df['id'].tolist(),
+        format_func=lambda x: f"{sites_df[sites_df['id']==x]['site_id'].values[0]} - {sites_df[sites_df['id']==x]['site_name'].values[0]}"
+    )
     
-    with col_m1:
-        with st.container(border=True):
-            st.markdown("### ⚠️ Site Perlu Perhatian")
-            if not filtered.empty:
-                crit = filtered[filtered['status'].isin(['CRITICAL','DELAYED']) | (filtered['progress']<30)]
-                if not crit.empty:
-                    for _, r in crit.head(3).iterrows():
-                        color = '🔴' if r.get('status')=='CRITICAL' else '🟡'
-                        st.markdown(f"{color} **{r.get('site_id','?')}** — {r.get('progress',0):.0f}%")
-                else:
-                    st.success("Semua site aman!")
+    # ── Main Content ──
+    st.subheader("Preview Data")
     
-    with col_m2:
-        with st.container(border=True):
-            st.markdown("### 📦 Top Material Kritis")
-            if not materials_df.empty:
-                crit2 = materials_df[materials_df['current_stock'] < materials_df['min_stock']]
-                if not crit2.empty:
-                    for _, r in crit2.head(3).iterrows():
-                        gap = r['min_stock'] - r['current_stock']
-                        st.markdown(f"🔴 **{r['name']}** — Kurang {gap:.0f}")
-                else:
-                    st.success("Material cukup!")
+    # Tampilkan info site
+    site_info = sites_df[sites_df['id'] == selected].iloc[0]
     
-    with col_m3:
-        with st.container(border=True):
-            st.markdown("### 🎯 Rekomendasi Cepat")
-            if delayed_ms > 5: st.warning("⚠️ Banyak milestone terlambat")
-            if critical_mat > 3: st.warning("📦 >3 material kritis")
-            if delayed_sites > 0: st.error(f"🔴 {delayed_sites} site terlambat")
-            if total_sites > 0 and on_track/total_sites >= 0.8: st.success("✅ Performa bagus!")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Site ID", site_info.get('site_id', '-'))
+    with col2:
+        st.metric("Status", site_info.get('status', '-'))
+    with col3:
+        st.metric("Progress", f"{site_info.get('progress', '0')}%")
+    
+    st.divider()
+    
+    # Tombol generate
+    if st.button("📄 Generate PDF Report", type="primary", use_container_width=True):
+        with st.spinner("🔄 Generating PDF..."):
+            try:
+                # Generate PDF
+                pdf_bytes = generate_site_pdf(selected)
+                
+                # Siapkan nama file
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                site_name = site_info.get('site_id', 'site').replace(' ', '_')
+                filename = f"report_{site_name}_{timestamp}.pdf"
+                
+                # Download button
+                st.success("✅ PDF berhasil digenerate!")
+                
+                st.download_button(
+                    label="📥 Download PDF",
+                    data=pdf_bytes,
+                    file_name=filename,
+                    mime="application/pdf",
+                    use_container_width=True
+                )
+                
+                # Info tambahan
+                st.info(f"📊 File size: {len(pdf_bytes) / 1024:.1f} KB")
+                
+            except Exception as e:
+                st.error(f"❌ Gagal generate PDF: {str(e)}")
+                st.exception(e)  # Tampilkan detail error untuk debugging
+    
+    # ── Batch Export (Opsional) ──
+    st.divider()
+    st.subheader("📦 Batch Export (Semua Site)")
+    
+    if st.button("📦 Generate All Sites Report", type="secondary"):
+        st.warning("⚠️ Fitur ini akan generate PDF untuk semua site (makan waktu).")
+        
+        if st.button("✅ Ya, Generate Semua!"):
+            st.info("🔄 Processing... (fitur dalam pengembangan)")
+
+# ─────────────────────────────────────────────────────────────
+# MAIN ENTRY POINT
+# ─────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    dashboard_page()
+    export_page()
