@@ -5,7 +5,7 @@ import plotly.graph_objects as go
 from datetime import datetime, timedelta, date
 from supabase_db import read_all_sheets, read_sheet
 import time
-import json
+import io
 
 # ─────────────────────────────────────────────────────────────
 # 🎨 THEME CONFIGURATION
@@ -51,7 +51,7 @@ THEMES = {
 }
 
 # ─────────────────────────────────────────────────────────────
-# 💅 CUSTOM CSS WITH ANIMATIONS
+# 💅 CUSTOM CSS
 # ─────────────────────────────────────────────────────────────
 
 def inject_custom_css(theme_name="Professional"):
@@ -59,19 +59,14 @@ def inject_custom_css(theme_name="Professional"):
     
     st.markdown(f"""
     <style>
-    /* Import Google Fonts */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
     
-    /* Global Styles */
-    * {{
-        font-family: 'Inter', sans-serif;
-    }}
+    * {{ font-family: 'Inter', sans-serif; }}
     
     .stApp {{
         background: linear-gradient(135deg, {theme['bg']} 0%, #ffffff 100%);
     }}
     
-    /* Animated Header */
     .header-container {{
         background: linear-gradient(135deg, {theme['primary']} 0%, {theme['secondary']} 100%);
         padding: 2rem;
@@ -86,7 +81,6 @@ def inject_custom_css(theme_name="Professional"):
         to {{ opacity: 1; transform: translateY(0); }}
     }}
     
-    /* Enhanced Clock */
     .clock-widget {{
         background: rgba(255,255,255,0.15);
         backdrop-filter: blur(10px);
@@ -102,7 +96,6 @@ def inject_custom_css(theme_name="Professional"):
         transform: scale(1.05);
     }}
     
-    /* Animated KPI Cards */
     .kpi-card {{
         background: linear-gradient(135deg, {theme['primary']} 0%, {theme['secondary']} 100%);
         padding: 25px;
@@ -116,22 +109,6 @@ def inject_custom_css(theme_name="Professional"):
         overflow: hidden;
     }}
     
-    .kpi-card::before {{
-        content: '';
-        position: absolute;
-        top: -50%;
-        left: -50%;
-        width: 200%;
-        height: 200%;
-        background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
-        transform: rotate(45deg);
-        transition: all 0.6s;
-    }}
-    
-    .kpi-card:hover::before {{
-        left: 100%;
-    }}
-    
     .kpi-card:hover {{
         transform: translateY(-10px) scale(1.02);
         box-shadow: 0 15px 50px rgba(0,0,0,0.2);
@@ -142,7 +119,6 @@ def inject_custom_css(theme_name="Professional"):
         to {{ opacity: 1; transform: translateY(0); }}
     }}
     
-    /* Interactive Buttons */
     .stButton > button {{
         background: linear-gradient(135deg, {theme['primary']} 0%, {theme['secondary']} 100%);
         color: white;
@@ -159,7 +135,6 @@ def inject_custom_css(theme_name="Professional"):
         box-shadow: 0 6px 20px rgba(0,0,0,0.3);
     }}
     
-    /* Filter Container */
     .filter-container {{
         background: white;
         padding: 20px;
@@ -174,7 +149,6 @@ def inject_custom_css(theme_name="Professional"):
         to {{ opacity: 1; transform: translateX(0); }}
     }}
     
-    /* Chart Container */
     .chart-container {{
         background: white;
         padding: 20px;
@@ -188,43 +162,25 @@ def inject_custom_css(theme_name="Professional"):
         box-shadow: 0 8px 30px rgba(0,0,0,0.12);
     }}
     
-    /* Notification Badge */
-    .notif-badge {{
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: {theme['danger']};
-        color: white;
-        padding: 10px 20px;
-        border-radius: 25px;
+    .last-update-badge {{
+        background: rgba(255,255,255,0.95);
+        padding: 8px 15px;
+        border-radius: 20px;
+        font-size: 12px;
         font-weight: 600;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        color: {theme['primary']};
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
         animation: pulse 2s infinite;
-        z-index: 1000;
-        cursor: pointer;
     }}
     
     @keyframes pulse {{
-        0%, 100% {{ transform: scale(1); }}
-        50% {{ transform: scale(1.05); }}
+        0%, 100% {{ opacity: 1; }}
+        50% {{ opacity: 0.7; }}
     }}
     
-    /* Loading Animation */
-    .loading-spinner {{
-        border: 4px solid rgba(0,0,0,0.1);
-        border-left-color: {theme['primary']};
-        border-radius: 50%;
-        width: 40px;
-        height: 40px;
-        animation: spin 1s linear infinite;
-        margin: 20px auto;
-    }}
-    
-    @keyframes spin {{
-        to {{ transform: rotate(360deg); }}
-    }}
-    
-    /* Insight Cards */
     .insight-card {{
         background: white;
         border-left: 5px solid {theme['primary']};
@@ -240,70 +196,18 @@ def inject_custom_css(theme_name="Professional"):
         box-shadow: 0 4px 20px rgba(0,0,0,0.1);
     }}
     
-    /* Progress Bar Animation */
-    .progress-animated {{
-        background: linear-gradient(90deg, {theme['success']} 0%, {theme['info']} 100%);
-        height: 8px;
-        border-radius: 10px;
-        animation: progressFill 1.5s ease-out;
-    }}
-    
-    @keyframes progressFill {{
-        from {{ width: 0%; }}
-    }}
-    
-    /* Tooltip Enhancement */
-    [data-testid="stMetricValue"] {{
-        font-size: 2rem;
-        font-weight: 700;
-        color: {theme['primary']};
-    }}
-    
-    /* Responsive Design */
     @media (max-width: 768px) {{
-        .kpi-card {{
-            margin-bottom: 15px;
-        }}
-        .header-container {{
-            padding: 1rem;
-        }}
+        .kpi-card {{ margin-bottom: 15px; }}
+        .header-container {{ padding: 1rem; }}
     }}
     </style>
     """, unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────────────────────
-# 🔄 AUTO-REFRESH COMPONENT
-# ─────────────────────────────────────────────────────────────
-
-def auto_refresh_component(interval_seconds=60):
-    """Auto-refresh dengan countdown timer."""
-    if 'last_refresh' not in st.session_state:
-        st.session_state.last_refresh = datetime.now()
-    
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        st.markdown(f"""
-        <div style='color: #666; font-size: 12px;'>
-            🕐 Terakhir update: {st.session_state.last_refresh.strftime('%H:%M:%S')}
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col2:
-        auto_refresh = st.toggle("🔄 Auto", value=False, help="Auto refresh setiap 60 detik")
-    
-    if auto_refresh:
-        time.sleep(interval_seconds)
-        st.session_state.last_refresh = datetime.now()
-        st.rerun()
-    
-    return auto_refresh
-
-# ─────────────────────────────────────────────────────────────
-# 📊 ENHANCED CHART FUNCTIONS
+# 📊 CHART FUNCTIONS (sama seperti sebelumnya)
 # ─────────────────────────────────────────────────────────────
 
 def create_interactive_progress_chart(filtered, theme):
-    """Progress chart dengan drill-down & hover effects."""
     if filtered.empty or 'site_id' not in filtered.columns:
         return None
     
@@ -320,11 +224,7 @@ def create_interactive_progress_chart(filtered, theme):
         y=filtered['site_id'],
         x=filtered['progress'],
         orientation='h',
-        marker=dict(
-            color=colors,
-            line=dict(color='rgba(0,0,0,0.3)', width=1),
-            showscale=False
-        ),
+        marker=dict(color=colors, line=dict(color='rgba(0,0,0,0.3)', width=1)),
         text=filtered['progress'].apply(lambda x: f'{x:.1f}%'),
         textposition='outside',
         hovertext=[f"<b>{filtered[hover_col].iloc[i]}</b><br>Status: {filtered['status'].iloc[i]}<br>PM: {filtered['pm'].iloc[i]}" 
@@ -335,16 +235,8 @@ def create_interactive_progress_chart(filtered, theme):
     
     fig.update_layout(
         height=max(350, len(filtered)*45),
-        xaxis=dict(
-            range=[0, 105],
-            title='Progress (%)',
-            gridcolor='rgba(0,0,0,0.1)',
-            zerolinecolor='rgba(0,0,0,0.2)'
-        ),
-        yaxis=dict(
-            title='Site ID',
-            gridcolor='rgba(0,0,0,0.1)'
-        ),
+        xaxis=dict(range=[0, 105], title='Progress (%)', gridcolor='rgba(0,0,0,0.1)'),
+        yaxis=dict(title='Site ID', gridcolor='rgba(0,0,0,0.1)'),
         margin=dict(l=10, r=30, t=20, b=10),
         showlegend=False,
         plot_bgcolor='rgba(0,0,0,0)',
@@ -356,7 +248,6 @@ def create_interactive_progress_chart(filtered, theme):
     return fig
 
 def create_s_curve_with_targets(filtered, theme):
-    """S-Curve dengan target line & interactive annotations."""
     if filtered.empty or 'progress' not in filtered.columns:
         return None
     
@@ -365,7 +256,7 @@ def create_s_curve_with_targets(filtered, theme):
     thresholds = [0, 10, 25, 50, 75, 90, 100]
     
     actual_values = []
-    target_values = [0, 10, 25, 50, 75, 90, 100]  # Target ideal
+    target_values = [0, 10, 25, 50, 75, 90, 100]
     
     for thresh in thresholds:
         actual = (len(filtered[filtered['progress'] >= thresh]) / total * 100) if total > 0 else 0
@@ -373,7 +264,6 @@ def create_s_curve_with_targets(filtered, theme):
     
     fig = go.Figure()
     
-    # Actual S-Curve
     fig.add_trace(go.Scatter(
         x=m_labels,
         y=actual_values,
@@ -386,7 +276,6 @@ def create_s_curve_with_targets(filtered, theme):
         hovertemplate='<b>Actual</b><br>Cumulative: %{y:.1f}%<extra></extra>'
     ))
     
-    # Target Line (dashed)
     fig.add_trace(go.Scatter(
         x=m_labels,
         y=target_values,
@@ -399,37 +288,22 @@ def create_s_curve_with_targets(filtered, theme):
     
     fig.update_layout(
         height=400,
-        yaxis=dict(
-            range=[0, 105],
-            title='Cumulative Sites (%)',
-            gridcolor='rgba(0,0,0,0.1)',
-            zerolinecolor='rgba(0,0,0,0.2)'
-        ),
-        xaxis=dict(
-            title='Progress Threshold',
-            gridcolor='rgba(0,0,0,0.1)'
-        ),
+        yaxis=dict(range=[0, 105], title='Cumulative Sites (%)', gridcolor='rgba(0,0,0,0.1)'),
+        xaxis=dict(title='Progress Threshold', gridcolor='rgba(0,0,0,0.1)'),
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
         hovermode='x unified',
-        legend=dict(
-            orientation='h',
-            y=1.05,
-            x=0.5,
-            xanchor='center'
-        )
+        legend=dict(orientation='h', y=1.05, x=0.5, xanchor='center')
     )
     
     return fig
 
 def create_material_comparison_chart(materials_df, theme):
-    """Material chart dengan alert indicators."""
     if materials_df.empty or 'name' not in materials_df.columns:
         return None
     
     mat_disp = materials_df.head(15).copy()
     
-    # Determine colors based on stock status
     bar_colors = []
     for _, row in mat_disp.iterrows():
         current = row.get('current_stock', 0)
@@ -465,26 +339,31 @@ def create_material_comparison_chart(materials_df, theme):
     fig.update_layout(
         height=max(400, len(mat_disp)*40),
         barmode='group',
-        xaxis=dict(
-            title='Quantity',
-            gridcolor='rgba(0,0,0,0.1)'
-        ),
-        yaxis=dict(
-            title='Material',
-            gridcolor='rgba(0,0,0,0.1)'
-        ),
+        xaxis=dict(title='Quantity', gridcolor='rgba(0,0,0,0.1)'),
+        yaxis=dict(title='Material', gridcolor='rgba(0,0,0,0.1)'),
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
-        legend=dict(
-            orientation='h',
-            y=1.02,
-            x=0.5,
-            xanchor='center'
-        ),
+        legend=dict(orientation='h', y=1.02, x=0.5, xanchor='center'),
         hovermode='closest'
     )
     
     return fig
+
+# ─────────────────────────────────────────────────────────────
+# 💾 EXPORT FUNCTIONS
+# ─────────────────────────────────────────────────────────────
+
+def export_to_excel(df, materials_df, milestones_df):
+    """Export data ke Excel dengan multiple sheets."""
+    output = io.BytesIO()
+    
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df.to_excel(writer, sheet_name='Projects', index=False)
+        materials_df.to_excel(writer, sheet_name='Materials', index=False)
+        milestones_df.to_excel(writer, sheet_name='Milestones', index=False)
+    
+    output.seek(0)
+    return output.getvalue()
 
 # ─────────────────────────────────────────────────────────────
 # 🎯 MAIN DASHBOARD FUNCTION
@@ -494,8 +373,10 @@ def dashboard_page():
     # Initialize session state
     if 'theme' not in st.session_state:
         st.session_state.theme = "Professional"
-    if 'sidebar_expanded' not in st.session_state:
-        st.session_state.sidebar_expanded = True
+    if 'last_refresh' not in st.session_state:
+        st.session_state.last_refresh = datetime.now()
+    if 'data_loaded' not in st.session_state:
+        st.session_state.data_loaded = False
     
     # Inject custom CSS
     inject_custom_css(st.session_state.theme)
@@ -504,30 +385,71 @@ def dashboard_page():
     with st.sidebar:
         st.markdown("### ⚙️ Dashboard Settings")
         
-        # Theme Selector
+        # Theme Selector - FIXED
         selected_theme = st.selectbox(
             "🎨 Theme:",
             list(THEMES.keys()),
-            index=list(THEMES.keys()).index(st.session_state.theme)
+            index=list(THEMES.keys()).index(st.session_state.theme),
+            key="theme_selector"
         )
+        
         if selected_theme != st.session_state.theme:
             st.session_state.theme = selected_theme
+            st.success(f"✅ Theme diubah ke **{selected_theme}**")
             st.rerun()
         
         st.divider()
         
-        # Auto-refresh
-        auto_refresh_component(interval_seconds=60)
+        # Auto-refresh with timestamp
+        st.markdown("### 🔄 Auto Refresh")
+        auto_refresh = st.toggle("Aktifkan", value=False, help="Auto refresh setiap 60 detik")
+        
+        if auto_refresh:
+            time.sleep(60)
+            st.session_state.last_refresh = datetime.now()
+            st.rerun()
+        
+        # Display last update time - FIXED
+        st.markdown("---")
+        st.markdown("### ⏰ Last Update")
+        st.markdown(f"""
+        <div class='last-update-badge'>
+            <span>🕐</span>
+            <span>{st.session_state.last_refresh.strftime('%d/%m/%Y %H:%M:%S')}</span>
+        </div>
+        """, unsafe_allow_html=True)
         
         st.divider()
         
-        # Export Options
+        # Export Options - FIXED
         st.markdown("### 📥 Export Data")
-        if st.button("📊 Export to Excel", use_container_width=True):
-            st.info("Fitur export sedang dikembangkan...")
         
+        # Button Export Excel
+        if st.button("📊 Export to Excel", use_container_width=True):
+            try:
+                # Load data untuk export
+                all_data = read_all_sheets()
+                df_export = all_data.get('projects', pd.DataFrame())
+                materials_export = all_data.get('materials', pd.DataFrame())
+                milestones_export = all_data.get('milestones', pd.DataFrame())
+                
+                excel_data = export_to_excel(df_export, materials_export, milestones_export)
+                
+                st.download_button(
+                    label="⬇️ Download Excel",
+                    data=excel_data,
+                    file_name=f"dashboard_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True
+                )
+                st.success("✅ File Excel siap download!")
+                
+            except Exception as e:
+                st.error(f"❌ Gagal export: {str(e)[:100]}")
+        
+        # Button Export PDF (placeholder)
         if st.button("📄 Export to PDF", use_container_width=True):
-            st.info("Fitur export sedang dikembangkan...")
+            st.info("🚧 Fitur PDF export sedang dikembangkan. Gunakan Excel export untuk saat ini.")
         
         st.divider()
         
@@ -535,12 +457,20 @@ def dashboard_page():
         st.markdown("### 📊 Quick Stats")
         st.metric("Active Users", "12", "👥")
         st.metric("System Status", "🟢 Online")
+        
+        # Manual Refresh Button
+        st.divider()
+        if st.button("🔄 Refresh Data Sekarang", use_container_width=True, type="primary"):
+            st.session_state.last_refresh = datetime.now()
+            st.cache_data.clear()
+            st.success("✅ Data berhasil di-refresh!")
+            st.rerun()
     
     # ── MAIN CONTENT ──
     now = datetime.now()
     
     # Enhanced Header
-    col_header1, col_header2, col_header3 = st.columns([2, 1, 1])
+    col_header1, col_header2 = st.columns([3, 1])
     
     with col_header1:
         st.markdown(f"""
@@ -556,31 +486,22 @@ def dashboard_page():
         st.markdown(f"""
         <div class='clock-widget'>
             <div style='font-size: 14px;'>📅 {now.strftime('%A, %d %B %Y')}</div>
-            <div style='font-size: 32px; font-weight: bold; margin: 10px 0;'>
+            <div style='font-size: 28px; font-weight: bold; margin: 8px 0;'>
                 🕐 {now.strftime('%H:%M:%S')}
             </div>
             <div style='font-size: 11px;'>WIB</div>
         </div>
         """, unsafe_allow_html=True)
     
-    with col_header3:
-        # Notification Center
-        st.markdown("""
-        <div style='text-align: right;'>
-            <div style='background: #dc3545; color: white; padding: 10px 15px; 
-                        border-radius: 10px; font-weight: 600; cursor: pointer;
-                            box-shadow: 0 4px 15px rgba(220,53,69,0.3);'>
-                🔔 Notifications
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-    
     st.markdown("---")
     
-    # ── LOAD DATA WITH ERROR HANDLING ──
+    # ── LOAD DATA WITH TIMESTAMP UPDATE ──
     try:
         with st.spinner("🔄 Loading data..."):
             all_data = read_all_sheets()
+            # Update timestamp setelah data berhasil di-load
+            st.session_state.last_refresh = datetime.now()
+            st.session_state.data_loaded = True
     except Exception as e:
         st.error(f"⚠️ Gagal load data: {str(e)[:100]}")
         all_data = {}
@@ -665,7 +586,7 @@ def dashboard_page():
     
     st.markdown("---")
     
-    # ── KPI CARDS WITH ANIMATIONS ──
+    # ── KPI CARDS ──
     total_sites = len(filtered)
     avg_progress = filtered['progress'].mean() if not filtered.empty and 'progress' in filtered.columns else 0
     
@@ -814,7 +735,7 @@ def dashboard_page():
     
     st.markdown("---")
     
-    # ── MINI INSIGHTS WITH ENHANCED UI ──
+    # ── MINI INSIGHTS ──
     st.markdown("### 🤖 Mini Insights")
     
     col_m1, col_m2, col_m3 = st.columns(3)
