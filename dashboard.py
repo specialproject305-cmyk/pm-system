@@ -268,4 +268,4 @@ def export_page():
 # ─────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    export_page()
+    dashboard_page()
