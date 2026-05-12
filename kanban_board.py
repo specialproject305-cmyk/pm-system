@@ -52,12 +52,14 @@ def inject_kanban_css():
     .card-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 6px; padding-right: 40px; }
     .card-meta { font-size: 0.8rem; color: #555; display: flex; justify-content: space-between; align-items: center; }
     
-    /* Mobile Stack */
+    /* Mobile Stack & Touch Targets */
     @media (max-width: 768px) {
         .kanban-column { min-height: auto; margin-bottom: 15px; }
         .stColumn { width: 100% !important; }
         .kanban-card { padding: 15px; }
         .card-title { font-size: 1.05rem; }
+        button, input, select, textarea { min-height: 44px !important; font-size: 16px !important; }
+        .stTabs [data-baseweb="tab"] { height: 40px; }
     }
     </style>
     """, unsafe_allow_html=True)
@@ -91,16 +93,10 @@ def render_card(task):
     days_left, sla_class = get_sla_info(planned_end, status)
     sla_text = f"{days_left}d" if days_left is not None else sla_days
     
-    # ✅ FIX: Konversi aman untuk actual_end agar tidak error [:10]
+    # Safe actual_end handling
     actual_end_val = task.get('actual_end')
     if actual_end_val and pd.notna(actual_end_val):
-        if isinstance(actual_end_val, str):
-            actual_end_str = actual_end_val[:10]
-        else:
-            try:
-                actual_end_str = pd.to_datetime(actual_end_val).strftime('%Y-%m-%d')
-            except:
-                actual_end_str = ''
+        actual_end_str = actual_end_val[:10] if isinstance(actual_end_val, str) else pd.to_datetime(actual_end_val).strftime('%Y-%m-%d')
     else:
         actual_end_str = ''
 
@@ -143,13 +139,14 @@ def render_card(task):
     return html
 
 # ─────────────────────────────────────────────────────────────
-#  MAIN PAGE FUNCTION
+# 🎯 MAIN PAGE FUNCTION
 # ─────────────────────────────────────────────────────────────
 
 def kanban_page():
     inject_kanban_css()
     st.title("📋 Kanban Board")
     
+    # Load Sites
     sites_df = read_sheet("projects")
     if sites_df.empty:
         st.warning("⚠️ Belum ada data site.")
@@ -163,16 +160,66 @@ def kanban_page():
     )
     is_all = (selected_site == "ALL SITE")
     
+    # 📅 DATE FILTER (NEW)
+    st.markdown("### 📅 Filter Tanggal Target Milestone")
+    col_d1, col_d2, col_d3 = st.columns([1, 1, 1])
+    with col_d1:
+        start_date = st.date_input("📆 Dari", value=datetime.now() - timedelta(days=7))
+    with col_d2:
+        end_date = st.date_input("📆 Sampai", value=datetime.now() + timedelta(days=30))
+    with col_d3:
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("🔄 Terapkan Filter", type="primary", use_container_width=True):
+            st.rerun()
+
+    # Load & Filter Milestones
     ms_df = read_sheet("milestones")
     if ms_df.empty:
-        st.info("ℹ️ Belum ada milestone.")
+        st.info("ℹ️ Belum ada milestone. Generate template di menu Milestone Monitoring.")
         return
         
     if not is_all:
         ms_df = ms_df[ms_df['project_id'] == selected_site].copy()
-    if 'planned_end' in ms_df.columns:
-        ms_df['planned_end'] = pd.to_datetime(ms_df['planned_end'], errors='coerce')
         
+    # Filter by Date Range using planned_end
+    if 'planned_end' in ms_df.columns:
+        ms_df['planned_end_dt'] = pd.to_datetime(ms_df['planned_end'], errors='coerce')
+        ms_df = ms_df[
+            (ms_df['planned_end_dt'] >= start_date) & 
+            (ms_df['planned_end_dt'] <= end_date) & 
+            ms_df['planned_end_dt'].notna()
+        ].copy()
+    else:
+        ms_df = pd.DataFrame()
+
+    # 🏢 SITE TABLE ABOVE KANBAN (NEW)
+    if not ms_df.empty:
+        st.markdown("### 📊 Site dalam Periode Terfilter")
+        unique_site_ids = ms_df['project_id'].unique()
+        site_table = sites_df[sites_df['id'].isin(unique_site_ids)].copy()
+        
+        # Add task count in period
+        task_counts = ms_df.groupby('project_id').size().reset_index(name='tasks_in_period')
+        site_table = site_table.merge(task_counts, left_on='id', right_on='project_id', how='left')
+        
+        display_cols = ['site_id', 'site_name', 'pm', 'status', 'progress', 'tasks_in_period']
+        available_cols = [c for c in display_cols if c in site_table.columns]
+        
+        # Color code status
+        def color_status(val):
+            if val == 'ON_TRACK': return 'background-color: #d4edda'
+            elif val == 'DELAYED': return 'background-color: #fff3cd'
+            elif val == 'CRITICAL': return 'background-color: #f8d7da'
+            return ''
+            
+        styled = site_table[available_cols].style.map(color_status, subset=['status']) if 'status' in site_table.columns else site_table[available_cols]
+        st.dataframe(styled, use_container_width=True, hide_index=True)
+        st.divider()
+    else:
+        st.info("ℹ️ Tidak ada milestone dalam rentang tanggal ini. Silakan ubah filter tanggal.")
+        return
+
+    # KANBAN COLUMNS
     col_mapping = [
         ('PENDING', '📋 Planned'), ('MATERIAL_READY', '📦 Mat. Ready'),
         ('ONGOING', '🚧 In Progress'), ('DELAYED', '⏳ Waiting'), ('DONE', '✅ Done')
@@ -189,7 +236,7 @@ def kanban_page():
     
     # Quick Update Section (Mobile Optimized)
     st.divider()
-    st.markdown("### ✏️ Quick Update")
+    st.markdown("### ✏️ Quick Update Status")
     
     if not ms_df.empty:
         ms_df['label'] = ms_df.apply(lambda x: f"{x['name']} ({x.get('status','?')}) - {x.get('assigned_to','?')}", axis=1)
