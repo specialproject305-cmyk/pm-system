@@ -151,6 +151,8 @@ def check_critical(row, today):
 # ─────────────────────────────────────────────────────────────
 # 📊 MAIN PAGE FUNCTION
 # ─────────────────────────────────────────────────────────────
+if 'master_project_filter' not in st.session_state:
+    st.session_state.master_project_filter = "ALL"
 
 def milestone_page():
     st.title("🧱 Milestone Monitoring")
@@ -182,6 +184,18 @@ def milestone_page():
         else:
             ms_df["planned_start"] = pd.to_datetime(ms_df["planned_start"], errors="coerce")
             ms_df["planned_end"] = pd.to_datetime(ms_df["planned_end"], errors="coerce")
+
+            # Cek apakah filter Master Project aktif
+            if 'master_project_filter' in st.session_state and st.session_state.master_project_filter != "ALL":
+                
+                # 1. Filter Tabel Site (Projects) dulu
+                if not sites_df.empty and 'master_project_id' in sites_df.columns:
+                    sites_df = sites_df[sites_df['master_project_id'] == st.session_state.master_project_filter]
+                    
+                    # 2. Filter Tabel Milestone berdasarkan Site yang sudah difilter
+                    if not ms_df.empty:
+                        valid_site_ids = sites_df['id'].tolist()
+                        ms_df = ms_df[ms_df['project_id'].isin(valid_site_ids)]
             
             if is_all:
                 st.subheader("📊 Gantt Chart - ALL SITE")
