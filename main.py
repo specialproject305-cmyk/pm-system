@@ -118,7 +118,7 @@ def main():
         st.error("Menu tidak dikenali.")
 
     elif menu == "📊 Export Report":
-            export_report_page()
+        export_report_page()
     
 if __name__ == "__main__":
     main()
