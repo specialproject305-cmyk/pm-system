@@ -2,10 +2,29 @@ import streamlit as st
 import pandas as pd
 from supabase_db import read_sheet, insert_row, update_row, find_row_by_id, generate_id, today_str
 
+def sync_progress_from_milestones(site_id):
+    """Hitung progress dari milestones"""
+    ms_df = read_sheet("milestones")
+    if ms_df.empty:
+        return 0, 'ON_TRACK'
+    site_ms = ms_df[ms_df['project_id'] == site_id]
+    if site_ms.empty:
+        return 0, 'ON_TRACK'
+
+    site_ms['weight'] = pd.to_numeric(site_ms['weight'], errors='coerce').fillna(0)
+    total_weight = site_ms['weight'].sum()
+    done_weight = site_ms[site_ms['status'] == 'DONE']['weight'].sum()
+    progress = round((done_weight / total_weight) * 100, 1) if total_weight > 0 else 0
+
+    delayed = len(site_ms[site_ms['status'] == 'DELAYED'])
+    status = 'CRITICAL' if delayed > 3 else ('DELAYED' if delayed > 0 else 'ON_TRACK')
+
+    return progress, status
+
 def project_tracker_page():
-    st.title("📁 Site & Project Portfolio")
+    st.title("📁 Site & Project Tracker")
     
-    # Inisialisasi session state untuk filter global
+    # Inisialisasi filter global di session state
     if 'master_project_filter' not in st.session_state:
         st.session_state.master_project_filter = "ALL"
     
@@ -14,7 +33,7 @@ def project_tracker_page():
     ])
 
     # ─────────────────────────────────────────────────────────────
-    # TAB 1: DAFTAR SITE (DENGAN FILTER MASTER PROJECT)
+    # TAB 1: DAFTAR SITE
     # ─────────────────────────────────────────────────────────────
     with tab1:
         st.subheader("Daftar Site")
@@ -24,7 +43,7 @@ def project_tracker_page():
             df['progress'] = pd.to_numeric(df['progress'], errors='coerce').fillna(0)
             
             # Filter berdasarkan Master Project
-            if st.session_state.master_project_filter != "ALL":
+            if st.session_state.master_project_filter != "ALL" and 'master_project_id' in df.columns:
                 df = df[df['master_project_id'] == st.session_state.master_project_filter]
             
             def color_status(val):
@@ -37,12 +56,22 @@ def project_tracker_page():
                           'vendor', 'pm', 'status', 'progress']
             display_df = df[[c for c in display_cols if c in df.columns]]
             styled = display_df.style.map(color_status, subset=['status']) if 'status' in df.columns else display_df
-            st.dataframe(styled, use_container_width=True)
+            st.dataframe(styled, use_container_width=True, hide_index=True)
             
             col1, col2, col3 = st.columns(3)
             col1.metric("Total Site", len(df))
             col2.metric("On Track", len(df[df['status']=='ON_TRACK']) if 'status' in df.columns else 0)
             col3.metric("Terlambat", len(df[df['status'].isin(['DELAYED','CRITICAL'])]) if 'status' in df.columns else 0)
+            
+            if st.button("🔄 Sync Progress dari Milestones", use_container_width=True):
+                for _, row in df.iterrows():
+                    prog, sts = sync_progress_from_milestones(row['id'])
+                    ridx = find_row_by_id("projects", row['id'])
+                    if ridx:
+                        update_row("projects", ridx, {'progress': str(prog), 'status': sts})
+                st.cache_data.clear()
+                st.success("✅ Semua site di-sync!")
+                st.rerun()
         else:
             st.info("📋 Belum ada site.")
 
@@ -80,12 +109,11 @@ def project_tracker_page():
             st.dataframe(master_df[['project_code', 'project_name', 'category', 'status']], use_container_width=True, hide_index=True)
 
     # ─────────────────────────────────────────────────────────────
-    # TAB 3: TAMBAH SITE (DENGAN FIELD BARU)
+    # TAB 3: TAMBAH SITE
     # ─────────────────────────────────────────────────────────────
     with tab3:
         st.subheader("➕ Tambah Site Baru")
         
-        # Ambil list master project untuk dropdown
         master_df = read_sheet("master_projects")
         master_options = [""] + master_df["id"].tolist() if not master_df.empty else [""]
         
@@ -133,34 +161,52 @@ def project_tracker_page():
                         st.error(f"❌ Gagal simpan: {str(e)}")
 
     # ─────────────────────────────────────────────────────────────
-    # TAB 4 & 5: EDIT & IMPORT (Sama seperti sebelumnya, disesuaikan field)
+    # TAB 4: EDIT SITE (FIXED: Safe Float & Submit Button)
     # ─────────────────────────────────────────────────────────────
     with tab4:
         st.subheader("✏️ Edit Data Site")
         df = read_sheet("projects")
         if not df.empty:
-            selected = st.selectbox("Pilih Site:", df['id'].tolist(),
+            selected = st.selectbox("Pilih Site untuk Edit:", df['id'].tolist(),
                                    format_func=lambda x: f"{df[df['id']==x]['site_id'].values[0]} - {df[df['id']==x]['site_name'].values[0]}")
             if selected:
                 site = df[df['id']==selected].iloc[0]
                 ridx = find_row_by_id("projects", selected)
+                
                 with st.form("edit_site"):
                     new_status = st.selectbox("Status", ["ON_TRACK", "DELAYED", "CRITICAL"],
                                              index=["ON_TRACK", "DELAYED", "CRITICAL"].index(site.get('status','ON_TRACK')) if site.get('status') in ["ON_TRACK", "DELAYED", "CRITICAL"] else 0)
                     new_progress = st.slider("Progress (%)", 0, 100, int(float(site.get('progress',0))) if site.get('progress') else 0)
-                    new_cat = st.selectbox("Kategori", ["New Site", "Collocation", "Upgrade", "Relocation"], index=["New Site", "Collocation", "Upgrade", "Relocation"].index(site.get('site_category','New Site')))
-                    new_type = st.selectbox("Tipe", ["SST", "MP", "Light Pole", "Rooftop", "Indoor"], index=["SST", "MP", "Light Pole", "Rooftop", "Indoor"].index(site.get('site_type','SST')))
-                    new_height = st.number_input("Ketinggian (m)", value=float(site.get('tower_height', 45)))
                     
-                    if st.form_submit_button("💾 Update", use_container_width=True):
+                    new_cat = st.selectbox("Kategori Site", ["New Site", "Collocation", "Upgrade", "Relocation"], 
+                                          index=["New Site", "Collocation", "Upgrade", "Relocation"].index(site.get('site_category','New Site')))
+                    new_type = st.selectbox("Tipe Site", ["SST", "MP", "Light Pole", "Rooftop", "Indoor"], 
+                                           index=["SST", "MP", "Light Pole", "Rooftop", "Indoor"].index(site.get('site_type','SST')))
+                    
+                    # ✅ FIX: Safe conversion untuk tower_height (handle string/None/NaN)
+                    try:
+                        h_val = site.get('tower_height')
+                        new_height_val = float(h_val) if pd.notna(h_val) and str(h_val).strip() not in ['', 'None', 'nan'] else 45.0
+                    except (ValueError, TypeError):
+                        new_height_val = 45.0
+                        
+                    new_height = st.number_input("Ketinggian Tower (m)", value=new_height_val)
+                    
+                    # ✅ FIX: Tombol submit ditambahkan
+                    if st.form_submit_button("💾 Update Data", type="primary", use_container_width=True):
                         update_row("projects", ridx, {
-                            'status': new_status, 'progress': str(new_progress),
-                            'site_category': new_cat, 'site_type': new_type,
+                            'status': new_status, 
+                            'progress': str(new_progress),
+                            'site_category': new_cat, 
+                            'site_type': new_type,
                             'tower_height': str(new_height)
                         })
-                        st.success("✅ Site diupdate!")
+                        st.success("✅ Site berhasil diupdate!")
                         st.rerun()
 
+    # ─────────────────────────────────────────────────────────────
+    # TAB 5: IMPORT CSV
+    # ─────────────────────────────────────────────────────────────
     with tab5:
         st.subheader("📥 Import Site via CSV")
         st.info("ℹ️ Gunakan template di bawah. Pastikan kolom `master_project_id` diisi dengan ID proyek yang valid.")
