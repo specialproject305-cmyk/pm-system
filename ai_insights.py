@@ -15,51 +15,40 @@ from supabase_db import read_all_sheets
 # ─────────────────────────────────────────────────────────────
 
 def analyze_pic_performance(ms_df):
-    """Analisis performa berdasarkan PIC/Assigned To."""
-    if ms_df.empty or 'assigned_to' not in ms_df.columns:
+    if ms_df.empty or 'assigned_to' not in ms_df.columns: 
         return pd.DataFrame()
     
-    # Filter yang punya assigned_to
     assigned = ms_df[ms_df['assigned_to'].notna() & (ms_df['assigned_to'] != '')].copy()
-    
-    if assigned.empty:
+    if assigned.empty: 
         return pd.DataFrame()
     
-    # Konversi tanggal untuk kalkulasi
+    # Konversi kolom tanggal
     for col in ['planned_start', 'planned_end', 'actual_start', 'actual_end']:
-        if col in assigned.columns:
+        if col in assigned.columns: 
             assigned[col] = pd.to_datetime(assigned[col], errors='coerce')
-    
-    # Group by assigned_to
+            
+    # ✅ FIX: Paksa konversi weight ke numerik agar .mean() tidak error
+    if 'weight' in assigned.columns:
+        assigned['weight'] = pd.to_numeric(assigned['weight'], errors='coerce').fillna(0)
+        
     pic_stats = assigned.groupby('assigned_to').agg(
-        total_tasks=('id', 'count'),
+        total_tasks=('id', 'count'), 
         done_tasks=('status', lambda x: (x == 'DONE').sum()),
-        delayed_tasks=('status', lambda x: (x.isin(['DELAYED', 'CRITICAL'])).sum()),
+        delayed_tasks=('status', lambda x: (x.isin(['DELAYED', 'CRITICAL'])).sum()), 
         avg_weight=('weight', 'mean')
     ).reset_index()
     
-    # Hitung SLA Score (% tasks on-time/done)
-    pic_stats['sla_score'] = round(
-        (pic_stats['done_tasks'] / pic_stats['total_tasks']) * 100, 1
-    ).fillna(0)
+    pic_stats['sla_score'] = round((pic_stats['done_tasks'] / pic_stats['total_tasks']) * 100, 1).fillna(0)
     
-    # Hitung rata-rata delay (untuk yang DONE dengan actual_end)
     def calc_avg_delay(group):
-        done_with_actual = group[
-            (group['status'] == 'DONE') & 
-            (group['actual_end'].notna()) & 
-            (group['planned_end'].notna())
-        ]
-        if done_with_actual.empty:
-            return 0
+        done_with_actual = group[(group['status'] == 'DONE') & (group['actual_end'].notna()) & (group['planned_end'].notna())]
+        if done_with_actual.empty: return 0
         delays = (done_with_actual['actual_end'] - done_with_actual['planned_end']).dt.days
         return round(delays.mean(), 1)
-    
+        
     pic_stats['avg_delay'] = assigned.groupby('assigned_to').apply(calc_avg_delay).values
     pic_stats['avg_delay'] = pic_stats['avg_delay'].fillna(0)
-    
     return pic_stats
-
 
 def analyze_sla_compliance(ms_df):
     """Analisis kepatuhan terhadap SLA berdasarkan sla_days vs actual duration."""
