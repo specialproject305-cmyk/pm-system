@@ -482,6 +482,9 @@ def dashboard_page():
         st.session_state.last_refresh = datetime.now()
     if 'data_loaded' not in st.session_state:
         st.session_state.data_loaded = False
+    # ✅ TAMBAHKAN INI AGAR TIDAK ERROR
+    if 'master_project_filter' not in st.session_state:
+        st.session_state.master_project_filter = "ALL"
     
     # Inject custom CSS
     inject_custom_css(st.session_state.theme)
