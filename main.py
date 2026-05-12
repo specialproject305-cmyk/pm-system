@@ -92,6 +92,9 @@ def main():
 
     elif menu == "🤖 AI Insights": 
         ai_insights_page()
+
+    elif menu == "📊 Export Report":
+        export_report_page()
         
     elif menu == "💬 Chat & Notif": 
         chat_notif_page()
@@ -116,9 +119,6 @@ def main():
 
     else:
         st.error("Menu tidak dikenali.")
-
-    elif menu == "📊 Export Report":
-        export_report_page()
     
 if __name__ == "__main__":
     main()
