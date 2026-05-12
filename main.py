@@ -9,6 +9,7 @@ from chat_module import chat_notif_page
 from export_module import export_page
 from settings_page import settings_page
 from kanban_board import kanban_page
+from export_report import export_report_page
 
 st.set_page_config(page_title="PM System", page_icon="🏗️", layout="wide", initial_sidebar_state="expanded")
 
@@ -30,7 +31,7 @@ with st.sidebar:
     
     menu_options = [
         "📊 Dashboard", "📁 Site Tracker", "🧱 Milestones","📋 Kanban Board",
-        "📦 Inventory", "🤖 AI Insights", "💬 Chat & Notif", "📄 Export Report"
+        "📦 Inventory", "🤖 AI Insights", "💬 Chat & Notif", "📊 Export Report"
     ]
     if role == 'admin':
         menu_options.append("⚙️ Settings")
@@ -115,6 +116,9 @@ def main():
 
     else:
         st.error("Menu tidak dikenali.")
+
+    elif menu == "📊 Export Report":
+        export_report_page()
         
 if __name__ == "__main__":
     main()
