@@ -141,7 +141,9 @@ def render_card(task):
 # ─────────────────────────────────────────────────────────────
 # 🎯 MAIN PAGE FUNCTION
 # ─────────────────────────────────────────────────────────────
-
+if 'master_project_filter' not in st.session_state:
+    st.session_state.master_project_filter = "ALL"
+    
 def kanban_page():
     inject_kanban_css()
     st.title("📋 Kanban Board")
@@ -180,6 +182,10 @@ def kanban_page():
         
     if not is_all:
         ms_df = ms_df[ms_df['project_id'] == selected_site].copy()
+
+    if st.session_state.master_project_filter != "ALL" and not sites_df.empty:
+        valid_sites = sites_df[sites_df['master_project_id'] == st.session_state.master_project_filter]['id'].tolist()
+        ms_df = ms_df[ms_df['project_id'].isin(valid_sites)]
         
     # Filter by Date Range using planned_end
         # Filter by Date Range using planned_end
