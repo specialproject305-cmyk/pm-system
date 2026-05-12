@@ -182,13 +182,21 @@ def kanban_page():
         ms_df = ms_df[ms_df['project_id'] == selected_site].copy()
         
     # Filter by Date Range using planned_end
+        # Filter by Date Range using planned_end
     if 'planned_end' in ms_df.columns:
+        # Konversi kolom ke datetime
         ms_df['planned_end_dt'] = pd.to_datetime(ms_df['planned_end'], errors='coerce')
-        ms_df = ms_df[
-            (ms_df['planned_end_dt'] >= start_date) & 
-            (ms_df['planned_end_dt'] <= end_date) & 
-            ms_df['planned_end_dt'].notna()
-        ].copy()
+        
+        # Konversi input user (date) ke Timestamp agar kompatibel dengan kolom datetime
+        start_ts = pd.Timestamp(start_date)
+        end_ts = pd.Timestamp(end_date)
+        
+        # Filter data
+        mask = (ms_df['planned_end_dt'].notna()) & \
+               (ms_df['planned_end_dt'] >= start_ts) & \
+               (ms_df['planned_end_dt'] <= end_ts)
+               
+        ms_df = ms_df[mask].copy()
     else:
         ms_df = pd.DataFrame()
 
