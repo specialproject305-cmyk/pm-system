@@ -487,23 +487,33 @@ def dashboard_page():
     inject_custom_css(st.session_state.theme)
     
     # ── MOBILE SIDEBAR CONTROLS ──
+        # ── SIDEBAR CONTROLS ──
     with st.sidebar:
-        st.markdown("### ⚙️ Dashboard Settings")
+        st.markdown("### 🏢 Portfolio Filter")
         
-        # Theme Selector
-        selected_theme = st.selectbox(
-            "🎨 Theme:",
-            list(THEMES.keys()),
-            index=list(THEMES.keys()).index(st.session_state.theme),
-            key="theme_selector"
+        # Load Master Projects
+        try:
+            master_df = read_sheet("master_projects")
+            master_options = ["ALL"] + master_df["id"].tolist() if not master_df.empty else ["ALL"]
+        except:
+            master_options = ["ALL"]
+
+        selected_master = st.selectbox(
+            "Pilih Proyek:",
+            master_options,
+            index=master_options.index(st.session_state.get('master_project_filter', "ALL")),
+            format_func=lambda x: "🌍 SEMUA PROYEK" if x == "ALL" 
+            else f"{master_df[master_df['id']==x]['project_code'].values[0]} - {master_df[master_df['id']==x]['project_name'].values[0]}" if not master_df.empty else x
         )
         
-        if selected_theme != st.session_state.theme:
-            st.session_state.theme = selected_theme
-            st.success(f"✅ Theme diubah ke **{selected_theme}**")
+        if selected_master != st.session_state.get('master_project_filter', "ALL"):
+            st.session_state.master_project_filter = selected_master
+            st.cache_data.clear()
             st.rerun()
-        
+
         st.divider()
+        st.markdown("### ⚙️ Dashboard Settings")
+        # ... (kode tema & refresh tetap sama) ...
         
         # Auto-refresh with timestamp
         st.markdown("### 🔄 Auto Refresh")
@@ -551,6 +561,19 @@ def dashboard_page():
                 
             except Exception as e:
                 st.error(f"❌ Gagal export: {str(e)[:100]}")
+
+            # Filter Data berdasarkan Master Project
+        if st.session_state.master_project_filter != "ALL" and not df.empty:
+            df = df[df['master_project_id'] == st.session_state.master_project_filter]
+            
+            # Filter child tables juga (Milestones & Inventory)
+            if not milestones_df.empty:
+                # Ambil list site_id yang termasuk proyek ini
+                valid_sites = df['id'].tolist()
+                milestones_df = milestones_df[milestones_df['project_id'].isin(valid_sites)]
+                
+            if not materials_df.empty:
+                materials_df = materials_df[materials_df['project_id'].isin(valid_sites)]
         
         # Button Export PDF (placeholder)
         if st.button("📄 Export to PDF", use_container_width=True):
