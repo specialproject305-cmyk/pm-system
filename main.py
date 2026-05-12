@@ -6,7 +6,6 @@ from milestone_module import milestone_page
 from inventory_module import inventory_page
 from ai_insights import ai_insights_page
 from chat_module import chat_notif_page
-from export_module import export_page
 from settings_page import settings_page
 from kanban_board import kanban_page
 from export_report import export_report_page
@@ -98,14 +97,6 @@ def main():
         
     elif menu == "💬 Chat & Notif": 
         chat_notif_page()
-        
-    elif menu == "📄 Export Report": 
-        # Asumsi export_page() ada di dashboard.py atau module terpisah
-        try:
-            from dashboard import export_page # Atau sesuaikan importnya
-            export_page()
-        except ImportError:
-            st.info("Halaman Export Report sedang dikembangkan.")
 
     elif menu == "⚙️ Settings":
         if 'check_permission' in globals() and check_permission('admin'): 
