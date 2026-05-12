@@ -108,6 +108,8 @@ def analyze_sla_compliance(ms_df):
 # ─────────────────────────────────────────────────────────────
 # 🎯 MAIN PAGE FUNCTION
 # ─────────────────────────────────────────────────────────────
+if 'master_project_filter' not in st.session_state:
+    st.session_state.master_project_filter = "ALL"
 
 def ai_insights_page():
     st.title("🤖 AI-Powered Analytics Center")
@@ -135,6 +137,10 @@ def ai_insights_page():
         for col in ['planned_start', 'planned_end', 'actual_start', 'actual_end']:
             if col in ms_df.columns:
                 ms_df[col] = pd.to_datetime(ms_df[col], errors='coerce')
+
+    if st.session_state.master_project_filter != "ALL" and not sites_df.empty:
+        valid_sites = sites_df[sites_df['master_project_id'] == st.session_state.master_project_filter]['id'].tolist()
+        ms_df = ms_df[ms_df['project_id'].isin(valid_sites)]
     
     # ===== FILTER =====
     col_f1, col_f2 = st.columns(2)
