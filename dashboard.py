@@ -142,33 +142,13 @@ def dashboard_page():
     delay_count = len(df[df['status'].isin(['DELAYED','CRITICAL'])])
     avg_prog = df['progress'].mean()
 
-        # ─── KPI CARDS (WITH NaN HANDLING) ───
-    total_sites = len(df)
-    
-    # Handle empty dataframe
-    if total_sites == 0:
-        rfs_count = 0
-        on_prog = 0
-        not_start = 0
-        delay_count = 0
-        avg_prog = 0.0
-    else:
-        rfs_count = len(df[df['status']=='DONE']) if 'status' in df.columns else 0
-        on_prog = len(df[df['status']=='ONGOING']) if 'status' in df.columns else 0
-        not_start = len(df[df['status']=='PENDING']) if 'status' in df.columns else 0
-        delay_count = len(df[df['status'].isin(['DELAYED','CRITICAL'])]) if 'status' in df.columns else 0
-        avg_prog = df['progress'].mean() if 'progress' in df.columns else 0.0
-        # Handle NaN
-        if pd.isna(avg_prog):
-            avg_prog = 0.0
-
     kpis = [
         ("📡 TOTAL SITE", total_sites, "Sites", "text-blue"),
-        ("🟢 RFS (ON AIR)", rfs_count, f"{(rfs_count/total_sites*100):.0f}% dari total" if total_sites > 0 else "0% dari total", "text-green"),
-        ("⚙️ ON PROGRESS", on_prog, f"{(on_prog/total_sites*100):.0f}% dari total" if total_sites > 0 else "0% dari total", "text-yellow"),
-        ("⚪ NOT STARTED", not_start, f"{(not_start/total_sites*100):.0f}% dari total" if total_sites > 0 else "0% dari total", "text-gray"),
-        ("🔴 DELAY SITE", delay_count, f"{(delay_count/total_sites*100):.0f}% dari total" if total_sites > 0 else "0% dari total", "text-red"),
-        ("📊 RATA-RATA PROGRESS", f"{avg_prog:.1f}%", "Target: 100%", "text-blue")
+        ("🟢 RFS (ON AIR)", rfs_count, f"{rfs_count/total_sites*100:.0f}% dari total" if total_sites > 0 else "0%", "text-green"),
+        ("⚙️ ON PROGRESS", on_prog, f"{on_prog/total_sites*100:.0f}% dari total" if total_sites > 0 else "0%", "text-yellow"),
+        ("⚪ NOT STARTED", not_start, f"{not_start/total_sites*100:.0f}% dari total" if total_sites > 0 else "0%", "text-gray"),
+        ("🔴 DELAY SITE", delay_count, f"{delay_count/total_sites*100:.0f}% dari total" if total_sites > 0 else "0%", "text-red"),
+        (" RATA-RATA PROGRESS", f"{avg_prog:.1f}%", "Target: 100%", "text-blue")
     ]
 
     cols = st.columns(6)
@@ -176,80 +156,121 @@ def dashboard_page():
         with cols[i]:
             st.markdown(f"""<div class='kpi-card'><div class='kpi-title'>{title}</div><div class='kpi-value'>{value}</div><div class='kpi-sub {color_class}'>{sub}</div></div>""", unsafe_allow_html=True)
 
-    # ─── ROW 1: DONUTS & CATEGORIES ───
     col_d1, col_d2, col_d3 = st.columns([1, 1, 1.5])
-    
     with col_d1:
         st.markdown("<div class='chart-box'>", unsafe_allow_html=True)
-        st.markdown("<h3 style='color:#CBD5E1 !important; font-size:0.9rem; margin-bottom:10px;'>PROGRESS OVERVIEW</h3>", unsafe_allow_html=True)
-        
-        if total_sites == 0 or 'status' not in df.columns:
-            st.info("📭 Belum ada data status site. Silakan tambahkan site di menu Project Tracker.")
-        else:
-            status_counts = df['status'].value_counts()
-            if status_counts.empty:
-                st.info("📭 Data status masih kosong.")
-            else:
-                status_map = {'DONE':'#10B981', 'ONGOING':'#F59E0B', 'PENDING':'#94A3B8', 'DELAYED':'#EF4444', 'CRITICAL':'#7F1D1D', 'ON_TRACK':'#10B981'}
-                fig1 = create_donut_chart(status_counts, None, "", status_map)
-                if not pd.isna(avg_prog):
-                    fig1.add_annotation(dict(text=f'{avg_prog:.0f}%', x=0.5, y=0.5, font_size=24, showarrow=False, font_color='#FFFFFF'))
-                st.plotly_chart(fig1, use_container_width=True)
+        status_counts = df['status'].value_counts()
+        status_map = {'DONE':'#10B981', 'ONGOING':'#F59E0B', 'PENDING':'#94A3B8', 'DELAYED':'#EF4444', 'CRITICAL':'#7F1D1D', 'ON_TRACK':'#10B981'}
+        fig1 = create_donut_chart(status_counts, None, "PROGRESS OVERVIEW", status_map)
+        fig1.add_annotation(dict(text=f'{avg_prog:.0f}%', x=0.5, y=0.5, font_size=24, showarrow=False, font_color='#FFFFFF'))
+        st.plotly_chart(fig1, use_container_width=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
     with col_d2:
         st.markdown("<div class='chart-box'>", unsafe_allow_html=True)
-        st.markdown("<h3 style='color:#CBD5E1 !important; font-size:0.9rem; margin-bottom:10px;'>SITE BY KATEGORI</h3>", unsafe_allow_html=True)
-        
-        if 'site_category' not in df.columns:
-            st.warning("⚠️ Kolom 'site_category' tidak tersedia di database.")
-        elif df.empty:
-            st.info("📭 Belum ada data site.")
+        if 'site_category' in df.columns:
+            cat_counts = df['site_category'].value_counts()
+            cat_map = {'New Site':'#3B82F6', 'Collocation':'#8B5CF6', 'Upgrade':'#F59E0B', 'Relocation':'#EF4444'}
+            fig2 = create_donut_chart(cat_counts, None, "SITE BY KATEGORI", cat_map)
+            st.plotly_chart(fig2, use_container_width=True)
         else:
-            cat_counts = df['site_category'].dropna().value_counts()
-            if cat_counts.empty:
-                st.info("ℹ️ Data kategori belum diisi. Update site di menu Project Tracker.")
-            else:
-                cat_map = {'New Site':'#3B82F6', 'Collocation':'#8B5CF6', 'Upgrade':'#F59E0B', 'Relocation':'#EF4444'}
-                fig2 = create_donut_chart(cat_counts, None, "", cat_map)
-                st.plotly_chart(fig2, use_container_width=True)
+            st.markdown("<p style='color:#CBD5E1;'>Data Kategori tidak tersedia.</p>", unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
     with col_d3:
         st.markdown("<div class='chart-box'>", unsafe_allow_html=True)
-        st.markdown("<h3 style='color:#CBD5E1 !important; font-size:0.9rem; margin-bottom:10px;'>SITE STATUS BY VENDOR</h3>", unsafe_allow_html=True)
-        
-        if df.empty:
-            st.info("📭 Belum ada data untuk ditampilkan.")
-        elif 'vendor' not in df.columns and 'site_category' not in df.columns:
-            st.warning("⚠️ Kolom 'vendor' atau 'site_category' tidak tersedia.")
+        if 'vendor' in df.columns:
+            group_col, title_bar = 'vendor', "SITE STATUS BY VENDOR"
+        elif 'site_category' in df.columns:
+            group_col, title_bar = 'site_category', "SITE STATUS BY CATEGORY"
         else:
-            if 'vendor' in df.columns:
-                group_col = 'vendor'
-                title_bar = "SITE STATUS BY VENDOR"
+            group_col, title_bar = 'status', "SITE STATUS"
+            
+        # Drop NaN agar index bersih
+        clean_df = df.dropna(subset=[group_col])
+        pivot = clean_df.groupby(group_col)['status'].value_counts().unstack(fill_value=0)
+        
+        stack_order = ['DELAYED', 'CRITICAL', 'ONGOING', 'PENDING', 'DONE', 'ON_TRACK']
+        available_cats = [c for c in stack_order if c in pivot.columns]
+        if not available_cats: available_cats = pivot.columns.tolist()
+        stack_colors = ['#EF4444', '#7F1D1D', '#F59E0B', '#94A3B8', '#10B981', '#10B981']
+        
+        if not pivot.empty:
+            fig3 = create_stacked_bar(pivot, group_col, available_cats, stack_colors[:len(available_cats)])
+            fig3.update_layout(title=dict(text=title_bar, x=0.5, font=dict(color='#CBD5E1')))
+            st.plotly_chart(fig3, use_container_width=True)
+        else:
+            st.info("Tidak ada data untuk ditampilkan.")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    col_m1, col_m2, col_m3 = st.columns([1.5, 1, 1])
+    with col_m1:
+        st.markdown("<div class='chart-box'>", unsafe_allow_html=True)
+        st.markdown("<h3 style='color:#CBD5E1 !important; font-size:1rem; margin-bottom:10px;'>OVERALL MILESTONE PROGRESS</h3>", unsafe_allow_html=True)
+        if not ms_df.empty:
+            ms_pivot = ms_df.groupby('name')['status'].value_counts().unstack(fill_value=0)
+            total_ms = ms_df.groupby('name')['id'].count()
+            steps = ['Survey', 'Design', 'Permit', 'Construction', 'Installation', 'Integration', 'RFS']
+            avail_steps = [s for s in steps if s in ms_pivot.index]
+            if not avail_steps: avail_steps = ms_pivot.index.tolist()[:5]
+            for step in avail_steps:
+                done = ms_pivot.loc[step].get('DONE', 0)
+                total = total_ms.get(step, 1)
+                pct = (done/total)*100
+                color = '#10B981' if pct >= 80 else ('#F59E0B' if pct >= 40 else '#EF4444')
+                st.markdown(f"""<div style='display:flex; align-items:center; margin-bottom:8px;'><div style='width:80px; font-size:0.8rem; color:#FFFFFF !important; font-weight:bold;'>{step}</div><div style='flex:1; height:8px; background:#334155; border-radius:4px; overflow:hidden;'><div style='width:{pct}%; height:100%; background:{color};'></div></div><div style='width:40px; text-align:right; font-size:0.7rem; color:#CBD5E1;'>{pct:.0f}%</div></div>""", unsafe_allow_html=True)
+        else:
+            st.info("Data milestone kosong.")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    with col_m2:
+        st.markdown("<div class='chart-box'>", unsafe_allow_html=True)
+        st.markdown("<h3 style='color:#CBD5E1 !important; font-size:1rem; margin-bottom:10px;'>ISSUE SUMMARY</h3>", unsafe_allow_html=True)
+        fig_iss = go.Figure(data=[go.Bar(x=['High', 'Medium', 'Low'], y=[6, 11, 6], marker_color=['#EF4444', '#F59E0B', '#10B981'])])
+        fig_iss.update_layout(showlegend=False, margin=dict(l=0, r=0, t=10, b=0), height=200, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='#FFFFFF'))
+        st.plotly_chart(fig_iss, use_container_width=True)
+        st.markdown("<div style='text-align:center; font-size:2rem; font-weight:bold; color:#FFFFFF !important;'>23</div><div style='text-align:center; color:#CBD5E1; font-size:0.8rem;'>TOTAL ISSUE</div>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    with col_m3:
+        st.markdown("<div class='chart-box'>", unsafe_allow_html=True)
+        st.markdown("<h3 style='color:#CBD5E1 !important; font-size:1rem; margin-bottom:10px;'>RISK MATRIX</h3>", unsafe_allow_html=True)
+        risk_data = np.random.randint(0, 5, (5, 5))
+        fig_risk = px.imshow(risk_data, text_auto=True, aspect="auto", color_continuous_scale="RdYlGn_r", zmin=0, zmax=10)
+        fig_risk.update_layout(margin=dict(l=0, r=0, t=10, b=0), height=200, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='#FFFFFF'), coloraxis_showscale=False)
+        st.plotly_chart(fig_risk, use_container_width=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    col_t1, col_t2 = st.columns([1.5, 1])
+    with col_t1:
+        st.markdown("<div class='chart-box'>", unsafe_allow_html=True)
+        st.markdown("<h3 style='color:#EF4444 !important; font-size:1rem; margin-bottom:10px;'> SITE DELAY (TOP 5)</h3>", unsafe_allow_html=True)
+        delay_df = df[df['status'].isin(['DELAYED', 'CRITICAL'])].copy()
+        if 'end_date' in delay_df.columns:
+            delay_df['end_date_dt'] = pd.to_datetime(delay_df['end_date'], errors='coerce')
+            delay_df['delay_days'] = (datetime.now() - delay_df['end_date_dt']).dt.days
+            delay_df = delay_df.sort_values('delay_days', ascending=False).head(5)
+            st.dataframe(delay_df[['site_id', 'site_name', 'site_category', 'vendor', 'end_date', 'delay_days', 'status']].rename(columns={'end_date':'Target RFS', 'delay_days':'Delay (Hari)'}), use_container_width=True, hide_index=True)
+        else:
+            st.warning("Kolom 'end_date' tidak ditemukan.")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    with col_t2:
+        st.markdown("<div class='chart-box'>", unsafe_allow_html=True)
+        st.markdown("<h3 style='color:#38BDF8 !important; font-size:1rem; margin-bottom:10px;'>TREND PROGRESS</h3>", unsafe_allow_html=True)
+        if not ms_df.empty and 'actual_end' in ms_df.columns:
+            trend = ms_df.dropna(subset=['actual_end']).sort_values('actual_end')
+            if not trend.empty and 'weight' in trend.columns:
+                trend['weight'] = pd.to_numeric(trend['weight'], errors='coerce').fillna(0)
+                total_w = trend['weight'].sum()
+                trend['cum_progress'] = (trend['weight'].cumsum() / total_w * 100) if total_w > 0 else np.linspace(0, 100, len(trend))
             else:
-                group_col = 'site_category'
-                title_bar = "SITE STATUS BY CATEGORY"
-                
-            clean_df = df.dropna(subset=[group_col])
-            if clean_df.empty or 'status' not in clean_df.columns:
-                st.info("ℹ️ Data status atau vendor masih kosong.")
-            else:
-                pivot = clean_df.groupby(group_col)['status'].value_counts().unstack(fill_value=0)
-                
-                stack_order = ['DELAYED', 'CRITICAL', 'ONGOING', 'PENDING', 'DONE', 'ON_TRACK']
-                available_cats = [c for c in stack_order if c in pivot.columns]
-                if not available_cats: 
-                    available_cats = pivot.columns.tolist()
-                
-                stack_colors = ['#EF4444', '#7F1D1D', '#F59E0B', '#94A3B8', '#10B981', '#10B981']
-                
-                if not pivot.empty:
-                    fig3 = create_stacked_bar(pivot, group_col, available_cats, stack_colors[:len(available_cats)])
-                    fig3.update_layout(title=dict(text=title_bar, x=0.5, font=dict(color='#CBD5E1')))
-                    st.plotly_chart(fig3, use_container_width=True)
-                else:
-                    st.info("📭 Tidak ada data untuk ditampilkan.")
+                trend['cum_progress'] = np.linspace(0, 100, len(trend))
+            fig_trend = create_scatter_trend(trend, 'actual_end', 'cum_progress', "S-Curve")
+        else:
+            trend_df = pd.DataFrame({'actual_end': pd.date_range(start=datetime.now()-timedelta(days=60), periods=10), 'cum_progress': np.linspace(20, 80, 10)})
+            fig_trend = create_scatter_trend(trend_df, 'actual_end', 'cum_progress', "S-Curve (Simulated)")
+        st.plotly_chart(fig_trend, use_container_width=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
 if __name__ == "__main__":
