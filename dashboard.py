@@ -44,16 +44,77 @@ def inject_dark_css():
     """, unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────────────────────
-# 🧠 HELPER FUNCTIONS
+# 🧠 HELPER FUNCTIONS (FIXED DONUT CHART)
 # ─────────────────────────────────────────────────────────────
 
 def get_safe_numeric(series):
     return pd.to_numeric(series, errors='coerce').fillna(0)
 
-def create_donut_chart(df, value_col, title, color_map):
-    fig = px.pie(df, values=value_col, names=df.index, title=title, hole=0.7, color=df.index, color_discrete_map=color_map)
-    fig.update_traces(textposition='inside', textinfo='percent+label', hoverinfo='label+value', marker=dict(line=dict(color='#1E293B', width=2)), textfont=dict(color='#FFFFFF', size=12))
-    fig.update_layout(showlegend=False, margin=dict(l=0, r=0, t=40, b=0), height=250, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='#FFFFFF'), title=dict(text=title, x=0.5, y=0.95, font=dict(size=16, color='#CBD5E1')))
+def create_donut_chart_safe(series, title, color_map, center_text=None):
+    """
+    ✅ Membuat donut chart yang aman dari Series value_counts()
+    - Handle data kosong
+    - Warna fallback jika kategori tidak ada di map
+    - Teks tengah opsional
+    """
+    if series.empty:
+        # Return empty chart dengan pesan
+        fig = go.Figure()
+        fig.add_annotation(text="📭 Data kosong", x=0.5, y=0.5, showarrow=False, font=dict(color='#94A3B8', size=14))
+        fig.update_layout(
+            margin=dict(l=0, r=0, t=30, b=0), height=250,
+            paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+            font=dict(color='#FFFFFF'),
+            title=dict(text=title, x=0.5, font=dict(color='#CBD5E1', size=14)),
+            xaxis=dict(showgrid=False, showticklabels=False),
+            yaxis=dict(showgrid=False, showticklabels=False)
+        )
+        return fig
+
+    # Prepare data: index = labels, values = counts
+    labels = series.index.astype(str).tolist()
+    values = series.values.tolist()
+    
+    # Assign colors: pakai dari map, fallback ke abu jika tidak ada
+    colors = [color_map.get(label, '#64748B') for label in labels]
+    
+    fig = px.pie(
+        values=values, 
+        names=labels, 
+        hole=0.7, 
+        color=labels,
+        color_discrete_map={label: color_map.get(label, '#64748B') for label in labels}
+    )
+    
+    fig.update_traces(
+        textposition='inside', 
+        textinfo='percent+label', 
+        hoverinfo='label+value+percent',
+        marker=dict(line=dict(color='#1E293B', width=2)),
+        textfont=dict(color='#FFFFFF', size=11)
+    )
+    
+    # Tambahkan teks tengah jika ada (misal: avg progress %)
+    if center_text:
+        fig.add_annotation(
+            text=f"{center_text}", 
+            x=0.5, y=0.5, 
+            font_size=20, 
+            showarrow=False, 
+            font_color='#FFFFFF',
+            font_weight='bold'
+        )
+    
+    fig.update_layout(
+        showlegend=False,
+        margin=dict(l=0, r=0, t=35, b=0),
+        height=250,
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        font=dict(color='#FFFFFF'),
+        title=dict(text=title, x=0.5, font=dict(color='#CBD5E1', size=14))
+    )
+    
     return fig
 
 def create_stacked_bar(df, x_col, categories, colors):
@@ -156,25 +217,46 @@ def dashboard_page():
         with cols[i]:
             st.markdown(f"""<div class='kpi-card'><div class='kpi-title'>{title}</div><div class='kpi-value'>{value}</div><div class='kpi-sub {color_class}'>{sub}</div></div>""", unsafe_allow_html=True)
 
+        # ─── ROW 1: DONUT CHARTS (FIXED) ───
     col_d1, col_d2, col_d3 = st.columns([1, 1, 1.5])
+    
     with col_d1:
         st.markdown("<div class='chart-box'>", unsafe_allow_html=True)
-        status_counts = df['status'].value_counts()
-        status_map = {'DONE':'#10B981', 'ONGOING':'#F59E0B', 'PENDING':'#94A3B8', 'DELAYED':'#EF4444', 'CRITICAL':'#7F1D1D', 'ON_TRACK':'#10B981'}
-        fig1 = create_donut_chart(status_counts, None, "PROGRESS OVERVIEW", status_map)
-        fig1.add_annotation(dict(text=f'{avg_prog:.0f}%', x=0.5, y=0.5, font_size=24, showarrow=False, font_color='#FFFFFF'))
-        st.plotly_chart(fig1, use_container_width=True)
+        st.markdown("<h3 style='color:#CBD5E1 !important; font-size:0.9rem; margin-bottom:10px; text-align:center;'>PROGRESS OVERVIEW</h3>", unsafe_allow_html=True)
+        
+        if 'status' in df.columns and not df.empty:
+            status_counts = df['status'].dropna().value_counts()
+            status_map = {
+                'DONE': '#10B981', 'ON_TRACK': '#10B981',
+                'ONGOING': '#F59E0B', 
+                'PENDING': '#94A3B8', 
+                'DELAYED': '#EF4444', 'CRITICAL': '#7F1D1D'
+            }
+            # Handle NaN avg_prog
+            center_val = f"{avg_prog:.0f}%" if not pd.isna(avg_prog) else "0%"
+            fig1 = create_donut_chart_safe(status_counts, "", status_map, center_text=center_val)
+            st.plotly_chart(fig1, use_container_width=True)
+        else:
+            st.markdown("<p style='text-align:center; color:#94A3B8; padding:20px;'>📭 Data status belum tersedia</p>", unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
     with col_d2:
         st.markdown("<div class='chart-box'>", unsafe_allow_html=True)
-        if 'site_category' in df.columns:
-            cat_counts = df['site_category'].value_counts()
-            cat_map = {'New Site':'#3B82F6', 'Collocation':'#8B5CF6', 'Upgrade':'#F59E0B', 'Relocation':'#EF4444'}
-            fig2 = create_donut_chart(cat_counts, None, "SITE BY KATEGORI", cat_map)
+        st.markdown("<h3 style='color:#CBD5E1 !important; font-size:0.9rem; margin-bottom:10px; text-align:center;'>SITE BY KATEGORI</h3>", unsafe_allow_html=True)
+        
+        if 'site_category' in df.columns and not df.empty:
+            cat_series = df['site_category'].dropna().value_counts()
+            cat_map = {
+                'New Site': '#3B82F6', 
+                'Collocation': '#8B5CF6', 
+                'Upgrade': '#F59E0B', 
+                'Relocation': '#EF4444',
+                'Indoor': '#EC4899'  # Fallback untuk tipe lain
+            }
+            fig2 = create_donut_chart_safe(cat_series, "", cat_map)
             st.plotly_chart(fig2, use_container_width=True)
         else:
-            st.markdown("<p style='color:#CBD5E1;'>Data Kategori tidak tersedia.</p>", unsafe_allow_html=True)
+            st.markdown("<p style='text-align:center; color:#94A3B8; padding:20px;'>ℹ️ Data kategori belum diisi</p>", unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
     with col_d3:
@@ -186,23 +268,25 @@ def dashboard_page():
         else:
             group_col, title_bar = 'status', "SITE STATUS"
             
-        # Drop NaN agar index bersih
         clean_df = df.dropna(subset=[group_col])
-        pivot = clean_df.groupby(group_col)['status'].value_counts().unstack(fill_value=0)
-        
-        stack_order = ['DELAYED', 'CRITICAL', 'ONGOING', 'PENDING', 'DONE', 'ON_TRACK']
-        available_cats = [c for c in stack_order if c in pivot.columns]
-        if not available_cats: available_cats = pivot.columns.tolist()
-        stack_colors = ['#EF4444', '#7F1D1D', '#F59E0B', '#94A3B8', '#10B981', '#10B981']
-        
-        if not pivot.empty:
-            fig3 = create_stacked_bar(pivot, group_col, available_cats, stack_colors[:len(available_cats)])
-            fig3.update_layout(title=dict(text=title_bar, x=0.5, font=dict(color='#CBD5E1')))
-            st.plotly_chart(fig3, use_container_width=True)
+        if not clean_df.empty and 'status' in clean_df.columns:
+            pivot = clean_df.groupby(group_col)['status'].value_counts().unstack(fill_value=0)
+            
+            stack_order = ['DELAYED', 'CRITICAL', 'ONGOING', 'PENDING', 'DONE', 'ON_TRACK']
+            available_cats = [c for c in stack_order if c in pivot.columns]
+            if not available_cats: available_cats = pivot.columns.tolist()
+            stack_colors = ['#EF4444', '#7F1D1D', '#F59E0B', '#94A3B8', '#10B981', '#10B981']
+            
+            if not pivot.empty:
+                fig3 = create_stacked_bar(pivot, group_col, available_cats, stack_colors[:len(available_cats)])
+                fig3.update_layout(title=dict(text=title_bar, x=0.5, font=dict(color='#CBD5E1', size=14)))
+                st.plotly_chart(fig3, use_container_width=True)
+            else:
+                st.markdown("<p style='text-align:center; color:#94A3B8;'>📭 Tidak ada data</p>", unsafe_allow_html=True)
         else:
-            st.info("Tidak ada data untuk ditampilkan.")
+            st.markdown("<p style='text-align:center; color:#94A3B8;'>⚠️ Data vendor/kategori tidak tersedia</p>", unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
-
+        
     col_m1, col_m2, col_m3 = st.columns([1.5, 1, 1])
     with col_m1:
         st.markdown("<div class='chart-box'>", unsafe_allow_html=True)
