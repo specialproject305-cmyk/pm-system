@@ -151,6 +151,11 @@ def create_scatter_trend(df, date_col, value_col, title):
 #  MAIN DASHBOARD FUNCTION
 # ─────────────────────────────────────────────────────────────
 
+    if st.query_params.get("refresh") == "true":
+        st.cache_data.clear()
+        st.query_params.clear()
+        st.rerun()
+
 def dashboard_page():
     inject_dark_css()
     if 'master_project_filter' not in st.session_state:
@@ -202,7 +207,7 @@ def dashboard_page():
     st.sidebar.markdown(f"###  Site: {len(df)}")
     st.sidebar.markdown(f"### 🔄 Update: {datetime.now().strftime('%H:%M')}")
 
-    st.markdown("""<div class='header-container'><div class='header-title'><h1>MCP TOWER PROJECT</h1><p>Deployment Dashboard</p></div><div style='display:flex; gap:15px; align-items:center;'><button style='background:#38BDF8; color:#FFFFFF !important; border:none; padding:8px 15px; border-radius:6px; cursor:pointer; font-size:0.8rem;'>📅 Periode: 20 Mei - 20 Jun 2024</button><button style='background:#38BDF8; color:#0F172A !important; border:none; padding:8px 15px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:0.8rem;' onclick='document.location.reload()'>🔄 Refresh</button></div></div>""", unsafe_allow_html=True)
+    st.markdown("""<div class='header-container'><div class='header-title'><h1>MCP TOWER PROJECT</h1><p>Deployment Dashboard</p></div><div style='display:flex; gap:15px; align-items:center;'><button style='background:#38BDF8; color:#FFFFFF !important; border:none; padding:8px 15px; border-radius:6px; cursor:pointer; font-size:0.8rem;'>📅 Periode: 20 Mei - 20 Jun 2024</button><a href='?refresh=true' style='background:#38BDF8; color:#0F172A; border:none; padding:8px 15px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:0.8rem; text-decoration:none;'>🔄 Refresh</a></div></div>""", unsafe_allow_html=True)
 
     total_sites = len(df)
     rfs_count = len(df[df['status']=='DONE'])
