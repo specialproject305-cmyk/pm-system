@@ -217,7 +217,7 @@ def dashboard_page():
     """, unsafe_allow_html=True)
     
     # Refresh & Period - blue background
-    st.markdown("<div style='background: linear-gradient(90deg, #1E3A5F 0%, #0F172A 100%); padding:10px 15px; border-radius:10px; margin-bottom:15px;'>", unsafe_allow_html=True)
+    st.markdown("<div style='background: linear-gradient(90deg, #1E3A5F 10%, #0F172A 90%); padding:10px 15px; border-radius:10px; margin-bottom:15px;'>", unsafe_allow_html=True)
     
     col_r1, col_r2 = st.columns([1, 2])
     with col_r1:
