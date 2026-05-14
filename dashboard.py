@@ -19,8 +19,10 @@ def inject_dark_css():
         [data-testid="stSidebar"] * { color: #E2E8F0 !important; }
         .stSidebar h1, .stSidebar h2, .stSidebar h3, .stSidebar p, .stSidebar span, .stSidebar div, .stSidebar label { color: #FFFFFF !important; }
         .stSidebar .stSelectbox > div { background-color: #0F172A; border: 1px solid #334155; color: #FFF !important; }
-        .stSidebar button { width: 100%; text-align: left; color: #FFFFFF !important; background: transparent; border: none; padding: 10px; margin: 5px 0; border-radius: 8px; }
-        .stSidebar button:hover { background-color: #334155; color: #FFF !important; }
+        
+        @media (max-width: 768px) {
+            [data-testid="stSidebar"] { display: block !important; }
+        }
         
         .header-container { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(90deg, #1E293B 0%, #0F172A 100%); padding: 15px 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #334155; }
         .header-title h1 { margin: 0; font-size: 1.5rem; font-weight: 800; color: #38BDF8 !important; letter-spacing: 1px; }
@@ -184,11 +186,14 @@ def dashboard_page():
         st.cache_data.clear()
         st.rerun()
         
-    if selected_mp != " SEMUA PROYEK":
-        target_id = selected_mp.split(" - ")[0]
-        df = df[df['master_project_id'] == target_id]
-        valid_sites = df['id'].tolist()
-        ms_df = ms_df[ms_df['project_id'].isin(valid_sites)]
+    if selected_mp != "🌐 SEMUA PROYEK":
+        try:
+            target_id = mp_df[mp_df['id'] == selected_mp].iloc[0]['id']
+            df = df[df.get('master_project_id', '') == target_id]
+            valid_sites = df['id'].tolist()
+            ms_df = ms_df[ms_df['project_id'].isin(valid_sites)]
+        except:
+            pass
         
     st.sidebar.markdown("---")
     st.sidebar.markdown(f"###  Site: {len(df)}")
