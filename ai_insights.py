@@ -112,6 +112,8 @@ def ai_insights_page():
     
     sites_df = all_data.get('projects', pd.DataFrame())
     ms_df = all_data.get('milestones', pd.DataFrame())
+        st.write("🔍 Sample sla_days:", ms_df['sla_days'].value_counts().head())
+        st.write("🔍 Sample assigned_to:", ms_df['assigned_to'].value_counts().head())
     mat_df = all_data.get('materials', pd.DataFrame())
     
     if sites_df.empty:
