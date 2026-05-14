@@ -22,7 +22,7 @@ def inject_dark_css():
          @media (max-width: 768px) {
             [data-testid="stSidebar"] { display: block !important; }
         }
-            [data-testid="stSidebarCollapseButton"] { display: block !important; visibility: visible !important; }
+                [data-testid="stSidebarCollapseButton"] { display: block !important; visibility: visible !important; }
         button[kind="header"] { display: block !important; }
         
         .header-container { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(90deg, #1E293B 0%, #0F172A 100%); padding: 15px 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #334155; }
