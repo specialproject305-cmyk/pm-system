@@ -117,6 +117,9 @@ def ai_insights_page():
     if sites_df.empty:
         st.warning("⚠️ Belum ada data site.")
         return
+
+        # DEBUG: Cek kolom
+    st.write("🔍 Kolom milestones:", ms_df.columns.tolist())
     
     # Safe numeric/date conversion
     if not sites_df.empty and 'progress' in sites_df.columns:
@@ -348,7 +351,7 @@ def ai_insights_page():
         st.header("⏱️ 3. SLA Compliance Analysis")
         st.markdown("*Perbandingan SLA (target) vs Actual Duration*")
         
-        if not site_ms.empty and 'sla_days' in site_ms.columns:
+        if not site_ms.empty and ('sla_days' in site_ms.columns or 'SLA' in site_ms.columns):
             sla_stats = analyze_sla_compliance(site_ms)
             
             if sla_stats:
