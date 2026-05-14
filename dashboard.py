@@ -207,7 +207,7 @@ def dashboard_page():
     st.sidebar.markdown(f"###  Site: {len(df)}")
     st.sidebar.markdown(f"### 🔄 Update: {datetime.now().strftime('%H:%M')}")
 
-        col_title, col_btn = st.columns([3, 1])
+    col_title, col_btn = st.columns([3, 1])
     with col_title:
         st.markdown("""<div class='header-container'><div class='header-title'><h1>MCP TOWER PROJECT</h1><p>Deployment Dashboard</p></div></div>""", unsafe_allow_html=True)
     with col_btn:
