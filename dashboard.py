@@ -208,29 +208,31 @@ def dashboard_page():
     st.sidebar.markdown(f"###  Site: {len(df)}")
     st.sidebar.markdown(f"### 🔄 Update: {datetime.now().strftime('%H:%M')}")
 
-        # Header center 3 baris
+        # Header center - compact
     st.markdown(f"""
-    <div style='text-align:center; background: linear-gradient(90deg, #1E293B 0%, #0F172A 100%); padding:20px; border-radius:12px; margin-bottom:10px; border:1px solid #334155;'>
-        <h1 style='margin:0; font-size:1.8rem; font-weight:800; color:#38BDF8;'>MCP TOWER PROJECT</h1>
-        <p style='margin:5px 0; font-size:1rem; color:#CBD5E1;'>Deployment Dashboard</p>
+    <div style='text-align:center; background: linear-gradient(90deg, #1E3A5F 0%, #0F172A 100%); padding:10px 20px; border-radius:12px; margin-bottom:10px; border:1px solid #334155;'>
+        <h1 style='margin:0; font-size:1.5rem; font-weight:800; color:#38BDF8;'>MCP TOWER PROJECT</h1>
+        <p style='margin:2px 0; font-size:0.85rem; color:#CBD5E1;'>Deployment Dashboard</p>
     </div>
     """, unsafe_allow_html=True)
     
-    # Refresh & Period dalam 1 row
-    col_r1, col_r2, col_r3 = st.columns([1, 2, 1])
+    # Refresh & Period - blue background
+    st.markdown("<div style='background: linear-gradient(90deg, #1E3A5F 0%, #0F172A 100%); padding:10px 15px; border-radius:10px; margin-bottom:15px;'>", unsafe_allow_html=True)
+    
+    col_r1, col_r2 = st.columns([1, 2])
+    with col_r1:
+        if st.button("🔄 Refresh Data", key="refresh_btn", use_container_width=True):
+            st.cache_data.clear()
+            st.rerun()
     with col_r2:
         date_range = st.date_input(
-            "📅 Filter Periode",
+            "📅 Periode",
             value=(date.today() - timedelta(days=30), date.today()),
             max_value=date.today(),
             key="dash_period",
             label_visibility="collapsed"
         )
     
-    st.markdown("<div style='text-align:center; margin-bottom:15px;'>", unsafe_allow_html=True)
-    if st.button("🔄 Refresh Data", key="refresh_btn"):
-        st.cache_data.clear()
-        st.rerun()
     st.markdown("</div>", unsafe_allow_html=True)
 
     total_sites = len(df)
