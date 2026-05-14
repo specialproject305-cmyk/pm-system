@@ -26,6 +26,20 @@ def rca_page():
         if selected_master != "ALL":
             valid_sites = sites_df[sites_df['master_project_id'] == selected_master]['id'].tolist()
             ms_df = ms_df[ms_df['project_id'].isin(valid_sites)]
+
+        # Filter Project
+    if not master_df.empty:
+        ...
+    
+    # Filter Site ← TAMBAH DI SINI
+    site_options = ["ALL SITE"] + sites_df["id"].tolist()
+    selected_site = st.selectbox(...)
+    if selected_site != "ALL SITE":
+        delayed_ms = delayed_ms[delayed_ms['project_id'] == selected_site]
+    
+    if delayed_ms.empty:
+        st.success("✅ Tidak ada milestone delayed!")
+        return
     
     # Filter: hanya milestone DELAYED/CRITICAL
     delayed_ms = ms_df[ms_df['status'].isin(['DELAYED', 'CRITICAL'])].copy()
