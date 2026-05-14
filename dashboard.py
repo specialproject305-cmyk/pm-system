@@ -40,7 +40,9 @@ def inject_dark_css():
         [data-testid="stDataFrame"] div { background-color: #1E293B; color: #FFFFFF !important; }
         thead th { background-color: #0F172A !important; color: #E2E8F0 !important; border-bottom: 2px solid #38BDF8 !important; }
         
-        #MainMenu {visibility: hidden;} header {visibility: hidden;} .stDecoration {display: none;}
+        #MainMenu {visibility: hidden;} 
+        .stDecoration {display: none;}
+        header[data-testid="stHeader"] { visibility: visible !important; }
         .text-green { color: #10B981 !important; } .text-yellow { color: #F59E0B !important; }
         .text-red { color: #EF4444 !important; } .text-blue { color: #3B82F6 !important; }
     </style>
