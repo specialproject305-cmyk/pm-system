@@ -113,7 +113,7 @@ def main():
     elif menu == "📋 Daily Tasks":
         daily_task_page()
 
-        elif menu == "🔍 RCA Analysis":
+    elif menu == "🔍 RCA Analysis":
         rca_page()
 
     else:
