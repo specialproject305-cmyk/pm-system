@@ -19,8 +19,7 @@ def inject_dark_css():
         [data-testid="stSidebar"] * { color: #E2E8F0 !important; }
         .stSidebar h1, .stSidebar h2, .stSidebar h3, .stSidebar p, .stSidebar span, .stSidebar div, .stSidebar label { color: #FFFFFF !important; }
         .stSidebar .stSelectbox > div { background-color: #0F172A; border: 1px solid #334155; color: #FFF !important; }
-        
-        @media (max-width: 768px) {
+         @media (max-width: 768px) {
             [data-testid="stSidebar"] { display: block !important; }
         }
         
