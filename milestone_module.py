@@ -185,20 +185,15 @@ def milestone_page():
             ms_df["planned_start"] = pd.to_datetime(ms_df["planned_start"], errors="coerce")
             ms_df["planned_end"] = pd.to_datetime(ms_df["planned_end"], errors="coerce")
 
-            # Cek apakah filter Master Project aktif
-            if 'master_project_filter' in st.session_state and st.session_state.master_project_filter != "ALL":
-                
-                # 1. Filter Tabel Site (Projects) dulu
-                if not sites_df.empty and 'master_project_id' in sites_df.columns:
-                    sites_df = sites_df[sites_df['master_project_id'] == st.session_state.master_project_filter]
-                    
-                    # 2. Filter Tabel Milestone berdasarkan Site yang sudah difilter
-                    if not ms_df.empty:
-                        valid_site_ids = sites_df['id'].tolist()
-                        ms_df = ms_df[ms_df['project_id'].isin(valid_site_ids)]
-            
             if is_all:
                 st.subheader("📊 Gantt Chart - ALL SITE")
+                
+                # Filter by master project if set
+                if 'master_project_filter' in st.session_state and st.session_state.master_project_filter != "ALL":
+                    valid_sites = sites_df[sites_df.get('master_project_id', '') == st.session_state.master_project_filter]['id'].tolist()
+                    if valid_sites:
+                        ms_df = ms_df[ms_df['project_id'].isin(valid_sites)]
+                
                 grouped = ms_df.groupby("name").agg(
                     start=("planned_start", "min"),
                     end=("planned_end", "max"),
@@ -219,6 +214,7 @@ def milestone_page():
                 
                 fig = px.timeline(grouped, x_start="start", x_end="end", y="name", color="status", color_discrete_map=color_map)
                 fig.update_yaxes(autorange="reversed")
+                fig.update_layout(height=max(500, len(grouped)*35))
                 st.plotly_chart(fig, use_container_width=True)
             else:
                 site_ms = ms_df[ms_df["project_id"] == selected_site].copy()
@@ -231,11 +227,14 @@ def milestone_page():
                     color_map = {"PENDING": "#6c757d", "ONGOING": "#0d6efd", "DONE": "#28a745", "DELAYED": "#dc3545", "CRITICAL": "#ff0000"}
                     fig = px.timeline(site_ms, x_start="planned_start", x_end="planned_end", y="name", color="display_status", color_discrete_map=color_map)
                     fig.update_yaxes(autorange="reversed")
+                    fig.update_layout(height=max(400, len(site_ms)*30))
                     st.plotly_chart(fig, use_container_width=True)
                     
                     done = len(site_ms[site_ms["status"] == "DONE"])
                     total = len(site_ms)
-                    st.progress(done/total if total > 0 else 0)
+                    if total > 0:
+                        st.progress(done/total)
+                        st.caption(f"Progress: {(done/total*100):.1f}%")
 
     # ════════════════════════════════════════════════════════
     # TAB 2: TAMBAH MANUAL (dengan Actual Date)
