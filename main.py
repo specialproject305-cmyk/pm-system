@@ -109,11 +109,13 @@ def main():
         else: 
             st.info("Halaman Settings sedang dikembangkan.")
 
+    elif menu == "📋 Daily Tasks":
+        daily_task_page()
+
     else:
         st.error("Menu tidak dikenali.")
 
-    elif menu == "📋 Daily Tasks":
-        daily_task_page()
+    
     
 if __name__ == "__main__":
     main()
