@@ -112,8 +112,13 @@ def ai_insights_page():
     
     sites_df = all_data.get('projects', pd.DataFrame())
     ms_df = all_data.get('milestones', pd.DataFrame())
-        st.write("🔍 Sample sla_days:", ms_df['sla_days'].value_counts().head())
-        st.write("🔍 Sample assigned_to:", ms_df['assigned_to'].value_counts().head())
+            if not ms_df.empty:
+                for col in ['planned_start', 'planned_end', 'actual_start', 'actual_end']:
+            if col in ms_df.columns:
+                ms_df[col] = pd.to_datetime(ms_df[col], errors='coerce')
+        
+        # DEBUG
+        st.caption(f"🔍 Total MS: {len(ms_df)} | assigned_to terisi: {(ms_df['assigned_to'].notna() & (ms_df['assigned_to'] != '')).sum()} | sla_days terisi: {(ms_df['sla_days'].notna() & (ms_df['sla_days'] != '')).sum()}")
     mat_df = all_data.get('materials', pd.DataFrame())
     
     if sites_df.empty:
