@@ -554,6 +554,7 @@ def milestone_page():
                 if st.button("🚀 Konfirmasi Import"):
                     success_count = 0
                     for _, r in df_import.iterrows():
+                    try:
                         new_id = insert_row("milestones", {
                             "id": generate_id(),
                             "project_id": selected_site,
@@ -569,11 +570,14 @@ def milestone_page():
                         })
                         if new_id:
                             success_count += 1
-                    
-                    sync_milestone_to_site(selected_site)
-                    if success_count > 0:
-                        st.success(f"Berhasil import {success_count} task!")
-                        st.rerun()
-
-if __name__ == "__main__":
-    milestone_page()
+                        else:
+                            st.warning(f"⚠️ Gagal: {r.get('name', '?')}")
+                    except Exception as e:
+                        st.error(f"❌ Error: {e}")
+                
+                sync_milestone_to_site(selected_site)
+                if success_count > 0:
+                    st.success(f"Berhasil import {success_count} task!")
+                    st.rerun()
+                else:
+                    st.error("❌ Tidak ada data berhasil diimport!")
