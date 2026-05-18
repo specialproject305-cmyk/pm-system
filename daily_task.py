@@ -27,12 +27,17 @@ def daily_task_page():
     # Filter: milestone yang belum DONE, deadline hari ini atau besok
     follow_up = ms_df[
         (ms_df['status'].isin(['PENDING', 'ONGOING', 'DELAYED'])) &
-        (ms_df['planned_end'].dt.date <= tomorrow)
+        (
+            (ms_df['planned_end'].dt.date <= tomorrow) |  # Deadline sudah dekat
+            ((ms_df['planned_start'].dt.date <= today) & (ms_df['status'] == 'PENDING'))  # Harusnya sudah mulai
+        )
     ].copy()
     
     if follow_up.empty:
         st.success("✅ Tidak ada milestone yang harus di-follow up hari ini atau besok!")
         return
+
+    st.write(f"🔍 Total follow-up: {len(follow_up)} | PENDING: {len(follow_up[follow_up['status']=='PENDING'])} | ONGOING: {len(follow_up[follow_up['status']=='ONGOING'])} | DELAYED: {len(follow_up[follow_up['status']=='DELAYED'])}")
     
     # Merge dengan site & master project
     site_map = dict(zip(sites_df['id'], sites_df['site_name'])) if not sites_df.empty else {}
