@@ -3,6 +3,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from supabase_db import (
     read_sheet,
     insert_row,
@@ -161,6 +162,21 @@ def milestone_page():
     if sites_df.empty: 
         st.warning("⚠️ Tambahkan site dulu di menu Project Tracker!")
         return
+    
+    # ===== AUTO-DELAY: Milestone yang deadline-nya sudah lewat =====
+    ms_df = read_sheet("milestones")
+    if not ms_df.empty:
+        today = date.today()
+        ms_df['planned_end_dt'] = pd.to_datetime(ms_df['planned_end'], errors='coerce')
+        overdue = ms_df[
+            (ms_df['status'].isin(['PENDING', 'ONGOING'])) &
+            (ms_df['planned_end_dt'].dt.date < today)
+        ]
+        if not overdue.empty:
+            for _, row in overdue.iterrows():
+                update_row('milestones', row['id'], {'status': 'DELAYED'})
+            st.cache_data.clear()
+            st.toast(f"🤖 {len(overdue)} milestone auto-delayed!", icon="⚠️")
     
     # Sidebar Filter Site
     site_options = ["ALL SITE"] + sites_df["id"].tolist()
