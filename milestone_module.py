@@ -554,30 +554,30 @@ def milestone_page():
                 if st.button("🚀 Konfirmasi Import"):
                     success_count = 0
                     for _, r in df_import.iterrows():
-                    try:
-                        new_id = insert_row("milestones", {
-                            "id": generate_id(),
-                            "project_id": selected_site,
-                            "name": str(r["name"]),
-                            "planned_start": safe_date_string(r.get("planned_start", today_str())),
-                            "planned_end": safe_date_string(r.get("planned_end", today_str())),
-                            "actual_start": safe_date_string(r.get("actual_start")) if r.get("actual_start") else None,
-                            "actual_end": safe_date_string(r.get("actual_end")) if r.get("actual_end") else None,
-                            "assigned_to": str(r.get("assigned_to", "")),
-                            "weight": str(r.get("weight", 5)),
-                            "status": str(r.get("status", "PENDING")),
-                            "delay_reason": str(r.get("delay_reason", "Tidak Ada"))
-                        })
-                        if new_id:
-                            success_count += 1
-                        else:
-                            st.warning(f"⚠️ Gagal: {r.get('name', '?')}")
-                    except Exception as e:
-                        st.error(f"❌ Error: {e}")
-                
-                sync_milestone_to_site(selected_site)
-                if success_count > 0:
-                    st.success(f"Berhasil import {success_count} task!")
-                    st.rerun()
-                else:
-                    st.error("❌ Tidak ada data berhasil diimport!")
+                        try:
+                            new_id = insert_row("milestones", {
+                                "id": generate_id(),
+                                "project_id": selected_site,
+                                "name": str(r["name"]),
+                                "planned_start": safe_date_string(r.get("planned_start", today_str())),
+                                "planned_end": safe_date_string(r.get("planned_end", today_str())),
+                                "actual_start": safe_date_string(r.get("actual_start")) if r.get("actual_start") else None,
+                                "actual_end": safe_date_string(r.get("actual_end")) if r.get("actual_end") else None,
+                                "assigned_to": str(r.get("assigned_to", "")),
+                                "weight": str(r.get("weight", 5)),
+                                "status": str(r.get("status", "PENDING")),
+                                "delay_reason": str(r.get("delay_reason", "Tidak Ada"))
+                            })
+                            if new_id:
+                                success_count += 1
+                            else:
+                                st.warning(f"⚠️ Gagal: {r.get('name', '?')}")
+                        except Exception as e:
+                            st.error(f"❌ Error: {e}")
+                    
+                    sync_milestone_to_site(selected_site)
+                    if success_count > 0:
+                        st.success(f"Berhasil import {success_count} task!")
+                        st.rerun()
+                    else:
+                        st.error("❌ Tidak ada data berhasil diimport!")
