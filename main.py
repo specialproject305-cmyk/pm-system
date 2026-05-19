@@ -61,7 +61,7 @@ def main():
 
     if st.session_state.presentation_mode:
         presentation_page()
-else:
+    else:
     # ... routing normal ...
 
     if menu == "📊 Dashboard": 
