@@ -31,6 +31,17 @@ if not st.session_state['logged_in']:
 user = st.session_state.get('user', {})
 role = user.get('role', 'viewer')
 
+# ===== APP MODE =====
+app_mode = st.session_state.get('app_mode', '🏢 Full Dashboard')
+user = st.session_state.get('user', {})
+role = user.get('role', 'viewer')
+
+# Engineer / Field App mode
+if role == 'engineer' or app_mode == '📱 Field App':
+    from field_app import field_app_page
+    field_app_page()
+    st.stop()
+
 with st.sidebar:
     st.title("🏗️ PM System")
     st.markdown(f"👤 **{user.get('full_name', user.get('username', 'User'))}**")
