@@ -236,23 +236,94 @@ def milestone_page():
                                 st.warning("🗑️ Dihapus!"); st.rerun()
     
     # ===== TAB 5: IMPORT =====
+        # ===== TAB 5: IMPORT CSV (MULTI-SITE) =====
     with tab5:
-        if is_all: st.warning("⚠️ Pilih site spesifik dulu!")
-        else:
-            template = pd.DataFrame({"name":["Pondasi"],"planned_start":[today_str()],"planned_end":[today_str()],"assigned_to":["Engineering"],"weight":[10],"status":["PENDING"],"delay_reason":[""]})
-            st.download_button("📥 Template", template.to_csv(index=False), "template_ms.csv", "text/csv")
-            up = st.file_uploader("Upload CSV", type=["csv"])
-            if up:
-                idf = pd.read_csv(up); st.dataframe(idf)
-                if st.button("🚀 Import"):
-                    count = 0
-                    for _, r in idf.iterrows():
-                        try:
-                            if insert_row("milestones", {"id":generate_id(),"project_id":selected_site,"name":str(r["name"]),"planned_start":str(r.get("planned_start",today_str())),"planned_end":str(r.get("planned_end",today_str())),"assigned_to":str(r.get("assigned_to","")),"weight":str(r.get("weight",5)),"status":str(r.get("status","PENDING")),"delay_reason":str(r.get("delay_reason",""))}):
-                                count += 1
-                        except: pass
-                    sync_milestone_to_site(selected_site)
-                    st.success(f"✅ {count} diimport!"); st.rerun() if count > 0 else None
+        st.subheader("📥 Import Milestone via CSV (Multi-Site)")
+        st.info("💡 Satu file CSV bisa berisi milestone untuk banyak site. Gunakan kolom `site_id` untuk menentukan site tujuan.")
+        
+        # Template multi-site
+        template = pd.DataFrame({
+            "site_id": ["SITE-001", "SITE-001", "SITE-002"],
+            "name": ["Pondasi", "Erection", "Pondasi"],
+            "planned_start": [today_str(), today_str(), today_str()],
+            "planned_end": [today_str(), today_str(), today_str()],
+            "assigned_to": ["Engineering", "Project", "Engineering"],
+            "weight": [10, 15, 10],
+            "status": ["PENDING", "PENDING", "PENDING"],
+            "delay_reason": ["", "", ""]
+        })
+        
+        st.download_button("📥 Download Template CSV (Multi-Site)", template.to_csv(index=False), "template_milestone_multisite.csv", "text/csv")
+        
+        st.markdown("---")
+        st.caption("Format: `site_id` = ID Site tujuan, kosongkan untuk import ke site yang dipilih di atas")
+        
+        up_file = st.file_uploader("Upload File CSV", type=["csv"])
+        if up_file:
+            df_import = pd.read_csv(up_file)
+            st.write("Preview Data:")
+            st.dataframe(df_import)
+            
+            # Cek apakah ada kolom site_id
+            has_site_id = 'site_id' in df_import.columns
+            
+            if st.button("🚀 Konfirmasi Import Multi-Site"):
+                success_count = 0
+                error_rows = []
+                
+                # Buat mapping site_id → project_id
+                site_map = dict(zip(sites_df['site_id'], sites_df['id'])) if not sites_df.empty else {}
+                
+                for idx, r in df_import.iterrows():
+                    try:
+                        # Tentukan project_id
+                        if has_site_id and pd.notna(r.get('site_id')) and str(r['site_id']).strip() != '':
+                            target_site_id = str(r['site_id']).strip()
+                            if target_site_id in site_map:
+                                project_id = site_map[target_site_id]
+                            else:
+                                error_rows.append(f"Baris {idx+2}: Site ID '{target_site_id}' tidak ditemukan")
+                                continue
+                        else:
+                            project_id = selected_site if not is_all else None
+                        
+                        if project_id is None:
+                            error_rows.append(f"Baris {idx+2}: Tidak bisa menentukan site tujuan")
+                            continue
+                        
+                        new_id = insert_row("milestones", {
+                            "id": generate_id(),
+                            "project_id": project_id,
+                            "name": str(r.get("name", "")),
+                            "planned_start": safe_date_string(r.get("planned_start", today_str())),
+                            "planned_end": safe_date_string(r.get("planned_end", today_str())),
+                            "actual_start": safe_date_string(r.get("actual_start")) if r.get("actual_start") else None,
+                            "actual_end": safe_date_string(r.get("actual_end")) if r.get("actual_end") else None,
+                            "assigned_to": str(r.get("assigned_to", "")),
+                            "weight": str(r.get("weight", 5)),
+                            "status": str(r.get("status", "PENDING")),
+                            "delay_reason": str(r.get("delay_reason", ""))
+                        })
+                        
+                        if new_id:
+                            success_count += 1
+                            # Sync site yang bersangkutan
+                            sync_milestone_to_site(project_id)
+                        else:
+                            error_rows.append(f"Baris {idx+2}: Gagal insert")
+                            
+                    except Exception as e:
+                        error_rows.append(f"Baris {idx+2}: {str(e)[:50]}")
+                
+                if success_count > 0:
+                    st.success(f"✅ Berhasil import {success_count} milestone ke {len(df_import['site_id'].unique()) if has_site_id else 1} site!")
+                if error_rows:
+                    with st.expander(f"⚠️ {len(error_rows)} error"):
+                        for e in error_rows[:20]:
+                            st.write(e)
+                if success_count > 0:
+                    st.cache_data.clear()
+                    st.rerun()
 
 if __name__ == "__main__":
     milestone_page()
