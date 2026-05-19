@@ -53,6 +53,8 @@ def field_app_page():
         
         st.divider()
         st.metric("📋 Tasks", len(ms_df))
+
+        tab1, tab2, tab3 = st.tabs(["📱 Update Tasks", "💬 Team Chat", "📋 Daily Tasks"])
     # ===== TAB 1: UPDATE TASKS =====
     with tab1:
         if ms_df.empty:
