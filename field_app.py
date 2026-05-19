@@ -1,16 +1,16 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta, date
-from supabase_db import read_sheet, update_row, read_all_sheets
+from supabase_db import read_sheet, update_row, read_all_sheets, insert_row, generate_id, now_str, delete_row_by_id
 
 def field_app_page():
-    st.title("📱 Field Update App")
-    st.caption("Update milestone dari lapangan — lengkap dengan progress & tanggal aktual")
+    st.title("📱 Field App")
     
     all_data = read_all_sheets()
     ms_df = all_data.get('milestones', pd.DataFrame())
     sites_df = all_data.get('projects', pd.DataFrame())
     master_df = all_data.get('master_projects', pd.DataFrame())
+    messages = all_data.get('chat_messages', pd.DataFrame())
     
     # Global filter
     if st.session_state.get('global_project_filter', 'ALL') != "ALL":
@@ -18,15 +18,9 @@ def field_app_page():
         sites_df = sites_df[sites_df['id'].isin(valid_sites)]
         ms_df = ms_df[ms_df['project_id'].isin(valid_sites)] if not ms_df.empty else ms_df
     
-    if ms_df.empty:
-        st.info("📋 Belum ada milestone.")
-        return
-    
-    ms_df['planned_end'] = pd.to_datetime(ms_df['planned_end'], errors='coerce')
-    
-    # SIDEBAR
+    # Sidebar
     with st.sidebar:
-        st.header("⚙️ Filter & Info")
+        st.header("⚙️ Filter")
         
         # Filter Project
         if not master_df.empty:
@@ -43,37 +37,28 @@ def field_app_page():
         if pic_list:
             selected_pic = st.selectbox("👷 PIC:", pic_list)
             ms_df = ms_df[ms_df['assigned_to'] == selected_pic]
-        
-        # Filter Status
-        status_options = st.multiselect("📊 Status:", ['PENDING','ONGOING','DELAYED','DONE'], 
-                                        default=['PENDING','ONGOING','DELAYED'])
-        ms_df = ms_df[ms_df['status'].isin(status_options)]
-        
-        st.divider()
-        st.metric("📋 Total Tasks", len(ms_df))
-        st.metric("🔴 Overdue", len(ms_df[ms_df['planned_end'].dt.date < date.today()]) if not ms_df.empty else 0)
+        else:
+            selected_pic = "User"
     
-    if ms_df.empty:
-        st.success("✅ Tidak ada task!")
-        return
+    ms_df['planned_end'] = pd.to_datetime(ms_df['planned_end'], errors='coerce')
     
-    # Merge site info
-    site_map = dict(zip(sites_df['id'], sites_df['site_id'])) if not sites_df.empty else {}
-    site_name_map = dict(zip(sites_df['id'], sites_df['site_name'])) if not sites_df.empty else {}
-    ms_df['site_code'] = ms_df['project_id'].map(site_map).fillna('-')
-    ms_df['site_name'] = ms_df['project_id'].map(site_name_map).fillna('-')
-    ms_df['deadline'] = ms_df['planned_end'].dt.strftime('%d %b %Y')
-    ms_df['days_left'] = (ms_df['planned_end'].dt.date - date.today()).apply(lambda x: x.days if pd.notna(x) else 999)
+    tab1, tab2, tab3 = st.tabs(["📱 Update Tasks", "💬 Team Chat", "📋 Daily Tasks"])
     
-    # Tampilkan per site
-    sites = ms_df['site_code'].unique()
-    
-    for site_code in sites:
-        site_tasks = ms_df[ms_df['site_code'] == site_code]
-        site_name = site_tasks['site_name'].iloc[0]
-        
-        with st.expander(f"📍 {site_code} - {site_name} ({len(site_tasks)} task)", expanded=True):
-            for _, task in site_tasks.iterrows():
+    # ===== TAB 1: UPDATE TASKS =====
+    with tab1:
+        if ms_df.empty:
+            st.info("📋 Belum ada task.")
+        else:
+            site_map = dict(zip(sites_df['id'], sites_df['site_id'])) if not sites_df.empty else {}
+            site_name_map = dict(zip(sites_df['id'], sites_df['site_name'])) if not sites_df.empty else {}
+            ms_df['site_code'] = ms_df['project_id'].map(site_map).fillna('-')
+            ms_df['site_name'] = ms_df['project_id'].map(site_name_map).fillna('-')
+            ms_df['deadline'] = ms_df['planned_end'].dt.strftime('%d %b %Y')
+            ms_df['days_left'] = (ms_df['planned_end'].dt.date - date.today()).apply(lambda x: x.days if pd.notna(x) else 999)
+            
+            st.metric("📋 Tasks", len(ms_df))
+            
+            for _, task in ms_df.iterrows():
                 days = task['days_left']
                 if days < 0:
                     bg = '#FEE2E2'; border = '#EF4444'
@@ -84,48 +69,83 @@ def field_app_page():
                 else:
                     bg = '#F0FDF4'; border = '#10B981'
                 
-                # Info task
                 st.markdown(f"""
-                <div style='background:{bg}; padding:12px; border-radius:10px; margin:8px 0; border-left:5px solid {border};'>
+                <div style='background:{bg}; padding:10px; border-radius:8px; margin:5px 0; border-left:4px solid {border};'>
                     <strong>{task['name']}</strong><br>
-                    📅 Deadline: {task['deadline']} | ⏰ {days} hari | Status: <b>{task['status']}</b>
+                    📍 {task['site_code']} - {task['site_name']}<br>
+                    📅 {task['deadline']} | ⏰ {days} hari | {task['status']}
                 </div>
                 """, unsafe_allow_html=True)
                 
-                # Form update
                 with st.form(f"update_{task['id']}", clear_on_submit=False):
-                    col1, col2, col3 = st.columns(3)
-                    with col1:
+                    c1, c2, c3 = st.columns(3)
+                    with c1:
                         new_status = st.selectbox("Status", ['PENDING','ONGOING','DONE','DELAYED'],
                             index=['PENDING','ONGOING','DONE','DELAYED'].index(task['status']),
-                            key=f"status_{task['id']}")
-                        new_progress = st.slider("Progress %", 0, 100, 
-                            int(float(task.get('progress', 0))) if task.get('progress') else 0,
-                            key=f"prog_{task['id']}")
-                    with col2:
-                        as_default = pd.to_datetime(task.get('actual_start')).date() if pd.notna(task.get('actual_start')) else None
-                        new_actual_start = st.date_input("Actual Start", value=as_default, key=f"as_{task['id']}")
-                    with col3:
-                        ae_default = pd.to_datetime(task.get('actual_end')).date() if pd.notna(task.get('actual_end')) else None
-                        new_actual_end = st.date_input("Actual End", value=ae_default, key=f"ae_{task['id']}")
+                            key=f"st_{task['id']}")
+                    with c2:
+                        as_d = pd.to_datetime(task.get('actual_start')).date() if pd.notna(task.get('actual_start')) else None
+                        new_as = st.date_input("Actual Start", value=as_d, key=f"as_{task['id']}")
+                    with c3:
+                        ae_d = pd.to_datetime(task.get('actual_end')).date() if pd.notna(task.get('actual_end')) else None
+                        new_ae = st.date_input("Actual End", value=ae_d, key=f"ae_{task['id']}")
                     
-                    if st.form_submit_button("💾 Simpan Update", type="primary", use_container_width=True):
-                        update_data = {
-                            'status': new_status,
-                            'progress': str(new_progress)
-                        }
-                        if new_actual_start:
-                            update_data['actual_start'] = new_actual_start.strftime('%Y-%m-%d')
-                        if new_actual_end and new_status == 'DONE':
-                            update_data['actual_end'] = new_actual_end.strftime('%Y-%m-%d')
-                        elif new_status == 'DONE' and not new_actual_end:
-                            update_data['actual_end'] = date.today().strftime('%Y-%m-%d')
-                        
+                    if st.form_submit_button("💾 Simpan", type="primary", use_container_width=True):
+                        update_data = {'status': new_status}
+                        if new_as: update_data['actual_start'] = new_as.strftime('%Y-%m-%d')
+                        if new_ae or new_status == 'DONE':
+                            update_data['actual_end'] = (new_ae or date.today()).strftime('%Y-%m-%d')
                         update_row('milestones', task['id'], update_data)
-                        st.success(f"✅ **{task['name']}** berhasil diupdate!")
+                        st.success(f"✅ {task['name']} diupdate!")
                         st.toast(f"✅ {task['name']} → {new_status}", icon="🎉")
                         st.rerun()
-                
+                st.markdown("---")
+    
+    # ===== TAB 2: CHAT =====
+    with tab2:
+        st.subheader("💬 Team Chat")
+        
+        sender = st.text_input("Nama", value=selected_pic if selected_pic != "User" else "Engineer", key="chat_name")
+        
+        if not messages.empty:
+            global_msgs = messages[messages['site_id'] == 'GLOBAL'] if 'site_id' in messages.columns else pd.DataFrame()
+            for _, msg in global_msgs.tail(20).iterrows():
+                with st.chat_message("user"):
+                    st.caption(f"**{msg.get('sender','?')}** · {msg.get('created_at','')}")
+                    st.write(msg.get('message',''))
+        
+        with st.form("send_chat", clear_on_submit=True):
+            msg = st.text_input("Pesan...", key="chat_input", placeholder="Ketik pesan...")
+            if st.form_submit_button("📤 Kirim"):
+                if msg:
+                    insert_row("chat_messages", {
+                        'id': generate_id(), 'site_id': 'GLOBAL',
+                        'sender': sender, 'message': msg, 'created_at': now_str()
+                    })
+                    st.rerun()
+    
+    # ===== TAB 3: DAILY TASKS =====
+    with tab3:
+        st.subheader("📋 Daily Tasks")
+        
+        today = date.today()
+        week_end = today + timedelta(days=7)
+        
+        follow_up = ms_df[
+            (ms_df['status'].isin(['PENDING', 'ONGOING', 'DELAYED'])) &
+            (ms_df['planned_end'].dt.date <= week_end)
+        ].copy()
+        
+        if follow_up.empty:
+            st.success("✅ Tidak ada task minggu ini!")
+        else:
+            follow_up['days_left'] = (follow_up['planned_end'].dt.date - today).apply(lambda x: x.days if pd.notna(x) else 999)
+            
+            for _, task in follow_up.iterrows():
+                d = task['days_left']
+                icon = '🔴' if d < 0 else ('🟡' if d == 0 else '🟢')
+                site_code = site_map.get(task['project_id'], '-')
+                st.markdown(f"{icon} **{task['name']}** — {site_code} — {task['deadline']} ({d} hari)")
                 st.markdown("---")
 
 if __name__ == "__main__":
