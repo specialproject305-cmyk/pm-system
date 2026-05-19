@@ -54,6 +54,12 @@ def field_app_page():
         st.divider()
         st.metric("📋 Tasks", len(ms_df))
 
+        # Konversi tanggal (SEBELUM tabs)
+    if not ms_df.empty:
+        ms_df['planned_end'] = pd.to_datetime(ms_df['planned_end'], errors='coerce')
+    
+    tab1, tab2, tab3 = st.tabs(["📱 Update Tasks", "💬 Team Chat", "📋 Daily Tasks"])
+
     tab1, tab2, tab3 = st.tabs(["📱 Update Tasks", "💬 Team Chat", "📋 Daily Tasks"])
     # ===== TAB 1: UPDATE TASKS =====
     with tab1:
