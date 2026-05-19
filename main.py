@@ -60,7 +60,7 @@ def main():
     # menu = st.sidebar.radio("Navigasi", [...])
 
     if st.session_state.presentation_mode:
-    presentation_page()
+        presentation_page()
 else:
     # ... routing normal ...
 
