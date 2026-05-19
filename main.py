@@ -117,11 +117,13 @@ def main():
     elif menu == "🔍 RCA Analysis":
         rca_page()
 
+    elif menu == "📽️ Presentation":
+        presentation_page()
+
     else:
         st.error("Menu tidak dikenali.")
 
-    elif menu == "📽️ Presentation":
-        presentation_page()
+    
 
     
     
