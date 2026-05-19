@@ -14,7 +14,7 @@ def rca_page():
     master_df = all_data.get('master_projects', pd.DataFrame())
     milestones_df = all_data.get('milestones', pd.DataFrame())
 
-        if st.session_state.get('global_project_filter', 'ALL') != "ALL":
+    if st.session_state.get('global_project_filter', 'ALL') != "ALL":
             valid_sites = df[df.get('master_project_id', '') == st.session_state.global_project_filter]['id'].tolist()
             df = df[df['id'].isin(valid_sites)]
             milestones_df = milestones_df[milestones_df['project_id'].isin(valid_sites)] if not milestones_df.empty else milestones_df
