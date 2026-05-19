@@ -168,12 +168,11 @@ def dashboard_page():
         df = all_data.get('projects', pd.DataFrame())
         ms_df = all_data.get('milestones', pd.DataFrame())
 
-            # Apply global filter
-        if st.session_state.global_project_filter != "ALL":
-            valid_sites = sites_df[sites_df.get('master_project_id', '') == st.session_state.global_project_filter]['id'].tolist()
-            ms_df = ms_df[ms_df['project_id'].isin(valid_sites)] if not ms_df.empty else ms_df
-            sites_df = sites_df[sites_df['id'].isin(valid_sites)]
-        
+        if st.session_state.get('global_project_filter', 'ALL') != "ALL":
+            valid_sites = df[df.get('master_project_id', '') == st.session_state.global_project_filter]['id'].tolist()
+            df = df[df['id'].isin(valid_sites)]
+            milestones_df = milestones_df[milestones_df['project_id'].isin(valid_sites)] if not milestones_df.empty else milestones_df
+                
         try:
             mp_df = all_data.get('master_projects', pd.DataFrame())
             master_options = ["🌐 SEMUA PROYEK"] + mp_df["id"].tolist() if not mp_df.empty else ["🌐 SEMUA PROYEK"]
