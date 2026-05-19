@@ -70,7 +70,7 @@ def presentation_page():
         st.markdown(f"""
         <div style="text-align:center; padding-top:12%;">
             <div style="font-size:5rem;">🏗️</div>
-            <h1 style="font-size:3.5rem; color:#0369A1; margin:0;">MCP TOWER</h1>
+            <h1 style="font-size:3.5rem; color:#0369A1; margin:0;">MCP PROJECT</h1>
             <p style="font-size:1.3rem; color:#0284C7;">Deployment Progress Report</p>
             <div style="margin-top:40px; background:white; display:inline-block; padding:12px 30px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.08);">
                 <p style="font-size:1rem; color:#64748B; margin:0;">📅 {datetime.now().strftime('%d %B %Y')}</p>
@@ -110,7 +110,7 @@ def presentation_page():
         col_a, col_b = st.columns(2)
         with col_a:
             top10 = sites_df.nlargest(10, 'progress')
-            fig1 = px.bar(top10, y='site_id', x='progress', orientation='h',
+            fig1 = px.bar(top10, y='site_name', x='progress', orientation='h',
                         color='progress', color_continuous_scale=['#F59E0B','#38BDF8','#0284C7'],
                         title="Top 10 Progress")
             fig1.update_layout(height=350, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
