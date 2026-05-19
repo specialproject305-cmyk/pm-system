@@ -59,7 +59,7 @@ def logout_button():
 def check_permission(required_role='viewer'):
     user = st.session_state.get('user', {})
     user_role = user.get('role', 'viewer')
-    role_levels = {'admin': 3, 'editor': 2, 'viewer': 1}
+    role_levels = {'admin': 4, 'editor': 3, 'engineer': 2, 'viewer': 1}
     required_level = role_levels.get(required_role, 1)
     user_level = role_levels.get(user_role, 1)
     return user_level >= required_level
