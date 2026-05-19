@@ -11,6 +11,7 @@ from kanban_board import kanban_page
 from export_report import export_report_page
 from daily_task import daily_task_page
 from rca_page import rca_page
+from presentation import presentation_page
 
 st.set_page_config(page_title="PM System", page_icon="🏗️", layout="wide", initial_sidebar_state="expanded")
 
@@ -32,7 +33,7 @@ with st.sidebar:
     
     menu_options = [
         "📊 Dashboard", "📁 Site Tracker", "🧱 Milestones","📋 Kanban Board","📋 Daily Tasks",
-        "📦 Inventory", "🤖 AI Insights", "🔍 RCA Analysis", "💬 Chat & Notif", "📊 Export Report"
+        "📦 Inventory", "🤖 AI Insights", "🔍 RCA Analysis", "💬 Chat & Notif","📽️ Presentation", "📊 Export Report"
     ]
     if role == 'admin':
         menu_options.append("⚙️ Settings")
@@ -118,6 +119,9 @@ def main():
 
     else:
         st.error("Menu tidak dikenali.")
+
+    elif menu == "📽️ Presentation":
+        presentation_page()
 
     
     
