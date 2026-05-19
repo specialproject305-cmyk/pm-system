@@ -14,10 +14,12 @@ def rca_page():
     master_df = all_data.get('master_projects', pd.DataFrame())
     milestones_df = all_data.get('milestones', pd.DataFrame())
 
+        # ===== GLOBAL FILTER =====
     if st.session_state.get('global_project_filter', 'ALL') != "ALL":
-        valid_sites = df[df.get('master_project_id', '') == st.session_state.global_project_filter]['id'].tolist()
-        df = df[df['id'].isin(valid_sites)]
-        milestones_df = milestones_df[milestones_df['project_id'].isin(valid_sites)] if not milestones_df.empty else milestones_df
+        valid_sites = sites_df[sites_df.get('master_project_id', '') == st.session_state.global_project_filter]['id'].tolist()
+        sites_df = sites_df[sites_df['id'].isin(valid_sites)]
+        ms_df = ms_df[ms_df['project_id'].isin(valid_sites)] if not ms_df.empty else ms_df
+        delayed_ms = delayed_ms[delayed_ms['project_id'].isin(valid_sites)] if not delayed_ms.empty else delayed_ms
     
     if ms_df.empty:
         st.info("📋 Belum ada milestone.")
