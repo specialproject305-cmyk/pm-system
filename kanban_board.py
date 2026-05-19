@@ -150,10 +150,17 @@ def kanban_page():
     
     # Load Sites
     sites_df = read_sheet("projects")
+    ms_df = read_sheet("milestones")
         
     if sites_df.empty:
         st.warning("⚠️ Belum ada data site.")
         return
+
+    # ===== GLOBAL FILTER (SATU KALI SAJA) =====
+    if st.session_state.get('global_project_filter', 'ALL') != "ALL":
+        valid_sites = sites_df[sites_df.get('master_project_id', '') == st.session_state.global_project_filter]['id'].tolist()
+        sites_df = sites_df[sites_df['id'].isin(valid_sites)]
+        ms_df = ms_df[ms_df['project_id'].isin(valid_sites)] if not ms_df.empty else ms_df
         
     site_options = ["ALL SITE"] + sites_df["id"].tolist()
     selected_site = st.selectbox(
@@ -177,11 +184,6 @@ def kanban_page():
 
     # Load & Filter Milestones
     ms_df = read_sheet("milestones")
-        # Apply global filter
-    if st.session_state.global_project_filter != "ALL":
-        valid_sites = sites_df[sites_df.get('master_project_id', '') == st.session_state.global_project_filter]['id'].tolist()
-        ms_df = ms_df[ms_df['project_id'].isin(valid_sites)] if not ms_df.empty else ms_df
-        sites_df = sites_df[sites_df['id'].isin(valid_sites)]
     if ms_df.empty:
         st.info("ℹ️ Belum ada milestone. Generate template di menu Milestone Monitoring.")
         return
