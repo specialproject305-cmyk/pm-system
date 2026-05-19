@@ -10,21 +10,31 @@ def presentation_page():
     st.markdown("""
     <style>
         [data-testid="stSidebar"] { display: none; }
-        .stApp { margin: 0; padding: 0; }
-        .slide-container { 
-            background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+        .stApp { 
+            background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%) !important;
+            margin: 0; 
+            padding: 20px; 
             min-height: 100vh;
-            padding: 40px;
-            color: white;
         }
-        .slide-title { font-size: 2.5rem; font-weight: 800; text-align: center; color: #38BDF8; margin-bottom: 10px; }
-        .slide-subtitle { font-size: 1.2rem; text-align: center; color: #CBD5E1; margin-bottom: 40px; }
-        .kpi-big { background: #1E293B; border-radius: 20px; padding: 30px; text-align: center; border: 2px solid #334155; }
-        .kpi-big .value { font-size: 3rem; font-weight: 800; color: #38BDF8; }
-        .kpi-big .label { font-size: 1rem; color: #CBD5E1; }
-        .alert-red { background: #7F1D1D; border-left: 5px solid #EF4444; padding: 15px; margin: 10px 0; border-radius: 10px; }
-        .alert-yellow { background: #78350F; border-left: 5px solid #F59E0B; padding: 15px; margin: 10px 0; border-radius: 10px; }
-        .footer { text-align: center; color: #64748B; margin-top: 40px; font-size: 0.8rem; }
+        .stApp > div { padding: 0 !important; }
+        section.main > div { padding: 0 !important; }
+        
+        .slide-title { font-size: 2.5rem; font-weight: 800; text-align: center; color: #38BDF8; margin-bottom: 5px; }
+        .slide-subtitle { font-size: 1.1rem; text-align: center; color: #CBD5E1; margin-bottom: 30px; }
+        .kpi-big { background: #1E293B; border-radius: 20px; padding: 25px; text-align: center; border: 2px solid #334155; }
+        .kpi-big .value { font-size: 2.5rem; font-weight: 800; color: #38BDF8; }
+        .kpi-big .label { font-size: 0.9rem; color: #CBD5E1; }
+        .alert-red { background: #7F1D1D; border-left: 5px solid #EF4444; padding: 12px; margin: 8px 0; border-radius: 10px; color: white; }
+        .alert-yellow { background: #78350F; border-left: 5px solid #F59E0B; padding: 12px; margin: 8px 0; border-radius: 10px; color: white; }
+        .footer { text-align: center; color: #64748B; margin-top: 30px; font-size: 0.8rem; }
+        
+        .stRadio > div { justify-content: center; gap: 5px; }
+        .stRadio label { background: #1E293B; padding: 8px 15px; border-radius: 8px; color: white !important; }
+        .stRadio label:hover { background: #334155; }
+        
+        div[data-testid="stDataFrame"] { background: transparent !important; }
+        div[data-testid="stDataFrame"] th { background: #1E293B !important; color: #CBD5E1 !important; }
+        div[data-testid="stDataFrame"] td { background: transparent !important; color: white !important; }
     </style>
     """, unsafe_allow_html=True)
     
@@ -73,7 +83,6 @@ def presentation_page():
     
     # ===== SLIDE 2: EXECUTIVE SUMMARY =====
     elif "2. Executive" in slide:
-        st.markdown('<div class="slide-container">', unsafe_allow_html=True)
         st.markdown('<div class="slide-title">📊 Executive Summary</div>', unsafe_allow_html=True)
         st.markdown('<div class="slide-subtitle">Ringkasan Performa Project</div>', unsafe_allow_html=True)
         
@@ -95,7 +104,6 @@ def presentation_page():
     
     # ===== SLIDE 3: PROGRESS OVERVIEW =====
     elif "3. Progress" in slide:
-        st.markdown('<div class="slide-container">', unsafe_allow_html=True)
         st.markdown('<div class="slide-title">📈 Progress Overview</div>', unsafe_allow_html=True)
         
         if not sites_df.empty:
@@ -119,7 +127,6 @@ def presentation_page():
     
     # ===== SLIDE 4: SITE STATUS =====
     elif "4. Site" in slide:
-        st.markdown('<div class="slide-container">', unsafe_allow_html=True)
         st.markdown('<div class="slide-title">📍 Site Status</div>', unsafe_allow_html=True)
         
         display = sites_df[['site_id','site_name','status','progress','pm','vendor']].copy()
@@ -135,7 +142,6 @@ def presentation_page():
     
     # ===== SLIDE 5: CRITICAL ALERTS =====
     elif "5. Critical" in slide:
-        st.markdown('<div class="slide-container">', unsafe_allow_html=True)
         st.markdown('<div class="slide-title">⚠️ Critical Alerts</div>', unsafe_allow_html=True)
         
         # Delayed milestones
@@ -158,7 +164,6 @@ def presentation_page():
     
     # ===== SLIDE 6: AI INSIGHTS =====
     elif "6. AI" in slide:
-        st.markdown('<div class="slide-container">', unsafe_allow_html=True)
         st.markdown('<div class="slide-title">🤖 AI Insights</div>', unsafe_allow_html=True)
         
         health = round((on_track/total)*100) if total > 0 else 0
