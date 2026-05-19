@@ -167,6 +167,12 @@ def dashboard_page():
             all_data = read_all_sheets()
         df = all_data.get('projects', pd.DataFrame())
         ms_df = all_data.get('milestones', pd.DataFrame())
+
+            # Apply global filter
+        if st.session_state.global_project_filter != "ALL":
+            valid_sites = sites_df[sites_df.get('master_project_id', '') == st.session_state.global_project_filter]['id'].tolist()
+            ms_df = ms_df[ms_df['project_id'].isin(valid_sites)] if not ms_df.empty else ms_df
+            sites_df = sites_df[sites_df['id'].isin(valid_sites)]
         
         try:
             mp_df = all_data.get('master_projects', pd.DataFrame())
