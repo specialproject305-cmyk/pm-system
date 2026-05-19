@@ -9,13 +9,15 @@ def presentation_page():
     # CSS Biru Cerah
     st.markdown("""
     <style>
-        [data-testid="stSidebar"] { display: none; }
         .stApp { margin-left: 0 !important; }
         .stApp { 
-            background: linear-gradient(180deg, #E0F2FE 0%, #BAE6FD 50%, #7DD3FC 100%) !important;
+            background: linear-gradient(180deg, #E0F2FE 20%, #BAE6FD 50%, #7DD3FC 100%) !important;
             margin: 0; padding: 15px; min-height: 100vh;
         }
         section.main > div { padding: 0 !important; }
+        if st.button("⬅️ Kembali ke Dashboard", key="exit_pres"):
+        st.session_state['presentation_mode'] = False
+        st.rerun()
         
         .slide-title { font-size: 2.2rem; font-weight: 800; text-align: center; color: #0369A1; margin-bottom: 5px; }
         .slide-subtitle { font-size: 1rem; text-align: center; color: #0284C7; margin-bottom: 20px; }
