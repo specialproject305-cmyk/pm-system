@@ -24,7 +24,7 @@ def field_app_page():
         user = st.session_state.get('user', {})
         st.markdown(f"👷 **{user.get('full_name', 'Engineer')}**")
         
-        if st.button("🚪 Logout", use_container_width=True):
+        if st.button("🚪 Logout", key="field_logout", use_container_width=True):
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
             st.session_state['logged_in'] = False
