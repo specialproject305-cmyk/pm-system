@@ -20,6 +20,17 @@ def field_app_page():
     
     # Sidebar
     with st.sidebar:
+        # User info & Logout
+        user = st.session_state.get('user', {})
+        st.markdown(f"👷 **{user.get('full_name', 'Engineer')}**")
+        
+        if st.button("🚪 Logout", use_container_width=True):
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
+            st.session_state['logged_in'] = False
+            st.rerun()
+        
+        st.divider()
         st.header("⚙️ Filter")
         
         # Filter Project
@@ -39,11 +50,9 @@ def field_app_page():
             ms_df = ms_df[ms_df['assigned_to'] == selected_pic]
         else:
             selected_pic = "User"
-    
-    ms_df['planned_end'] = pd.to_datetime(ms_df['planned_end'], errors='coerce')
-    
-    tab1, tab2, tab3 = st.tabs(["📱 Update Tasks", "💬 Team Chat", "📋 Daily Tasks"])
-    
+        
+        st.divider()
+        st.metric("📋 Tasks", len(ms_df))
     # ===== TAB 1: UPDATE TASKS =====
     with tab1:
         if ms_df.empty:
