@@ -15,7 +15,9 @@ def field_app_page():
         st.info("📋 Belum ada milestone.")
         return
     
+    # Salin dataframe asli untuk proses filtering agar tidak merusak data utama
     ms_df['planned_end'] = pd.to_datetime(ms_df['planned_end'], errors='coerce')
+    filtered_df = ms_df.copy()
     
     # Sidebar
     with st.sidebar:
@@ -31,44 +33,61 @@ def field_app_page():
         st.divider()
         st.header("⚙️ Filter")
         
-                # Filter Project & Site
+        # 1. Filter Project (Master Project)
         selected_master = "ALL"
         if not master_df.empty:
             master_options = ["ALL"] + master_df['id'].tolist()
-            selected_master = st.selectbox("🏢 Project:", master_options,
-                format_func=lambda x: "🌐 SEMUA PROJECT" if x == "ALL" 
-                else f"{master_df[master_df['id']==x]['project_code'].values[0]} - {master_df[master_df['id']==x]['project_name'].values[0]}")
+            
+            # Ambil dictionary helper agar format_func berjalan lebih cepat dan aman
+            project_code_map = dict(zip(master_df['id'], master_df['project_code']))
+            project_name_map = dict(zip(master_df['id'], master_df['project_name']))
+            
+            selected_master = st.selectbox(
+                "🏢 Project:", 
+                master_options,
+                format_func=lambda x: "🌐 SEMUA PROJECT" if x == "ALL" else f"{project_code_map.get(x, '')} - {project_name_map.get(x, '')}"
+            )
+            
             if selected_master != "ALL":
-                ms_df = ms_df[ms_df['project_id'].isin(
-                    sites_df[sites_df['master_project_id'] == selected_master]['id'].tolist()
-                )]
+                valid_project_ids = sites_df[sites_df['master_project_id'] == selected_master]['id'].tolist()
+                filtered_df = filtered_df[filtered_df['project_id'].isin(valid_project_ids)]
         
-        # Filter Site (pakai site_name)
+        # 2. Filter Site (pakai site_name)
         if not sites_df.empty:
-            site_options = ["ALL"] + sites_df['site_name'].unique().tolist()
+            # Dropdown site dinamis menyesuaikan project yang dipilih agar UI/UX lebih clean
+            if selected_master != "ALL":
+                available_sites = sites_df[sites_df['master_project_id'] == selected_master]['site_name'].unique().tolist()
+            else:
+                available_sites = sites_df['site_name'].unique().tolist()
+                
+            site_options = ["ALL"] + available_sites
             selected_site = st.selectbox("📍 Site:", site_options)
+            
             if selected_site != "ALL":
-                valid_ids = sites_df[sites_df['site_name'] == selected_site]['id'].tolist()
-                ms_df = ms_df[ms_df['project_id'].isin(valid_ids)]
+                valid_site_ids = sites_df[sites_df['site_name'] == selected_site]['id'].tolist()
+                filtered_df = filtered_df[filtered_df['project_id'].isin(valid_site_ids)]
         
-        # Filter PIC
-        pic_list = sorted(ms_df['assigned_to'].dropna().unique().tolist()) if 'assigned_to' in ms_df.columns else []
+        # 3. Filter PIC (Mengambil dari dataframe yang sudah terfilter sebelumnya)
+        pic_list = sorted(filtered_df['assigned_to'].dropna().unique().tolist()) if 'assigned_to' in filtered_df.columns else []
         if pic_list:
-            selected_pic = st.selectbox("👷 PIC:", pic_list)
-            ms_df = ms_df[ms_df['assigned_to'] == selected_pic]
+            # Tambahkan opsi ALL agar PIC bisa di-reset kembali
+            pic_options = ["ALL"] + pic_list
+            selected_pic = st.selectbox("👷 PIC:", pic_options)
+            if selected_pic != "ALL":
+                filtered_df = filtered_df[filtered_df['assigned_to'] == selected_pic]
         
         st.divider()
-        st.metric("📋 Tasks", len(ms_df))
+        st.metric("📋 Tasks", len(filtered_df))
     
-    # Main content
-    if ms_df.empty:
+    # Main content menggunakan filtered_df
+    if filtered_df.empty:
         st.success("✅ Tidak ada task!")
         return
     
     site_map = dict(zip(sites_df['id'], sites_df['site_id'])) if not sites_df.empty else {}
     site_name_map = dict(zip(sites_df['id'], sites_df['site_name'])) if not sites_df.empty else {}
     
-    for _, task in ms_df.iterrows():
+    for _, task in filtered_df.iterrows():
         site_code = site_map.get(task['project_id'], '-')
         site_name = site_name_map.get(task['project_id'], '-')
         deadline = task['planned_end'].strftime('%d %b %Y') if pd.notna(task['planned_end']) else '-'
