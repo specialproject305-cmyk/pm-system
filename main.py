@@ -15,6 +15,9 @@ from presentation import presentation_page
 
 st.set_page_config(page_title="PM System", page_icon="🏗️", layout="wide", initial_sidebar_state="expanded")
 
+if 'presentation_mode' not in st.session_state:
+    st.session_state.presentation_mode = False
+    
 if 'logged_in' not in st.session_state:
     st.session_state['logged_in'] = False
 
@@ -47,10 +50,19 @@ with st.sidebar:
         st.session_state['logged_in'] = False
         st.rerun()
 
+    if st.button("📽️ Presentation Mode", use_container_width=True):
+        st.session_state.presentation_mode = True
+        st.rerun()
+
 def main():
     # Pastikan variabel 'menu' sudah didefinisikan sebelumnya (biasanya dari st.sidebar.radio)
     # Jika belum ada, tambahkan ini di atas fungsi main atau di dalam main sebelum if-else:
     # menu = st.sidebar.radio("Navigasi", [...])
+
+    if st.session_state.presentation_mode:
+    presentation_page()
+else:
+    # ... routing normal ...
 
     if menu == "📊 Dashboard": 
         dashboard_page()
@@ -122,10 +134,6 @@ def main():
 
     else:
         st.error("Menu tidak dikenali.")
-
-    
-
-    
-    
+   
 if __name__ == "__main__":
     main()
