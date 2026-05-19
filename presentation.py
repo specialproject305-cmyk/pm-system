@@ -9,7 +9,11 @@ def presentation_page():
     # CSS Biru Cerah
     st.markdown("""
     <style>
-        [data-testid="stSidebar"] { display: none; }
+        st.markdown("""
+        <div style="position:fixed; top:10px; right:10px; z-index:9999;">
+            <a href="/" style="background:#0284C7; color:white; padding:8px 15px; border-radius:8px; text-decoration:none; font-size:0.8rem;">⬅️ Exit</a>
+        </div>
+        """, unsafe_allow_html=True)
         .stApp { 
             background: linear-gradient(180deg, #E0F2FE 0%, #BAE6FD 50%, #7DD3FC 100%) !important;
             margin: 0; padding: 15px; min-height: 100vh;
