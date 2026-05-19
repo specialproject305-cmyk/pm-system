@@ -17,6 +17,9 @@ st.set_page_config(page_title="PM System", page_icon="🏗️", layout="wide", i
 
 if 'presentation_mode' not in st.session_state:
     st.session_state.presentation_mode = False
+
+if 'global_project_filter' not in st.session_state:
+    st.session_state.global_project_filter = "ALL"
     
 if 'logged_in' not in st.session_state:
     st.session_state['logged_in'] = False
@@ -32,6 +35,27 @@ with st.sidebar:
     st.title("🏗️ PM System")
     st.markdown(f"👤 **{user.get('full_name', user.get('username', 'User'))}**")
     st.caption(f"🔹 Role: {role.upper()}")
+    st.markdown("---")
+        # ===== GLOBAL PROJECT FILTER =====
+    st.markdown("---")
+    st.markdown("### 🏢 Filter Project")
+    
+    try:
+        from supabase_db import read_sheet
+        master_df = read_sheet("master_projects")
+        if not master_df.empty:
+            project_options = ["ALL"] + master_df['id'].tolist()
+            selected = st.selectbox(
+                "Pilih Project:",
+                project_options,
+                format_func=lambda x: "🌐 SEMUA PROJECT" if x == "ALL" 
+                else f"{master_df[master_df['id']==x]['project_code'].values[0]} - {master_df[master_df['id']==x]['project_name'].values[0]}",
+                key="global_proj_select"
+            )
+            st.session_state.global_project_filter = selected
+    except:
+        st.session_state.global_project_filter = "ALL"
+    
     st.markdown("---")
     
     menu_options = [
