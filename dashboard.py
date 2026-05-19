@@ -166,7 +166,9 @@ def dashboard_page():
         with st.spinner("🔄 Loading..."):
             all_data = read_all_sheets()
         df = all_data.get('projects', pd.DataFrame())
+        materials_df = all_data.get('materials', pd.DataFrame())
         ms_df = all_data.get('milestones', pd.DataFrame())
+        milestones_df = all_data.get('milestones', pd.DataFrame())
 
         if st.session_state.get('global_project_filter', 'ALL') != "ALL":
             valid_sites = df[df.get('master_project_id', '') == st.session_state.global_project_filter]['id'].tolist()
