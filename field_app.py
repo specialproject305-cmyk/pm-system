@@ -40,6 +40,20 @@ def field_app_page():
             if selected_master != "ALL":
                 valid_sites2 = sites_df[sites_df['master_project_id'] == selected_master]['id'].tolist()
                 ms_df = ms_df[ms_df['project_id'].isin(valid_sites2)]
+
+                # Filter Site (setelah project)
+        if selected_master != "ALL":
+            site_list = sorted(sites_df[sites_df['master_project_id'] == selected_master]['site_id'].unique().tolist()) if not sites_df.empty else []
+        else:
+            site_list = sorted(sites_df['site_id'].unique().tolist()) if not sites_df.empty else []
+        
+        if site_list:
+            selected_site = st.selectbox("📍 Site:", ["ALL"] + site_list)
+            if selected_site != "ALL":
+                valid_site_ids = sites_df[sites_df['site_id'] == selected_site]['id'].tolist()
+                ms_df = ms_df[ms_df['project_id'].isin(valid_site_ids)]
+        
+        st.divider()
         
         # Filter PIC
         pic_list = sorted(ms_df['assigned_to'].dropna().unique().tolist()) if 'assigned_to' in ms_df.columns else []
