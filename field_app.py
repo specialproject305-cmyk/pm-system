@@ -36,19 +36,19 @@ def field_app_page():
         if not master_df.empty:
             master_options = ["ALL"] + master_df['id'].tolist()
             selected_master = st.selectbox("🏢 Project:", master_options,
-                format_func=lambda x: "🌐 SEMUA" if x == "ALL" 
+                format_func=lambda x: "🌐 SEMUA PROJECT" if x == "ALL" 
                 else f"{master_df[master_df['id']==x]['project_code'].values[0]} - {master_df[master_df['id']==x]['project_name'].values[0]}")
             if selected_master != "ALL":
                 ms_df = ms_df[ms_df['project_id'].isin(
                     sites_df[sites_df['master_project_id'] == selected_master]['id'].tolist()
                 )]
         
-        # Filter Site
-        site_list = sorted(sites_df['site_id'].unique().tolist()) if not sites_df.empty else []
-        if site_list:
-            selected_site = st.selectbox("📍 Site:", ["ALL"] + site_list)
+        # Filter Site (pakai site_name)
+        if not sites_df.empty:
+            site_options = ["ALL"] + sites_df['site_name'].unique().tolist()
+            selected_site = st.selectbox("📍 Site:", site_options)
             if selected_site != "ALL":
-                valid_ids = sites_df[sites_df['site_id'] == selected_site]['id'].tolist()
+                valid_ids = sites_df[sites_df['site_name'] == selected_site]['id'].tolist()
                 ms_df = ms_df[ms_df['project_id'].isin(valid_ids)]
         
         # Filter PIC
