@@ -10,7 +10,8 @@ def presentation_page():
     st.markdown("""
     <style>
         st.markdown("""
-        <div style="position:fixed; top:10px; right:10px; z-index:9999;"><a href="/" style="background:#0284C7; color:white; padding:8px 15px; border-radius:8px; text-decoration:none; font-size:0.8rem;">⬅️ Exit</a>
+        <div style="position:fixed; top:10px; right:10px; z-index:9999;">
+        <a href="/" style="background:#0284C7; color:white; padding:8px 15px; border-radius:8px; text-decoration:none; font-size:0.8rem;">⬅️ Exit</a>
         </div>
         """, unsafe_allow_html=True)
         .stApp { 
