@@ -5,6 +5,16 @@ from supabase_db import read_sheet, update_row, read_all_sheets, insert_row, gen
 
 def field_app_page():
     st.title("📱 Field Update App")
+
+        # Toggle sidebar
+    if "sidebar_expanded" not in st.session_state:
+        st.session_state.sidebar_expanded = True
+    
+    col_title, col_btn = st.columns([4, 1])
+    with col_btn:
+        if st.button("☰ Menu", use_container_width=True):
+            st.session_state.sidebar_expanded = not st.session_state.sidebar_expanded
+            st.rerun()
     
     all_data = read_all_sheets()
     ms_df = all_data.get('milestones', pd.DataFrame())
