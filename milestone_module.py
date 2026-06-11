@@ -207,7 +207,7 @@ def milestone_page():
                     with st.form("edit_ms"):
                         ename = st.text_input("Nama", value=ms.get("name",""))
                         c1, c2 = st.columns(2)
-                        with c1: estatus = st.selectbox("Status", ["PENDING","ONGOING","DONE","DELAYED"], index=["PENDING","ONGOING","DONE","DELAYED"].index(ms.get("status","PENDING")))
+                        with c1: estatus = st.selectbox("Status", ["PENDING","ONGOING","DONE","DELAYED"], index=["PENDING","ONGOING","DONE","DELAYED"].index(ms.get("status","PENDING")) if ms.get("status") in ["PENDING","ONGOING","DONE","DELAYED"] else 0
                         with c2: eweight = st.number_input("Bobot %", 0.0, 100.0, float(ms.get("weight",5) or 5))
                         c3, c4 = st.columns(2)
                         with c3:
