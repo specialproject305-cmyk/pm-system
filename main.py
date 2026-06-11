@@ -91,7 +91,7 @@ if 'global_project_filter' not in st.session_state:
 # 📂 SIDEBAR
 # ═══════════════════════════════════════════════
 with st.sidebar:
-    st.title("🏗️ PM System")
+    st.title("🏗️ PMO Management System")
     st.markdown("---")
 
     # 🌍 Global Project Filter
