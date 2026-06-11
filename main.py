@@ -1,5 +1,4 @@
 import streamlit as st
-from auth import login_page, check_permission, show_permission_denied
 from dashboard import dashboard_page
 from project_tracker import project_tracker_page
 from milestone_module import milestone_page
@@ -21,25 +20,9 @@ if 'presentation_mode' not in st.session_state:
     st.session_state.presentation_mode = False
 if 'global_project_filter' not in st.session_state:
     st.session_state.global_project_filter = "ALL"
-if 'logged_in' not in st.session_state:
-    st.session_state['logged_in'] = False
-
-if not st.session_state['logged_in']:
-    login_page()
-    st.stop()
-
-user = st.session_state.get('user', {})
-role = user.get('role', 'viewer')
-
-# Engineer / Field App mode
-if role == 'engineer' or st.session_state.get('app_mode') == '📱 Field App':
-    field_app_page()
-    st.stop()
 
 with st.sidebar:
     st.title("🏗️ PM System")
-    st.markdown(f"👤 **{user.get('full_name', user.get('username', 'User'))}**")
-    st.caption(f"🔹 Role: {role.upper()}")
     st.markdown("---")
     
     # Global Project Filter
@@ -58,29 +41,15 @@ with st.sidebar:
         st.session_state.global_project_filter = "ALL"
     st.markdown("---")
     
-    # Menu
-    menu_options = [
+    menu = st.sidebar.radio("📂 Navigasi:", [
         "📊 Dashboard", "📁 Site Tracker", "🧱 Milestones", "📋 Kanban Board",
         "📋 Daily Tasks", "📦 Inventory", "🤖 AI Insights", "🔍 RCA Analysis",
-        "💬 Chat & Notif", "📽️ Presentation", "📊 Export Report"
-    ]
-    if role in ['admin', 'editor']:
-        menu_options.append("📱 Field App")
-    if role == 'admin':
-        menu_options.append("👥 User Management")
-        menu_options.append("⚙️ Settings")
-    
-    menu = st.sidebar.radio("📂 Navigasi:", menu_options)
-    st.markdown("---")
+        "💬 Chat & Notif", "📱 Field App", "📽️ Presentation", "📊 Export Report",
+        "👥 User Management", "⚙️ Settings"
+    ])
     
     if st.button("📽️ Presentation Mode", use_container_width=True):
         st.session_state.presentation_mode = True
-        st.rerun()
-    
-    if st.button("🚪 Logout", use_container_width=True):
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
-        st.session_state['logged_in'] = False
         st.rerun()
 
 def main():
@@ -88,16 +57,10 @@ def main():
         presentation_page()
     else:
         if menu == "📊 Dashboard": dashboard_page()
-        elif menu == "📁 Site Tracker":
-            if check_permission('editor'): project_tracker_page()
-            else: show_permission_denied()
-        elif menu == "🧱 Milestones":
-            if check_permission('editor'): milestone_page()
-            else: show_permission_denied()
+        elif menu == "📁 Site Tracker": project_tracker_page()
+        elif menu == "🧱 Milestones": milestone_page()
         elif menu == "📋 Kanban Board": kanban_page()
-        elif menu == "📦 Inventory":
-            if check_permission('editor'): inventory_page()
-            else: show_permission_denied()
+        elif menu == "📦 Inventory": inventory_page()
         elif menu == "🤖 AI Insights": ai_insights_page()
         elif menu == "📊 Export Report": export_report_page()
         elif menu == "💬 Chat & Notif": chat_notif_page()
@@ -105,12 +68,8 @@ def main():
         elif menu == "🔍 RCA Analysis": rca_page()
         elif menu == "📽️ Presentation": presentation_page()
         elif menu == "📱 Field App": field_app_page()
-        elif menu == "👥 User Management":
-            if check_permission('admin'): user_management_page()
-            else: show_permission_denied()
-        elif menu == "⚙️ Settings":
-            if check_permission('admin'): settings_page()
-            else: show_permission_denied()
+        elif menu == "👥 User Management": user_management_page()
+        elif menu == "⚙️ Settings": settings_page()
 
 if __name__ == "__main__":
     main()
