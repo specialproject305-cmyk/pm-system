@@ -92,6 +92,7 @@ def kanban_page():
                         if status != 'DELAYED' and status != 'DONE':
                             if st.button(f"⏳ Delay", key=f"kanban_delay_{task['id']}"):
                                 update_row('milestones', task['id'], {'status': 'DELAYED'})
+                                st.cache_data.clear()
                                 st.rerun()
                         st.markdown("---")
 
