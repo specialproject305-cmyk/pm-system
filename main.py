@@ -47,6 +47,10 @@ with st.sidebar:
         "💬 Chat & Notif", "📱 Field App", "📽️ Presentation", "📊 Export Report",
         "👥 User Management", "⚙️ Settings"
     ])
+
+    if st.button("🔄 Refresh Data", use_container_width=True):
+        st.cache_data.clear()
+        st.rerun()
     
     if st.button("📽️ Presentation Mode", use_container_width=True):
         st.session_state.presentation_mode = True
