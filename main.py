@@ -26,23 +26,23 @@ st.markdown("""
     
     /* Target semua tombol di sidebar */
     div[data-testid="stSidebar"] button {
-        background: linear-gradient(90deg, #1E293B 0%, #0F172A 100%) !important;
+        background: linear-gradient(90deg, #374151 0%, #1F2937 100%) !important;
         color: #FFFFFF !important;
-        border: 1px solid #334155 !important;
+        border: 1px solid #4B5563 !important;
         border-radius: 8px !important;
         transition: all 0.2s !important;
         font-weight: 500 !important;
     }
     div[data-testid="stSidebar"] button:hover {
-        background: linear-gradient(90deg, #38BDF8 0%, #1E293B 100%) !important;
+        background: linear-gradient(90deg, #38BDF8 0%, #1F2937 100%) !important;
         border-color: #38BDF8 !important;
         color: #FFFFFF !important;
     }
 
     /* Target Selectbox (Dropdown) di Sidebar */
     div[data-testid="stSidebar"] [data-baseweb="select"] > div {
-        background: linear-gradient(90deg, #1E293B 0%, #0F172A 100%) !important;
-        border: 1px solid #334155 !important;
+        background: linear-gradient(90deg, #374151 0%, #1F2937 100%) !important;
+        border: 1px solid #4B5563 !important;
         border-radius: 8px !important;
         color: #FFFFFF !important;
     }
@@ -56,6 +56,25 @@ st.markdown("""
     div[data-testid="stSidebar"] .stSelectbox label {
         color: #CBD5E1 !important;
         font-weight: 600 !important;
+    }
+    
+    /* Target tombol radio di sidebar */
+    div[data-testid="stSidebar"] div[role="radiogroup"] label {
+        background-color: #374151 !important;
+        color: #FFFFFF !important;
+        border: 1px solid #4B5563 !important;
+        border-radius: 6px !important;
+        padding: 8px 12px !important;
+        margin: 4px 0 !important;
+    }
+    
+    div[data-testid="stSidebar"] div[role="radiogroup"] label:hover {
+        background-color: #4B5563 !important;
+        border-color: #38BDF8 !important;
+    }
+    
+    div[data-testid="stSidebar"] div[role="radiogroup"] label[data-baseweb="radio"] {
+        background-color: #374151 !important;
     }
 </style>
 """, unsafe_allow_html=True)
