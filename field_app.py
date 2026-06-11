@@ -117,6 +117,7 @@ def field_app_page():
                         if new_ae or new_status == 'DONE':
                             update_data['actual_end'] = (new_ae or date.today()).strftime('%Y-%m-%d')
                         update_row('milestones', task['id'], update_data)
+                        st.cache_data.clear()
                         st.success(f"✅ {task['name']} diupdate!")
                         st.toast(f"✅ {task['name']} → {new_status}", icon="🎉")
                         st.rerun()
