@@ -77,7 +77,7 @@ logger = logging.getLogger(__name__)
 # 🔄 READ FUNCTIONS (dengan caching)
 # ─────────────────────────────────────────────────────────────
 
-@st.cache_data(ttl=60, show_spinner="🔄 Loading data...")
+@st.cache_data(ttl=10, show_spinner="🔄 Loading data...")
 def read_sheet(table_name: str) -> pd.DataFrame:
     """Baca semua data dari tabel Supabase dengan caching 60 detik."""
     try:
