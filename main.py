@@ -24,6 +24,29 @@ if 'global_project_filter' not in st.session_state:
 with st.sidebar:
     st.title("🏗️ PM System")
     st.markdown("---")
+    /* Tombol Refresh & Presentation di sidebar */
+    div[data-testid="stSidebar"] .stButton > button {
+        background: linear-gradient(90deg, #1E293B 0%, #0F172A 100%) !important;
+        color: #FFFFFF !important;
+        border: 1px solid #334155;
+        border-radius: 8px;
+        transition: all 0.2s;
+    }
+    div[data-testid="stSidebar"] .stButton > button:hover {
+        background: linear-gradient(90deg, #38BDF8 0%, #1E293B 100%) !important;
+        border-color: #38BDF8;
+    }
+    
+    /* Dropdown Pilih Project di sidebar */
+    div[data-testid="stSidebar"] .stSelectbox > div {
+        background: linear-gradient(90deg, #1E293B 0%, #0F172A 100%) !important;
+        border: 1px solid #334155;
+        border-radius: 8px;
+        color: #FFFFFF !important;
+    }
+    div[data-testid="stSidebar"] .stSelectbox label {
+        color: #CBD5E1 !important;
+    }
     
     # Global Project Filter
     st.markdown("### 🏢 Filter Project")
