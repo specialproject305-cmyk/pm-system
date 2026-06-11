@@ -22,28 +22,40 @@ st.set_page_config(page_title="PM System", page_icon="🏗️", layout="wide", i
 # CSS untuk tombol dan dropdown di sidebar
 st.markdown("""
 <style>
-    /* Tombol Refresh & Presentation di sidebar */
-    div[data-testid="stSidebar"] .stButton > button {
+    /* === PERBAIKAN SIDEBAR: Tombol & Dropdown === */
+    
+    /* Target semua tombol di sidebar */
+    div[data-testid="stSidebar"] button {
         background: linear-gradient(90deg, #1E293B 0%, #0F172A 100%) !important;
         color: #FFFFFF !important;
-        border: 1px solid #334155;
-        border-radius: 8px;
-        transition: all 0.2s;
+        border: 1px solid #334155 !important;
+        border-radius: 8px !important;
+        transition: all 0.2s !important;
+        font-weight: 500 !important;
     }
-    div[data-testid="stSidebar"] .stButton > button:hover {
+    div[data-testid="stSidebar"] button:hover {
         background: linear-gradient(90deg, #38BDF8 0%, #1E293B 100%) !important;
-        border-color: #38BDF8;
+        border-color: #38BDF8 !important;
         color: #FFFFFF !important;
     }
-    /* Dropdown Pilih Project di sidebar */
-    div[data-testid="stSidebar"] .stSelectbox > div {
+
+    /* Target Selectbox (Dropdown) di Sidebar */
+    div[data-testid="stSidebar"] [data-baseweb="select"] > div {
         background: linear-gradient(90deg, #1E293B 0%, #0F172A 100%) !important;
-        border: 1px solid #334155;
-        border-radius: 8px;
+        border: 1px solid #334155 !important;
+        border-radius: 8px !important;
         color: #FFFFFF !important;
     }
+    
+    /* Target teks di dalam Selectbox */
+    div[data-testid="stSidebar"] [data-baseweb="select"] * {
+        color: #FFFFFF !important;
+    }
+    
+    /* Target label dropdown */
     div[data-testid="stSidebar"] .stSelectbox label {
         color: #CBD5E1 !important;
+        font-weight: 600 !important;
     }
 </style>
 """, unsafe_allow_html=True)
