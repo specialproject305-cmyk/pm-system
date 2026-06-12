@@ -441,15 +441,6 @@ def dashboard_page():
             df = df[df['pm'] == selected_pm]
             valid_sites = df['id'].tolist()
             milestones_df = milestones_df[milestones_df['project_id'].isin(valid_sites)] if not milestones_df.empty else milestones_df
-
-    # ===== FILTER BY PM =====
-    if 'pm' in df.columns and not df.empty:
-        pm_list = ['👤 ALL PM'] + sorted(df['pm'].dropna().unique().tolist())
-        selected_pm = st.selectbox("Filter by Project Manager:", pm_list, key="dash_pm_filter")
-        if selected_pm != '👤 ALL PM':
-            df = df[df['pm'] == selected_pm]
-            valid_sites = df['id'].tolist()
-            milestones_df = milestones_df[milestones_df['project_id'].isin(valid_sites)] if not milestones_df.empty else milestones_df
     
     # ===== KPI SECTION =====
     st.markdown('<h2 style="color: #0F172A; font-size: 1.1rem; margin-bottom: 16px;">📈 KEY PERFORMANCE INDICATORS</h2>', unsafe_allow_html=True)
