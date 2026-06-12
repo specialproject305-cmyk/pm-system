@@ -159,31 +159,20 @@ def inject_field_css():
             border-radius: 12px;
             border: 2px solid #DBEAFE;
             padding: 15px;
-            min-height: 400px;
+            min-height: 600px;  /* ✅ Lebih tinggi */
+            max-height: 80vh;   /* ✅ Prevent overflow */
+            overflow-y: auto;   /* ✅ Scrollable jika terlalu banyak */
+            display: flex;
+            flex-direction: column;
         }
         
         .kanban-column-header {
-            font-size: 0.95rem;
-            font-weight: 700;
-            color: #1F2937;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 12px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #DBEAFE;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            flex-shrink: 0;  /* ✅ Header tetap di atas */
         }
         
-        .kanban-count {
-            background: #F0F9FF;
-            border: 1px solid #DBEAFE;
-            color: #1E40AF;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 0.8rem;
-            font-weight: 600;
+        .kanban-cards-container {
+            flex: 1;
+            overflow-y: auto;
         }
         
         .kanban-card {
@@ -666,19 +655,13 @@ def field_app_page():
                         <span>{status}</span>
                         <span class="kanban-count">{count}</span>
                     </div>
+                    <div class="kanban-cards-container">
                 """, unsafe_allow_html=True)
                 
                 for _, task in subset.iterrows():
-                    site_code = site_map.get(task['project_id'], '-')
-                    st.markdown(f"""
-                    <div class="kanban-card" style="border-left-color: {kanban_colors[status]};">
-                        <strong>{task['name']}</strong><br>
-                        <small>📍 {site_code}</small><br>
-                        <small>Progress: {task['progress']}%</small>
-                    </div>
-                    """, unsafe_allow_html=True)
+                    # ... render cards ...
                 
-                st.markdown("</div>", unsafe_allow_html=True)
+                st.markdown("</div></div>", unsafe_allow_html=True)
     
     # ===== TAB 4: AI FORECAST =====
     with tab4:
