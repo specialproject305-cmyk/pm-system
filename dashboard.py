@@ -201,7 +201,12 @@ def dashboard_page():
     st.sidebar.markdown("---")
     st.sidebar.markdown("### 🎯 Filter Master Project")
     selected_mp = st.sidebar.selectbox("Pilih Proyek:", master_options, format_func=lambda x: "🌐 SEMUA PROYEK" if x == "🌐 SEMUA PROYEK" else f"{mp_df[mp_df['id']==x]['project_code'].values[0]} - {mp_df[mp_df['id']==x]['project_name'].values[0]}")
-    
+    selected_mp = st.sidebar.selectbox(
+    "Pilih Proyek:",
+    master_options,
+    format_func=...,
+    key="dash_master_project_select"  # ← TAMBAH INI
+)
     if selected_mp != st.session_state.master_project_filter:
         st.session_state.master_project_filter = selected_mp
         st.cache_data.clear()
