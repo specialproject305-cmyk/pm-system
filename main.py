@@ -1,4 +1,5 @@
 import streamlit as st
+from auth import login_page, check_permission, show_permission_denied
 from dashboard import dashboard_page
 from project_tracker import project_tracker_page
 from milestone_module import milestone_page
@@ -22,59 +23,17 @@ st.set_page_config(page_title="PM System", page_icon="🏗️", layout="wide", i
 # CSS untuk tombol dan dropdown di sidebar
 st.markdown("""
 <style>
-    /* === PERBAIKAN SIDEBAR: Tombol & Dropdown === */
-    
-    /* Target semua tombol di sidebar */
-    div[data-testid="stSidebar"] button {
-        background: linear-gradient(90deg, #374151 0%, #1F2937 100%) !important;
+    div[data-testid="stSidebar"] .stButton > button {
+        background: linear-gradient(90deg, #1E293B 0%, #0F172A 100%) !important;
         color: #FFFFFF !important;
-        border: 1px solid #4B5563 !important;
-        border-radius: 8px !important;
-        transition: all 0.2s !important;
-        font-weight: 500 !important;
+        border: 1px solid #334155;
+        border-radius: 8px;
     }
-    div[data-testid="stSidebar"] button:hover {
-        background: linear-gradient(90deg, #38BDF8 0%, #1F2937 100%) !important;
-        border-color: #38BDF8 !important;
+    div[data-testid="stSidebar"] .stSelectbox > div {
+        background: linear-gradient(90deg, #1E293B 0%, #0F172A 100%) !important;
+        border: 1px solid #334155;
+        border-radius: 8px;
         color: #FFFFFF !important;
-    }
-
-    /* Target Selectbox (Dropdown) di Sidebar */
-    div[data-testid="stSidebar"] [data-baseweb="select"] > div {
-        background: linear-gradient(90deg, #374151 0%, #1F2937 100%) !important;
-        border: 1px solid #4B5563 !important;
-        border-radius: 8px !important;
-        color: #FFFFFF !important;
-    }
-    
-    /* Target teks di dalam Selectbox */
-    div[data-testid="stSidebar"] [data-baseweb="select"] * {
-        color: #FFFFFF !important;
-    }
-    
-    /* Target label dropdown */
-    div[data-testid="stSidebar"] .stSelectbox label {
-        color: #CBD5E1 !important;
-        font-weight: 600 !important;
-    }
-    
-    /* Target tombol radio di sidebar */
-    div[data-testid="stSidebar"] div[role="radiogroup"] label {
-        background-color: #374151 !important;
-        color: #FFFFFF !important;
-        border: 1px solid #4B5563 !important;
-        border-radius: 6px !important;
-        padding: 8px 12px !important;
-        margin: 4px 0 !important;
-    }
-    
-    div[data-testid="stSidebar"] div[role="radiogroup"] label:hover {
-        background-color: #4B5563 !important;
-        border-color: #38BDF8 !important;
-    }
-    
-    div[data-testid="stSidebar"] div[role="radiogroup"] label[data-baseweb="radio"] {
-        background-color: #374151 !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -86,49 +45,67 @@ if 'presentation_mode' not in st.session_state:
     st.session_state.presentation_mode = False
 if 'global_project_filter' not in st.session_state:
     st.session_state.global_project_filter = "ALL"
+if 'logged_in' not in st.session_state:
+    st.session_state['logged_in'] = False
 
 # ═══════════════════════════════════════════════
-# 📂 SIDEBAR
+# 🔐 LOGIN CHECK & AUTO-REDIRECT
+# ═══════════════════════════════════════════════
+if not st.session_state['logged_in']:
+    login_page()
+    st.stop()
+
+user = st.session_state.get('user', {})
+role = user.get('role', 'viewer')
+app_mode = st.session_state.get('app_mode', '🏢 Full Dashboard')
+
+# Auto-redirect PIC ke Field App
+pic_roles = ['sitac', 'engineering', 'procurement', 'project', 'vendor_mgmt', 'legal']
+if role in pic_roles or app_mode == '📱 Field App':
+    field_app_page()
+    st.stop()
+
+# ═══════════════════════════════════════════════
+# 📂 SIDEBAR (Untuk Non-PIC)
 # ═══════════════════════════════════════════════
 with st.sidebar:
-    st.title("🏗️ PMO Management System")
+    st.title("🏗️ PM System")
+    st.markdown(f"👤 **{user.get('full_name', user.get('username', 'User'))}**")
     st.markdown("---")
 
-    # 🌍 Global Project Filter
-    st.markdown("### 🏢 Filter Project")
-    try:
-        from supabase_db import read_sheet
-        master_df = read_sheet("master_projects")
-        if not master_df.empty:
-            project_options = ["ALL"] + master_df['id'].tolist()
-            selected = st.selectbox(
-                "Pilih Project:",
-                project_options,
-                format_func=lambda x: "🌐 SEMUA PROJECT" if x == "ALL" 
-                else f"{master_df[master_df['id']==x]['project_code'].values[0]} - {master_df[master_df['id']==x]['project_name'].values[0]}",
-                key="global_proj_select"
-            )
-            st.session_state.global_project_filter = selected
-        else:
-            st.info("Belum ada project")
-    except Exception as e:
-        st.error(f"Gagal load project: {e}")
-        st.session_state.global_project_filter = "ALL"
+    # Global Filter (hanya untuk admin/pm/pmo/planning)
+    if role in ['admin', 'pm', 'pmo', 'planning']:
+        st.markdown("### 🏢 Filter Project")
+        try:
+            from supabase_db import read_sheet
+            master_df = read_sheet("master_projects")
+            if not master_df.empty:
+                project_options = ["ALL"] + master_df['id'].tolist()
+                selected = st.selectbox("Pilih Project:", project_options,
+                    format_func=lambda x: "🌐 SEMUA PROJECT" if x == "ALL" 
+                    else f"{master_df[master_df['id']==x]['project_code'].values[0]} - {master_df[master_df['id']==x]['project_name'].values[0]}",
+                    key="global_proj_select")
+                st.session_state.global_project_filter = selected
+        except:
+            pass
+        st.markdown("---")
 
-    st.markdown("---")
+    # Menu Navigasi berdasarkan Role
+    menu_options = []
+    if role in ['admin', 'pm', 'pmo']:
+        menu_options = ["📊 Dashboard", "📁 Site Tracker", "🧱 Milestones", "📋 Kanban Board", "📋 Daily Tasks", "📦 Inventory", "🤖 AI Insights", "🔍 RCA Analysis", "💬 Chat & Notif", "📱 Field App", "📽️ Presentation", "📊 Export Report"]
+    elif role == 'planning':
+        menu_options = ["📊 Dashboard", "📁 Site Tracker", "🧱 Milestones", "📊 Export Report"]
+    else: # viewer
+        menu_options = ["📊 Dashboard", "🤖 AI Insights", "💬 Chat & Notif", "📽️ Presentation", "📊 Export Report"]
 
-    # 📂 Menu Navigasi
-    menu_options = [
-        "📊 Dashboard", "📁 Site Tracker", "🧱 Milestones", "📋 Kanban Board",
-        "📋 Daily Tasks", "📦 Inventory", "🤖 AI Insights", "🔍 RCA Analysis",
-        "💬 Chat & Notif", "📱 Field App", "📽️ Presentation", "📊 Export Report",
-        "👥 User Management", "⚙️ Settings"
-    ]
+    if role == 'admin':
+        menu_options.append("👥 User Management")
+        menu_options.append("⚙️ Settings")
+
     menu = st.sidebar.radio("📂 Navigasi:", menu_options)
-
     st.markdown("---")
-
-    # Tombol Aksi
+    
     col1, col2 = st.columns(2)
     with col1:
         if st.button("🔄 Refresh", use_container_width=True, key="sidebar_refresh"):
@@ -138,6 +115,11 @@ with st.sidebar:
         if st.button("📽️ Presentation", use_container_width=True, key="sidebar_presentation"):
             st.session_state.presentation_mode = True
             st.rerun()
+    if st.button("🚪 Logout", use_container_width=True):
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+        st.session_state['logged_in'] = False
+        st.rerun()
 
 # ═══════════════════════════════════════════════
 # 🚀 ROUTING
@@ -147,34 +129,20 @@ def main():
         presentation_page()
         st.stop()
 
-    if menu == "📊 Dashboard":
-        dashboard_page()
-    elif menu == "📁 Site Tracker":
-        project_tracker_page()
-    elif menu == "🧱 Milestones":
-        milestone_page()
-    elif menu == "📋 Kanban Board":
-        kanban_page()
-    elif menu == "📦 Inventory":
-        inventory_page()
-    elif menu == "🤖 AI Insights":
-        ai_insights_page()
-    elif menu == "📊 Export Report":
-        export_report_page()
-    elif menu == "💬 Chat & Notif":
-        chat_notif_page()
-    elif menu == "📋 Daily Tasks":
-        daily_task_page()
-    elif menu == "🔍 RCA Analysis":
-        rca_page()
-    elif menu == "📽️ Presentation":
-        presentation_page()
-    elif menu == "📱 Field App":
-        field_app_page()
-    elif menu == "👥 User Management":
-        user_management_page()
-    elif menu == "⚙️ Settings":
-        settings_page()
+    if menu == "📊 Dashboard": dashboard_page()
+    elif menu == "📁 Site Tracker": project_tracker_page()
+    elif menu == "🧱 Milestones": milestone_page()
+    elif menu == "📋 Kanban Board": kanban_page()
+    elif menu == "📦 Inventory": inventory_page()
+    elif menu == "🤖 AI Insights": ai_insights_page()
+    elif menu == "📊 Export Report": export_report_page()
+    elif menu == "💬 Chat & Notif": chat_notif_page()
+    elif menu == "📋 Daily Tasks": daily_task_page()
+    elif menu == "🔍 RCA Analysis": rca_page()
+    elif menu == "📽️ Presentation": presentation_page()
+    elif menu == "📱 Field App": field_app_page()
+    elif menu == "👥 User Management": user_management_page()
+    elif menu == "⚙️ Settings": settings_page()
 
 if __name__ == "__main__":
     main()
