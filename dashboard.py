@@ -206,7 +206,7 @@ def dashboard_page():
     master_options,
     format_func=...,
     key="dash_master_project_select"  # ← TAMBAH INI
-)
+    )
     if selected_mp != st.session_state.master_project_filter:
         st.session_state.master_project_filter = selected_mp
         st.cache_data.clear()
