@@ -47,7 +47,13 @@ def login_page():
 def check_permission(required_role='viewer'):
     user = st.session_state.get('user', {})
     user_role = user.get('role', 'viewer')
-    role_levels = {'admin': 5, 'pm': 4, 'pmo': 4, 'planning': 3, 'sitac': 2, 'engineering': 2, 'procurement': 2, 'project': 2, 'vendor_mgmt': 2, 'legal': 2, 'viewer': 1}
+    role_levels = {
+        'admin': 5, 'pm': 4, 'pmo': 4, 'planning': 3,
+        'marketing': 3,  # ← tambah
+        'sitac': 2, 'engineering': 2, 'procurement': 2,
+        'project': 2, 'vendor_mgmt': 2, 'legal': 2,
+        'viewer': 1
+    }
     required_level = role_levels.get(required_role, 1)
     user_level = role_levels.get(user_role, 1)
     return user_level >= required_level
