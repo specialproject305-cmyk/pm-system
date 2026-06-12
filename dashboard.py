@@ -136,33 +136,34 @@ def dashboard_page():
 
     # ===== DONUT CHARTS ROW =====
     st.markdown("---")
-    col_d1, col_d2, col_d3 = st.columns([1, 1, 1.5])
+    col_d1, col_d2 = st.columns(2)
     
     with col_d1:
-        st.markdown("<div class='chart-box'><h3 style='color:#CBD5E1; text-align:center;'>PROGRESS OVERVIEW</h3>", unsafe_allow_html=True)
+        # PROGRESS OVERVIEW + SITE BY KATEGORI (stacked vertikal)
+        st.markdown("<div class='chart-box' style='height:250px;'><h3 style='color:#CBD5E1; text-align:center; font-size:0.8rem;'>PROGRESS OVERVIEW</h3>", unsafe_allow_html=True)
         if 'status' in df.columns and not df.empty:
             status_counts = df['status'].value_counts()
-            fig = px.pie(values=status_counts.values, names=status_counts.index, hole=0.6, color_discrete_map={'DONE':'#10B981','ON_TRACK':'#10B981','ONGOING':'#F59E0B','PENDING':'#94A3B8','DELAYED':'#EF4444','CRITICAL':'#7F1D1D'})
-            fig.update_layout(height=250, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='#FFFFFF'), showlegend=False)
+            fig = px.pie(values=status_counts.values, names=status_counts.index, hole=0.6)
+            fig.update_layout(height=200, margin=dict(t=10, b=10, l=10, r=10), paper_bgcolor='rgba(0,0,0,0)', font=dict(color='#FFFFFF', size=10), showlegend=False)
             st.plotly_chart(fig, use_container_width=True)
         st.markdown("</div>", unsafe_allow_html=True)
-
-    with col_d2:
-        st.markdown("<div class='chart-box'><h3 style='color:#CBD5E1; text-align:center;'>SITE BY KATEGORI</h3>", unsafe_allow_html=True)
+        
+        st.markdown("<div class='chart-box' style='height:250px;'><h3 style='color:#CBD5E1; text-align:center; font-size:0.8rem;'>SITE BY KATEGORI</h3>", unsafe_allow_html=True)
         if 'site_category' in df.columns and not df.empty:
             cat_counts = df['site_category'].value_counts()
-            fig2 = px.pie(values=cat_counts.values, names=cat_counts.index, hole=0.6, color_discrete_map={'New Site':'#3B82F6','Collocation':'#8B5CF6','Upgrade':'#F59E0B','Relocation':'#EF4444'})
-            fig2.update_layout(height=250, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='#FFFFFF'), showlegend=False)
+            fig2 = px.pie(values=cat_counts.values, names=cat_counts.index, hole=0.6)
+            fig2.update_layout(height=200, margin=dict(t=10, b=10, l=10, r=10), paper_bgcolor='rgba(0,0,0,0)', font=dict(color='#FFFFFF', size=10), showlegend=False)
             st.plotly_chart(fig2, use_container_width=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
-    with col_d3:
-        st.markdown("<div class='chart-box'><h3 style='color:#CBD5E1; text-align:center;'>SITE STATUS BY VENDOR</h3>", unsafe_allow_html=True)
+    with col_d2:
+        # SITE STATUS BY VENDOR (tall chart)
+        st.markdown("<div class='chart-box' style='height:520px;'><h3 style='color:#CBD5E1; text-align:center; font-size:0.8rem;'>SITE STATUS BY VENDOR</h3>", unsafe_allow_html=True)
         if 'vendor' in df.columns and 'status' in df.columns:
             pivot = df.groupby('vendor')['status'].value_counts().unstack(fill_value=0)
             if not pivot.empty:
-                fig3 = px.bar(pivot, x=pivot.index, y=pivot.columns, title="", barmode='stack')
-                fig3.update_layout(height=250, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='#FFFFFF'), legend=dict(orientation='h', y=1.1))
+                fig3 = px.bar(pivot, x=pivot.index, y=pivot.columns, barmode='stack')
+                fig3.update_layout(height=460, margin=dict(t=10, b=10, l=10, r=10), paper_bgcolor='rgba(0,0,0,0)', font=dict(color='#FFFFFF', size=10), legend=dict(orientation='h', y=1.05, font=dict(size=9)))
                 st.plotly_chart(fig3, use_container_width=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
