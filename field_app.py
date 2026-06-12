@@ -643,19 +643,30 @@ def field_app_page():
                 subset = ms_df[ms_df['status'] == status]
                 count = len(subset)
                 
+                # 1. Buka kontainer kolom dan kontainer kartu
                 st.markdown(f"""
                 <div class="kanban-column">
-                    <div class="kanban-column-header">
-                        <span>{status}</span>
-                        <span class="kanban-count">{count}</span>
+                    <div class="kanban-column-header" style="margin-bottom: 10px;">
+                        <span style="font-weight: 700;">{status}</span>
+                        <span class="kanban-count" style="background: #3B82F6; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.8rem; margin-left: 5px;">{count}</span>
                     </div>
                     <div class="kanban-cards-container">
                 """, unsafe_allow_html=True)
                 
+                # 2. Render kartu-kartu di DALAM kontainer
                 for _, task in subset.iterrows():
-                    st.markdown(f'<div class="kanban-card">{task["name"]}<br><small style="color:#6B7280;">Prog: {task["progress"]}%</small></div>', unsafe_allow_html=True)
+                    st.markdown(f"""
+                    <div class="kanban-card" style="background: #FFFFFF; padding: 12px; border-radius: 8px; border-left: 4px solid #3B82F6; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                        <div style="font-weight: 600; color: #1F2937;">{task["name"]}</div>
+                        <div style="font-size: 0.8rem; color: #6B7280; margin-top: 4px;">Prog: {task["progress"]}%</div>
+                    </div>
+                    """, unsafe_allow_html=True)
                 
-                st.markdown("</div></div>", unsafe_allow_html=True)
+                # 3. Tutup kedua tag </div> setelah semua kartu selesai dirender
+                st.markdown("""
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
     
     # ===== TAB 4: AI FORECAST =====
     with tab4:
