@@ -159,15 +159,15 @@ def inject_field_css():
             border-radius: 12px;
             border: 2px solid #DBEAFE;
             padding: 15px;
-            min-height: 600px;  /* ✅ Lebih tinggi */
-            max-height: 80vh;   /* ✅ Prevent overflow */
-            overflow-y: auto;   /* ✅ Scrollable jika terlalu banyak */
+            min-height: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
             display: flex;
             flex-direction: column;
         }
         
         .kanban-column-header {
-            flex-shrink: 0;  /* ✅ Header tetap di atas */
+            flex-shrink: 0;
         }
         
         .kanban-cards-container {
@@ -261,12 +261,14 @@ def inject_field_css():
     </style>
     """, unsafe_allow_html=True)
 
+
 def get_safe_numeric(val):
     """Safely convert to numeric"""
     try:
         return int(float(val)) if val else 0
     except:
         return 0
+
 
 def field_app_page():
     inject_field_css()
@@ -300,6 +302,7 @@ def field_app_page():
     
     # Filter task hanya untuk PIC ini
     ms_df = ms_df[ms_df['assigned_to'] == assigned_to].copy()
+    
     ms_df['planned_end'] = pd.to_datetime(ms_df['planned_end'], errors='coerce')
     ms_df['actual_start'] = pd.to_datetime(ms_df['actual_start'], errors='coerce')
     ms_df['actual_end'] = pd.to_datetime(ms_df['actual_end'], errors='coerce')
@@ -323,7 +326,10 @@ def field_app_page():
     ongoing_count = len(ms_df[ms_df['status'] == 'ONGOING'])
     pending_count = len(ms_df[ms_df['status'] == 'PENDING'])
     delayed_count = len(ms_df[ms_df['status'] == 'DELAYED'])
-    overdue_count = len(ms_df[ms_df['planned_end'].dt.date < date.today()])
+    
+    today_timestamp = pd.Timestamp(date.today())
+    overdue_count = len(ms_df[ms_df['planned_end'] < today_timestamp])
+    
     avg_progress = ms_df['progress'].mean() if total_tasks > 0 else 0
     completion_rate = (done_count / total_tasks * 100) if total_tasks > 0 else 0
     
@@ -421,7 +427,6 @@ def field_app_page():
         if ms_df.empty:
             st.info("✅ No tasks assigned to you right now!")
         else:
-            # Sort by priority: delayed first, then by deadline
             sort_order = {'DELAYED': 0, 'CRITICAL': 1, 'ONGOING': 2, 'PENDING': 3, 'DONE': 4}
             ms_df['sort_key'] = ms_df['status'].map(lambda x: sort_order.get(x, 5))
             ms_sorted = ms_df.sort_values(['sort_key', 'planned_end']).drop('sort_key', axis=1)
@@ -432,18 +437,16 @@ def field_app_page():
                 deadline = task['planned_end'].strftime('%d %b %Y') if pd.notna(task['planned_end']) else '-'
                 days_left = (task['planned_end'].date() - date.today()).days if pd.notna(task['planned_end']) else 999
                 
-                # Determine status styling
                 status_badge_class = {
                     'PENDING': 'badge-pending',
                     'ONGOING': 'badge-ongoing',
                     'DONE': 'badge-done',
                     'DELAYED': 'badge-delayed'
-                }.get(task.get('status', 'PENDING'), 'badge-pending')
+                } .get(task.get('status', 'PENDING'), 'badge-pending')
                 
                 progress_pct = task['progress']
                 progress_color = '#10B981' if task['status'] == 'DONE' else '#3B82F6'
                 
-                # Info box color
                 if days_left < 0:
                     info_class = 'danger-box'
                     urgency = f"🔴 {abs(days_left)} days overdue"
@@ -565,9 +568,9 @@ def field_app_page():
         with col_metrics2:
             st.markdown('<h4 style="color: #1F2937; margin-top: 0;">📊 Progress Comparison</h4>', unsafe_allow_html=True)
             if not ms_df.empty:
-                ms_sorted = ms_df.sort_values('progress', ascending=False).head(10)
+                ms_sorted_chart = ms_df.sort_values('progress', ascending=False).head(10)
                 fig = px.bar(
-                    ms_sorted,
+                    ms_sorted_chart,
                     x='name',
                     y='progress',
                     color='progress',
@@ -595,7 +598,6 @@ def field_app_page():
             if not ms_df.empty and 'actual_end' in ms_df.columns:
                 completed = ms_df[ms_df['status'] == 'DONE'].copy()
                 if not completed.empty:
-                    completed['actual_end'] = pd.to_datetime(completed['actual_end'], errors='coerce')
                     completed = completed[pd.notna(completed['actual_end'])].sort_values('actual_end')
                     if not completed.empty:
                         fig = px.line(
@@ -623,7 +625,7 @@ def field_app_page():
             
             with metrics_col1:
                 st.metric("Total Tasks", total_tasks)
-                st.metric("On Time", total_tasks - overdue_count)
+                st.metric("On Time", max(0, total_tasks - overdue_count))
             
             with metrics_col2:
                 st.metric("Completion Rate", f"{completion_rate:.1f}%")
@@ -634,15 +636,7 @@ def field_app_page():
         st.subheader("📇 Kanban Board View")
         
         kanban_statuses = ['PENDING', 'ONGOING', 'DONE', 'DELAYED']
-        kanban_colors = {
-            'PENDING': '#9CA3AF',
-            'ONGOING': '#FF8C00',
-            'DONE': '#10B981',
-            'DELAYED': '#DC2626'
-        }
-        
-        kanban_col1, kanban_col2, kanban_col3, kanban_col4 = st.columns(4)
-        kanban_cols = [kanban_col1, kanban_col2, kanban_col3, kanban_col4]
+        kanban_cols = st.columns(4)
         
         for col_idx, status in enumerate(kanban_statuses):
             with kanban_cols[col_idx]:
@@ -659,7 +653,7 @@ def field_app_page():
                 """, unsafe_allow_html=True)
                 
                 for _, task in subset.iterrows():
-                    # ... render cards ...
+                    st.markdown(f'<div class="kanban-card">{task["name"]}<br><small style="color:#6B7280;">Prog: {task["progress"]}%</small></div>', unsafe_allow_html=True)
                 
                 st.markdown("</div></div>", unsafe_allow_html=True)
     
@@ -691,12 +685,18 @@ def field_app_page():
             
             st.metric("Current Completion", f"{completion_rate:.1f}%")
             
-            if total_tasks > 0 and done_count < total_tasks:
+            active_tasks = ms_df[ms_df['status'] != 'DONE']
+            if not active_tasks.empty and done_count < total_tasks:
                 remaining_tasks = total_tasks - done_count
-                days_until_deadline = (ms_df[ms_df['status'] != 'DONE']['planned_end'].min() - pd.Timestamp(date.today())).days
-                if days_until_deadline > 0:
-                    tasks_per_day = remaining_tasks / days_until_deadline
-                    st.info(f"📈 To finish on time: {tasks_per_day:.1f} tasks/day needed")
+                min_planned_end = active_tasks['planned_end'].min()
+                
+                if pd.notna(min_planned_end):
+                    days_until_deadline = (min_planned_end - today_timestamp).days
+                    if days_until_deadline > 0:
+                        tasks_per_day = remaining_tasks / days_until_deadline
+                        st.info(f"📈 To finish on time: {tasks_per_day:.1f} tasks/day needed")
+                    else:
+                        st.warning("⚠️ Beberapa tugas aktif Anda telah melewati tenggat waktu!")
         
         with col_forecast2:
             st.markdown('<h4 style="color: #1F2937;">⚠️ Risk Analysis</h4>', unsafe_allow_html=True)
@@ -706,7 +706,7 @@ def field_app_page():
             
             risk_data = {
                 'Risk Level': ['🔴 High Risk', '🟡 Medium Risk', '🟢 Low Risk'],
-                'Count': [len(high_risk), len(medium_risk), total_tasks - len(high_risk) - len(medium_risk)]
+                'Count': [len(high_risk), len(medium_risk), max(0, total_tasks - len(high_risk) - len(medium_risk))]
             }
             risk_df = pd.DataFrame(risk_data)
             
@@ -744,7 +744,7 @@ def field_app_page():
         else:
             for _, task in delayed.iterrows():
                 site_code = site_map.get(task['project_id'], '-')
-                days_late = (date.today() - task['planned_end'].date()).days
+                days_late = (date.today() - task['planned_end'].date()).days if pd.notna(task['planned_end']) else 0
                 
                 st.markdown(f"""
                 <div class="info-box danger-box">
@@ -764,9 +764,10 @@ def field_app_page():
                         st.write(f"**Site**: {site_code}")
                     
                     with detail_col2:
-                        st.write(f"**Planned End**: {task['planned_end'].strftime('%d %b %Y')}")
+                        st.write(f"**Planned End**: {task['planned_end'].strftime('%d %b %Y') if pd.notna(task['planned_end']) else '-'}")
                         st.write(f"**Days Late**: {days_late}")
                         st.write(f"**Priority**: High")
+
 
 if __name__ == "__main__":
     field_app_page()
