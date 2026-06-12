@@ -32,6 +32,7 @@ def inject_dark_css():
         .kpi-sub { font-size: 0.75rem; color: #94A3B8; }
         
         .chart-box { background-color: #1E293B; border-radius: 12px; padding: 15px; border: 1px solid #334155; margin-bottom: 20px; }
+        .chart-box h3 { font-size: 0.85rem !important; margin-bottom: 5px !important; }
         .stDataFrame { border-radius: 10px; overflow: hidden; }
         [data-testid="stDataFrame"] div { background-color: #1E293B; color: #FFFFFF !important; }
         thead th { background-color: #0F172A !important; color: #E2E8F0 !important; border-bottom: 2px solid #38BDF8 !important; }
