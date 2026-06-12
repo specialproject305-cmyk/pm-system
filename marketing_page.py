@@ -30,7 +30,7 @@ def marketing_page():
             if sel_tenant != 'ALL': filtered = filtered[filtered['tenant_name'] == sel_tenant]
             if sel_milestone != 'ALL': filtered = filtered[filtered['milestone'] == sel_milestone]
             
-            display_cols = ['tenant_name', 'pic', 'division', 'site_id_tenant', 'site_name_tenant', 'work_type', 'tower_height', 'milestone', 'mobile_number']
+            display_cols = ['spk_number', 'spk_date', 'tenant_index', 'spk_status', 'site_id_tenant', 'site_name_tenant', 'work_type', 'tower_height', 'milestone', 'site_id_bts']
             st.dataframe(filtered[[c for c in display_cols if c in filtered.columns]], use_container_width=True, hide_index=True)
             
             # Export
