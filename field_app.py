@@ -294,6 +294,11 @@ def field_app_page():
         'vendor_mgmt': 'Vendor Management'
     }
     assigned_to = role_map.get(role, role)
+        # Jika role marketing, tampilkan Marketing Dashboard
+    if role == 'marketing':
+        from marketing_dashboard import marketing_dashboard_page
+        marketing_dashboard_page()
+        st.stop()
     
     try:
         with st.spinner("🔄 Loading data..."):
