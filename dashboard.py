@@ -371,6 +371,36 @@ def dashboard_page():
         st.plotly_chart(fig_risk, use_container_width=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
+        # ===== PIC PERFORMANCE SNAPSHOT =====
+        st.markdown("---")
+        st.subheader("👷 PIC Performance Snapshot")
+        
+        if not milestones_df.empty and 'assigned_to' in milestones_df.columns:
+            pic_list = ['Sitac', 'Legal', 'Engineering', 'Procurement', 'Project', 'Vendor Management']
+            cols = st.columns(len(pic_list))
+            
+            for i, pic in enumerate(pic_list):
+                pic_tasks = milestones_df[milestones_df['assigned_to'] == pic]
+                total = len(pic_tasks)
+                
+                if total > 0:
+                    done = len(pic_tasks[pic_tasks['status'] == 'DONE'])
+                    completion_rate = (done / total) * 100
+                    
+                    # Warna
+                    if completion_rate > 80: bg, border = '#DCFCE7', '#10B981'
+                    elif completion_rate > 50: bg, border = '#FEF3C7', '#F59E0B'
+                    else: bg, border = '#FEE2E2', '#EF4444'
+                    
+                    with cols[i]:
+                        st.markdown(f"""
+                        <div style="background:{bg}; padding:12px; border-radius:10px; border-left:4px solid {border}; text-align:center;">
+                            <strong>{pic}</strong><br>
+                            📋 {total} | ✅ {done}<br>
+                            📈 {completion_rate:.0f}%
+                        </div>
+                        """, unsafe_allow_html=True)
+    
     col_t1, col_t2 = st.columns([1.5, 1])
     with col_t1:
         st.markdown("<div class='chart-box'>", unsafe_allow_html=True)
