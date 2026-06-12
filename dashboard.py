@@ -321,4 +321,4 @@ def dashboard_page():
         st.markdown("</div>", unsafe_allow_html=True)
         
     # ... (SISA KODE TREND DAN LAINNYA) ...
-    dashboard_page()
+    
