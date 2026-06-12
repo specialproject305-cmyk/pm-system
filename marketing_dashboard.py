@@ -34,7 +34,7 @@ def marketing_dashboard_page():
     st.divider()
     
     # ===== CHARTS ROW 1 =====
-    col_a, col_b = st.columns(2)
+    col_a, col_b, col_c = st.columns(2)
     
     with col_a:
         st.subheader("📊 By Tenant")
@@ -53,8 +53,18 @@ def marketing_dashboard_page():
                          color_discrete_map={'RFS':'#10B981','Erected':'#3B82F6','On Progress':'#F59E0B','Pending':'#9CA3AF','Cancelled':'#EF4444'})
             fig2.update_layout(height=300)
             st.plotly_chart(fig2, use_container_width=True)
+
+    with col_c:
+        st.subheader("📋 By SPK Status")
+        if 'spk_status' in df.columns:
+            spk_counts = df['spk_status'].value_counts()
+            fig_spk = px.pie(values=spk_counts.values, names=spk_counts.index, hole=0.5,
+                           color_discrete_map={'CLOSE':'#10B981','OPEN':'#3B82F6','DROP':'#EF4444'})
+            fig_spk.update_layout(height=300)
+            st.plotly_chart(fig_spk, use_container_width=True)
     
     st.divider()
+
     
     # ===== CHARTS ROW 2 =====
     col_c, col_d = st.columns(2)
