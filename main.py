@@ -14,6 +14,7 @@ from rca_page import rca_page
 from presentation import presentation_page
 from field_app import field_app_page
 from user_management import user_management_page
+from marketing_page import marketing_page
 
 # ═══════════════════════════════════════════════
 # 🎨 KONFIGURASI HALAMAN & CSS CUSTOM
@@ -93,9 +94,11 @@ with st.sidebar:
     # Menu Navigasi berdasarkan Role
     menu_options = []
     if role in ['admin', 'pm', 'pmo']:
-        menu_options = ["📊 Dashboard", "📁 Site Tracker", "🧱 Milestones", "📋 Kanban Board", "📋 Daily Tasks", "📦 Inventory", "🤖 AI Insights", "🔍 RCA Analysis", "💬 Chat & Notif", "📱 Field App", "📽️ Presentation", "📊 Export Report"]
+        menu_options = ["📊 Dashboard", "📁 Site Tracker", "🧱 Milestones", "📋 Kanban Board", "📋 Daily Tasks", "📦 Inventory", "🤖 AI Insights", "🔍 RCA Analysis", "💬 Chat & Notif", "📱 Field App", "📽️ Presentation", "📊 Export Report", "📢 Marketing Sites"]
     elif role == 'planning':
         menu_options = ["📊 Dashboard", "📁 Site Tracker", "🧱 Milestones", "📊 Export Report"]
+    elif role == 'marketing':
+        menu_options = ["📊 Dashboard", "📢 Marketing Sites", "💬 Chat & Notif"]
     else: # viewer
         menu_options = ["📊 Dashboard", "🤖 AI Insights", "💬 Chat & Notif", "📽️ Presentation", "📊 Export Report"]
 
@@ -143,6 +146,7 @@ def main():
     elif menu == "📱 Field App": field_app_page()
     elif menu == "👥 User Management": user_management_page()
     elif menu == "⚙️ Settings": settings_page()
+    elif menu == "📢 Marketing Sites": marketing_page()
 
 if __name__ == "__main__":
     main()
