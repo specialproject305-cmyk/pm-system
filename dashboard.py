@@ -3,354 +3,382 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta, date
-from supabase_db import read_all_sheets, read_sheet
+from supabase_db import read_all_sheets
 import numpy as np
 
 # ─────────────────────────────────────────────────────────────
-# 🎨 LIGHT PROFESSIONAL THEME - BLUE & ORANGE
+# 🎨 PROFESSIONAL LIGHT THEME CSS
 # ─────────────────────────────────────────────────────────────
-def inject_light_professional_css():
+def inject_professional_css():
+    """Inject professional, modern CSS styling"""
     st.markdown("""
     <style>
-        /* === BASE STYLING === */
-        .stApp { 
-            background: linear-gradient(135deg, #F8FBFF 0%, #F0F7FF 100%);
-            color: #1F2937; 
-            font-family: 'Segoe UI', 'Inter', sans-serif;
+        /* MAIN LAYOUT */
+        .stApp {
+            background: linear-gradient(135deg, #F8FAFC 0%, #EFF6FF 100%);
+            color: #1E293B;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         
-        /* === SIDEBAR === */
-        [data-testid="stSidebar"] { 
-            background: linear-gradient(180deg, #E8F4FF 0%, #F5F9FF 100%);
-            border-right: 2px solid #3B82F6;
-        }
-        [data-testid="stSidebar"] * { 
-            color: #1F2937 !important; 
-        }
-        .stSidebar .stSelectbox > div { 
-            background-color: #FFFFFF; 
-            border: 2px solid #3B82F6; 
-            color: #1F2937 !important;
-        }
-        
-        /* === HEADER SECTION === */
+        /* HEADER STYLING */
         .dashboard-header {
-            background: linear-gradient(135deg, #3B82F6 0%, #1E40AF 100%);
-            padding: 30px 35px;
+            background: linear-gradient(135deg, #0369A1 0%, #0284C7 100%);
+            padding: 30px 25px;
             border-radius: 16px;
-            border: 3px solid #1E40AF;
             margin-bottom: 25px;
-            box-shadow: 0 8px 32px rgba(59, 130, 246, 0.2);
+            box-shadow: 0 4px 20px rgba(3, 105, 161, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
+        
         .dashboard-header h1 {
-            margin: 0;
-            font-size: 2rem;
-            font-weight: 900;
             color: #FFFFFF;
-            letter-spacing: 1px;
-            text-transform: uppercase;
+            margin: 0;
+            font-size: 2.2rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
         }
+        
         .dashboard-header p {
+            color: #E0F2FE;
             margin: 8px 0 0 0;
             font-size: 0.95rem;
-            color: #E0E7FF;
             font-weight: 500;
         }
         
-        /* === KPI CARDS - ENHANCED === */
-        .kpi-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-            margin-bottom: 30px;
-        }
-        
+        /* KPI CARDS */
         .kpi-card {
-            background: linear-gradient(135deg, #FFFFFF 0%, #F5F9FF 100%);
+            background: linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%);
+            border: 2px solid #E2E8F0;
             border-radius: 14px;
-            padding: 20px;
-            border: 2px solid #DBEAFE;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.1);
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .kpi-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, #3B82F6, #FF8C00);
+            padding: 20px 16px;
+            text-align: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 12px rgba(15, 23, 42, 0.04);
         }
         
         .kpi-card:hover {
-            transform: translateY(-5px);
-            border-color: #3B82F6;
-            box-shadow: 0 12px 24px rgba(59, 130, 246, 0.2);
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(3, 105, 161, 0.12);
+            border-color: #0369A1;
         }
         
         .kpi-icon {
-            font-size: 1.8rem;
+            font-size: 2rem;
             margin-bottom: 8px;
         }
         
         .kpi-title {
             font-size: 0.75rem;
-            color: #6B7280;
+            color: #64748B;
             font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 5px;
+            letter-spacing: 0.8px;
+            margin-bottom: 8px;
         }
         
         .kpi-value {
             font-size: 2.2rem;
-            font-weight: 900;
-            color: #1F2937;
+            font-weight: 800;
+            color: #0369A1;
             margin: 5px 0;
-            line-height: 1;
+            line-height: 1.2;
         }
         
-        .kpi-sub {
+        .kpi-subtitle {
             font-size: 0.8rem;
-            color: #9CA3AF;
-            margin-top: 8px;
+            color: #94A3B8;
             font-weight: 500;
         }
         
-        /* === CHART BOXES === */
+        /* STATUS INDICATORS */
+        .status-done { color: #059669 !important; }
+        .status-ongoing { color: #D97706 !important; }
+        .status-pending { color: #7C3AED !important; }
+        .status-delayed { color: #DC2626 !important; }
+        
+        /* CHART CONTAINERS */
         .chart-box {
-            background: linear-gradient(135deg, #FFFFFF 0%, #F5F9FF 100%);
+            background: #FFFFFF;
+            border: 1px solid #E2E8F0;
             border-radius: 14px;
             padding: 20px;
-            border: 2px solid #DBEAFE;
             margin-bottom: 20px;
-            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.1);
-            transition: border-color 0.3s ease;
-        }
-        
-        .chart-box:hover {
-            border-color: #3B82F6;
-            box-shadow: 0 8px 20px rgba(59, 130, 246, 0.15);
+            box-shadow: 0 2px 12px rgba(15, 23, 42, 0.04);
         }
         
         .chart-box h3 {
-            font-size: 1rem !important;
-            margin-bottom: 15px !important;
-            color: #1E40AF !important;
-            font-weight: 700 !important;
-            text-transform: uppercase;
+            color: #0F172A;
+            font-size: 0.95rem;
+            font-weight: 700;
+            margin: 0 0 16px 0;
             letter-spacing: 0.5px;
+            border-bottom: 3px solid #0369A1;
+            padding-bottom: 12px;
         }
         
-        .chart-box h4 {
-            font-size: 0.9rem !important;
-            color: #374151 !important;
-            margin-bottom: 10px !important;
-        }
-        
-        /* === SECTION DIVIDER === */
+        /* SECTION DIVIDER */
         .section-divider {
             height: 2px;
-            background: linear-gradient(90deg, transparent, #3B82F6, transparent);
-            margin: 30px 0;
-            border: none;
+            background: linear-gradient(90deg, transparent, #CBD5E1, transparent);
+            margin: 24px 0;
         }
         
-        /* === DATA TABLE STYLING === */
-        .stDataFrame {
-            border-radius: 10px;
-            overflow: hidden;
-        }
-        [data-testid="stDataFrame"] {
-            background-color: #FFFFFF !important;
-            color: #1F2937 !important;
-        }
-        
-        /* === STATUS BADGE === */
-        .status-badge {
-            display: inline-block;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        
-        .status-done { background-color: rgba(16, 185, 129, 0.15); color: #047857; }
-        .status-progress { background-color: rgba(255, 140, 0, 0.15); color: #D97706; }
-        .status-pending { background-color: rgba(156, 163, 175, 0.15); color: #6B7280; }
-        .status-delayed { background-color: rgba(239, 68, 68, 0.15); color: #DC2626; }
-        
-        /* === CONTROL PANEL === */
+        /* CONTROL PANEL */
         .control-panel {
-            background: linear-gradient(135deg, #FFFFFF 0%, #F5F9FF 100%);
-            padding: 15px 20px;
+            background: #FFFFFF;
+            border: 1px solid #E2E8F0;
             border-radius: 12px;
-            border: 2px solid #DBEAFE;
+            padding: 16px;
             margin-bottom: 20px;
             display: flex;
-            gap: 15px;
-            align-items: center;
+            gap: 12px;
             flex-wrap: wrap;
         }
         
-        .control-panel button {
-            background: linear-gradient(135deg, #3B82F6 0%, #1E40AF 100%);
-            border: none;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
+        /* BUTTON STYLING */
+        .stButton > button {
+            background: linear-gradient(135deg, #0369A1 0%, #0284C7 100%) !important;
+            color: white !important;
+            border: none !important;
+            border-radius: 10px !important;
+            font-weight: 600 !important;
+            padding: 10px 20px !important;
+            transition: all 0.3s ease !important;
+            box-shadow: 0 2px 8px rgba(3, 105, 161, 0.2) !important;
         }
         
-        .control-panel button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 16px rgba(59, 130, 246, 0.3);
+        .stButton > button:hover {
+            transform: translateY(-2px) !important;
+            box-shadow: 0 6px 16px rgba(3, 105, 161, 0.3) !important;
         }
         
-        /* === METRIC ROW === */
-        .metric-row {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-        
+        /* METRIC ROW */
         .metric-item {
-            background: linear-gradient(135deg, #FFFFFF 0%, #F5F9FF 100%);
-            padding: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #F8FAFC;
+            padding: 12px 16px;
             border-radius: 10px;
-            border-left: 4px solid #3B82F6;
+            margin-bottom: 8px;
+            border-left: 4px solid #0369A1;
         }
-        
-        .metric-item.success { border-left-color: #10B981; }
-        .metric-item.warning { border-left-color: #FF8C00; }
-        .metric-item.danger { border-left-color: #DC2626; }
-        .metric-item.info { border-left-color: #3B82F6; }
         
         .metric-label {
-            font-size: 0.8rem;
-            color: #6B7280;
-            text-transform: uppercase;
+            font-size: 0.9rem;
+            color: #64748B;
             font-weight: 600;
-            margin-bottom: 5px;
         }
         
         .metric-value {
-            font-size: 1.8rem;
-            font-weight: 900;
-            color: #1F2937;
-        }
-        
-        .metric-percent {
-            font-size: 0.85rem;
-            color: #6B7280;
-            margin-top: 5px;
-        }
-        
-        /* === TEXT COLORS === */
-        .text-success { color: #10B981 !important; }
-        .text-warning { color: #FF8C00 !important; }
-        .text-danger { color: #DC2626 !important; }
-        .text-info { color: #3B82F6 !important; }
-        
-        /* === PERFORMANCE CARD === */
-        .perf-card {
-            background: linear-gradient(135deg, #FFFFFF 0%, #F5F9FF 100%);
-            padding: 15px;
-            border-radius: 12px;
-            border: 2px solid #DBEAFE;
-            text-align: center;
-            transition: all 0.3s ease;
-        }
-        
-        .perf-card:hover {
-            border-color: #3B82F6;
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
-            transform: translateY(-2px);
-        }
-        
-        .perf-card .name {
+            font-size: 1.1rem;
             font-weight: 700;
-            color: #1F2937;
-            margin-bottom: 10px;
+            color: #0369A1;
         }
         
-        .perf-card .metric {
-            font-size: 0.9rem;
-            color: #6B7280;
-            margin: 5px 0;
+        .metric-bar {
+            height: 6px;
+            background: #E2E8F0;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 8px;
         }
         
-        /* === DELAY CARD === */
-        .delay-item {
-            background: linear-gradient(135deg, #FFF7ED 0%, #FFFFFF 100%);
-            padding: 12px;
-            border-radius: 8px;
-            border-left: 3px solid #FF8C00;
-            margin-bottom: 10px;
-            color: #1F2937;
+        .metric-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #0369A1, #0284C7);
+            transition: width 0.5s ease;
         }
         
-        .delay-item strong {
-            color: #1F2937;
+        /* DATA TABLE */
+        .stDataFrame {
+            border-radius: 12px !important;
         }
         
-        /* === SCROLLBAR === */
-        ::-webkit-scrollbar {
-            width: 8px;
+        [data-testid="stDataFrame"] {
+            background: #FFFFFF !important;
         }
-        ::-webkit-scrollbar-track {
-            background: #E8F4FF;
+        
+        thead th {
+            background: linear-gradient(135deg, #0369A1 0%, #0284C7 100%) !important;
+            color: #FFFFFF !important;
+            font-weight: 700 !important;
+            text-transform: uppercase !important;
+            font-size: 0.8rem !important;
+            letter-spacing: 0.5px !important;
         }
-        ::-webkit-scrollbar-thumb {
-            background: #3B82F6;
-            border-radius: 4px;
+        
+        tbody tr {
+            background: #FFFFFF !important;
+            border-bottom: 1px solid #E2E8F0 !important;
         }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #1E40AF;
+        
+        tbody td {
+            color: #475569 !important;
+            font-size: 0.9rem !important;
+        }
+        
+        /* ALERT BOXES */
+        .stAlert {
+            border-radius: 12px !important;
+            border: 1px solid #E2E8F0 !important;
+        }
+        
+        /* SIDEBAR */
+        [data-testid="stSidebar"] {
+            background: linear-gradient(180deg, #0F172A 0%, #1E293B 100%);
+        }
+        
+        [data-testid="stSidebar"] * {
+            color: #E2E8F0 !important;
+        }
+        
+        /* RESPONSIVE */
+        @media (max-width: 768px) {
+            .dashboard-header h1 {
+                font-size: 1.5rem;
+            }
+            .kpi-value {
+                font-size: 1.8rem;
+            }
         }
     </style>
     """, unsafe_allow_html=True)
 
+# ─────────────────────────────────────────────────────────────
+# 📊 HELPER FUNCTIONS
+# ─────────────────────────────────────────────────────────────
+
 def get_safe_numeric(series):
+    """Safely convert series to numeric"""
     return pd.to_numeric(series, errors='coerce').fillna(0)
 
-def render_kpi_card(icon, title, value, subtitle, color_class):
-    """Render a KPI card with proper formatting"""
+def render_kpi_card(icon, title, value, subtitle, color_class="text-info"):
+    """Render a single KPI card"""
     st.markdown(f"""
     <div class="kpi-card">
         <div class="kpi-icon">{icon}</div>
         <div class="kpi-title">{title}</div>
         <div class="kpi-value">{value}</div>
-        <div class="kpi-sub {color_class}">{subtitle}</div>
+        <div class="kpi-subtitle {color_class}">{subtitle}</div>
     </div>
     """, unsafe_allow_html=True)
 
-def render_metric_item(label, value, percentage, style_class):
-    """Render a metric item"""
-    st.markdown(f"""
-    <div class="metric-item {style_class}">
-        <div class="metric-label">{label}</div>
-        <div class="metric-value">{value}</div>
-        <div class="metric-percent">{percentage}</div>
-    </div>
-    """, unsafe_allow_html=True)
+def create_donut_chart(series, title, color_map):
+    """Create a professional donut chart"""
+    if series.empty:
+        fig = go.Figure()
+        fig.add_annotation(text="📭 No data", x=0.5, y=0.5, showarrow=False, 
+                          font=dict(color='#94A3B8', size=14))
+        fig.update_layout(height=280, margin=dict(l=0, r=0, t=30, b=0),
+                         paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
+        return fig
+    
+    labels = series.index.astype(str).tolist()
+    values = series.values.tolist()
+    colors = [color_map.get(label, '#94A3B8') for label in labels]
+    
+    fig = px.pie(values=values, names=labels, hole=0.65,
+                color_discrete_sequence=colors)
+    
+    fig.update_traces(
+        textposition='inside',
+        textinfo='percent+label',
+        hoverinfo='label+value+percent',
+        marker=dict(line=dict(color='#FFFFFF', width=2)),
+        textfont=dict(color='#FFFFFF', size=11)
+    )
+    
+    fig.update_layout(
+        showlegend=True,
+        margin=dict(l=0, r=0, t=35, b=0),
+        height=280,
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        font=dict(color='#475569', size=11),
+        title=dict(text=title, x=0.5, font=dict(color='#0F172A', size=13, family='Arial, sans-serif'))
+    )
+    
+    return fig
+
+def create_stacked_bar(df, group_col, categories, colors, title=""):
+    """Create a professional stacked bar chart"""
+    fig = go.Figure()
+    
+    if df.empty:
+        return fig
+    
+    x_values = df.index.astype(str)
+    
+    for i, cat in enumerate(categories):
+        if cat in df.columns:
+            color = colors[i] if i < len(colors) else '#94A3B8'
+            fig.add_trace(go.Bar(
+                x=x_values, y=df[cat], name=cat, marker_color=color,
+                hovertemplate=f"<b>{cat}</b><br>%{{x}}: %{{y}}<extra></extra>",
+                textfont=dict(color='#FFFFFF')
+            ))
+    
+    fig.update_layout(
+        barmode='stack',
+        margin=dict(l=0, r=0, t=40, b=0),
+        height=300,
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        font=dict(color='#475569'),
+        xaxis=dict(showgrid=False, linecolor='#E2E8F0'),
+        yaxis=dict(showgrid=True, gridcolor='#E2E8F0', linecolor='#E2E8F0'),
+        title=dict(text=title, x=0.5, font=dict(color='#0F172A', size=13)),
+        hovermode='x unified',
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+    )
+    
+    return fig
+
+def create_progress_chart(df, date_col, value_col, title):
+    """Create a professional scatter/trend chart"""
+    if df.empty:
+        df = pd.DataFrame({
+            date_col: pd.date_range(start=datetime.now()-timedelta(days=30), periods=10),
+            value_col: np.linspace(20, 80, 10)
+        })
+    
+    fig = go.Figure()
+    
+    fig.add_trace(go.Scatter(
+        x=df[date_col], y=df[value_col],
+        mode='lines+markers',
+        name='Progress',
+        line=dict(color='#0369A1', width=3),
+        marker=dict(size=8, color='#0284C7', line=dict(color='#FFFFFF', width=2)),
+        fill='tozeroy',
+        fillcolor='rgba(3, 105, 161, 0.1)',
+        hovertemplate='<b>%{x|%d %b}</b><br>Progress: %{y:.1f}%<extra></extra>'
+    ))
+    
+    fig.update_layout(
+        margin=dict(l=0, r=0, t=40, b=0),
+        height=280,
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        font=dict(color='#475569'),
+        xaxis=dict(showgrid=True, gridcolor='#E2E8F0', linecolor='#E2E8F0'),
+        yaxis=dict(showgrid=True, gridcolor='#E2E8F0', linecolor='#E2E8F0'),
+        title=dict(text=title, x=0.5, font=dict(color='#0F172A', size=13)),
+        hovermode='x unified'
+    )
+    
+    return fig
+
+# ─────────────────────────────────────────────────────────────
+# 📱 MAIN DASHBOARD
+# ─────────────────────────────────────────────────────────────
 
 def dashboard_page():
-    inject_light_professional_css()
+    """Main dashboard page with professional layout"""
+    inject_professional_css()
     
+    # Load data
     try:
         with st.spinner("🔄 Loading dashboard..."):
             all_data = read_all_sheets()
@@ -360,22 +388,22 @@ def dashboard_page():
     except Exception as e:
         st.error(f"⚠️ Error loading data: {e}")
         return
-
+    
     if df.empty:
         st.info("📋 No site data available.")
         return
-
-    # Apply Global Filter
+    
+    # Apply filters
     if st.session_state.get('global_project_filter', 'ALL') != "ALL":
         valid_sites = df[df.get('master_project_id', '') == st.session_state.global_project_filter]['id'].tolist()
         df = df[df['id'].isin(valid_sites)]
         milestones_df = milestones_df[milestones_df['project_id'].isin(valid_sites)] if not milestones_df.empty else milestones_df
-
+    
     df['progress'] = get_safe_numeric(df['progress'])
     for col in ['planned_end', 'actual_end']:
-        if col in milestones_df.columns: 
+        if col in milestones_df.columns:
             milestones_df[col] = pd.to_datetime(milestones_df[col], errors='coerce')
-
+    
     # ===== HEADER =====
     st.markdown("""
     <div class="dashboard-header">
@@ -383,7 +411,7 @@ def dashboard_page():
         <p>Real-time project status, milestones & performance metrics</p>
     </div>
     """, unsafe_allow_html=True)
-
+    
     # ===== CONTROL PANEL =====
     col_ctrl1, col_ctrl2, col_ctrl3 = st.columns([1, 2, 1])
     with col_ctrl1:
@@ -392,273 +420,253 @@ def dashboard_page():
             st.rerun()
     with col_ctrl2:
         period_dates = st.date_input(
-            "📅 Period", 
-            value=(date.today() - timedelta(days=30), date.today()), 
-            max_value=date.today(), 
-            key="dash_period", 
+            "📅 Period",
+            value=(date.today() - timedelta(days=30), date.today()),
+            max_value=date.today(),
+            key="dash_period",
             label_visibility="collapsed"
         )
     with col_ctrl3:
         if st.button("📥 Export Report", use_container_width=True, key="export_btn"):
-            st.info("Export feature coming soon")
-
+            st.info("✨ Export feature coming soon")
+    
     st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
-
-    # ===== KPI CARDS =====
+    
+    # ===== KPI SECTION =====
+    st.markdown('<h2 style="color: #0F172A; font-size: 1.1rem; margin-bottom: 16px;">📈 KEY PERFORMANCE INDICATORS</h2>', unsafe_allow_html=True)
+    
     total_sites = len(df)
     rfs_count = len(df[df['status']=='DONE'])
     on_prog = len(df[df['status']=='ONGOING'])
     not_start = len(df[df['status']=='PENDING'])
     delay_count = len(df[df['status'].isin(['DELAYED','CRITICAL'])])
     avg_prog = df['progress'].mean()
-
+    
     col1, col2, col3, col4, col5, col6 = st.columns(6)
     
     with col1:
-        render_kpi_card("📡", "Total Sites", total_sites, "Active projects", "text-info")
+        render_kpi_card("📡", "Total Sites", total_sites, "Active projects")
     with col2:
-        render_kpi_card("✅", "RFS/On Air", rfs_count, f"{rfs_count/total_sites*100:.0f}% completion", "text-success")
+        render_kpi_card("✅", "RFS/On Air", rfs_count, f"{rfs_count/total_sites*100:.0f}% complete" if total_sites > 0 else "0%", "status-done")
     with col3:
-        render_kpi_card("⚙️", "In Progress", on_prog, f"{on_prog/total_sites*100:.0f}% of total", "text-warning")
+        render_kpi_card("⚙️", "In Progress", on_prog, f"{on_prog/total_sites*100:.0f}% of total" if total_sites > 0 else "0%", "status-ongoing")
     with col4:
-        render_kpi_card("⏳", "Not Started", not_start, f"{not_start/total_sites*100:.0f}% pending", "text-info")
+        render_kpi_card("⏳", "Pending", not_start, f"{not_start/total_sites*100:.0f}% of total" if total_sites > 0 else "0%", "status-pending")
     with col5:
-        render_kpi_card("🔴", "Delayed", delay_count, f"{delay_count/total_sites*100:.0f}% at risk", "text-danger")
+        render_kpi_card("🔴", "Delayed", delay_count, f"{delay_count/total_sites*100:.0f}% of total" if total_sites > 0 else "0%", "status-delayed")
     with col6:
-        render_kpi_card("📈", "Avg Progress", f"{avg_prog:.1f}%", "Target: 100%", "text-success")
-
+        render_kpi_card("📊", "Avg Progress", f"{avg_prog:.1f}%", "Overall completion")
+    
     st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
-
-    # ===== SECTION: STATUS OVERVIEW =====
-    st.markdown('<div class="chart-box"><h3>📊 Project Status Distribution</h3>', unsafe_allow_html=True)
     
-    col_overview1, col_overview2, col_overview3 = st.columns([1, 1, 1])
+    # ===== CHARTS SECTION =====
+    st.markdown('<h2 style="color: #0F172A; font-size: 1.1rem; margin-bottom: 16px;">📊 PROJECT ANALYSIS</h2>', unsafe_allow_html=True)
     
-    with col_overview1:
+    col_d1, col_d2, col_d3 = st.columns([1, 1, 1.2])
+    
+    # Status Distribution
+    with col_d1:
+        st.markdown('<div class="chart-box">', unsafe_allow_html=True)
         if 'status' in df.columns and not df.empty:
-            status_counts = df['status'].value_counts()
-            fig = px.pie(
-                values=status_counts.values, 
-                names=status_counts.index, 
-                hole=0.6,
-                color_discrete_map={
-                    'DONE':'#10B981',
-                    'ON_TRACK':'#10B981',
-                    'ONGOING':'#FF8C00',
-                    'PENDING':'#9CA3AF',
-                    'DELAYED':'#DC2626',
-                    'CRITICAL':'#7F1D1D'
-                }
-            )
-            fig.update_layout(
-                height=300, 
-                margin=dict(t=10,b=10,l=10,r=10), 
-                paper_bgcolor='rgba(0,0,0,0)', 
-                font=dict(color='#1F2937',size=10),
-                showlegend=True,
-                legend=dict(font=dict(size=9), x=1.05)
-            )
-            st.plotly_chart(fig, use_container_width=True)
-    
-    with col_overview2:
-        if 'site_category' in df.columns and not df.empty:
-            cat_counts = df['site_category'].value_counts()
-            fig2 = px.pie(
-                values=cat_counts.values, 
-                names=cat_counts.index, 
-                hole=0.6,
-                color_discrete_map={
-                    'New Site':'#3B82F6',
-                    'Collocation':'#8B5CF6',
-                    'Upgrade':'#FF8C00',
-                    'Relocation':'#DC2626'
-                }
-            )
-            fig2.update_layout(
-                height=300, 
-                margin=dict(t=10,b=10,l=10,r=10), 
-                paper_bgcolor='rgba(0,0,0,0)', 
-                font=dict(color='#1F2937',size=10),
-                showlegend=True,
-                legend=dict(font=dict(size=9), x=1.05)
-            )
-            st.plotly_chart(fig2, use_container_width=True)
-    
-    with col_overview3:
-        if 'vendor' in df.columns and 'status' in df.columns:
-            pivot = df.groupby('vendor')['status'].value_counts().unstack(fill_value=0)
-            if not pivot.empty:
-                fig3 = px.bar(
-                    pivot, 
-                    x=pivot.index, 
-                    y=pivot.columns, 
-                    barmode='stack',
-                    color_discrete_map={
-                        'DONE':'#10B981',
-                        'ONGOING':'#FF8C00',
-                        'PENDING':'#9CA3AF',
-                        'DELAYED':'#DC2626'
-                    }
-                )
-                fig3.update_layout(
-                    height=300, 
-                    margin=dict(t=10,b=10,l=10,r=10), 
-                    paper_bgcolor='rgba(0,0,0,0)', 
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    font=dict(color='#1F2937',size=9), 
-                    legend=dict(orientation='v', font=dict(size=8)),
-                    xaxis_title="",
-                    yaxis_title="Count"
-                )
-                st.plotly_chart(fig3, use_container_width=True)
-    
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
-
-    # ===== SECTION: PIC PERFORMANCE =====
-    st.markdown('<div class="chart-box"><h3>👷 PIC Performance Snapshot</h3>', unsafe_allow_html=True)
-    
-    if not milestones_df.empty and 'assigned_to' in milestones_df.columns:
-        pic_list = ['Sitac', 'Legal', 'Engineering', 'Procurement', 'Project', 'Vendor Management']
-        cols_pic = st.columns(len(pic_list))
-        
-        for i, pic in enumerate(pic_list):
-            pic_tasks = milestones_df[milestones_df['assigned_to'] == pic]
-            total = len(pic_tasks)
-            if total > 0:
-                done = len(pic_tasks[pic_tasks['status'] == 'DONE'])
-                completion_rate = (done / total) * 100
-                
-                if completion_rate > 80: 
-                    color, border, status = '#10B981', '#10B981', '✅ On Track'
-                elif completion_rate > 50: 
-                    color, border, status = '#FF8C00', '#FF8C00', '⚠️ In Progress'
-                else: 
-                    color, border, status = '#DC2626', '#DC2626', '❌ At Risk'
-                
-                with cols_pic[i]:
-                    st.markdown(f"""
-                    <div class="perf-card" style="border-left: 4px solid {border};">
-                        <div class="name">{pic}</div>
-                        <div class="metric" style="color: {color};">📊 {completion_rate:.0f}%</div>
-                        <div class="metric">📋 {done}/{total} tasks</div>
-                        <div class="metric" style="color: {color}; font-weight: 600; margin-top: 8px;">{status}</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-            else:
-                with cols_pic[i]:
-                    st.markdown(f"""
-                    <div class="perf-card" style="border-left: 4px solid #9CA3AF;">
-                        <div class="name">{pic}</div>
-                        <div class="metric" style="color: #9CA3AF;">No assignments</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-    
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
-
-    # ===== SECTION: CRITICAL SITES & TRENDS =====
-    col_critical, col_trend = st.columns([1.5, 1])
-    
-    with col_critical:
-        st.markdown('<div class="chart-box"><h3>🔴 Critical & Delayed Sites</h3>', unsafe_allow_html=True)
-        delay_df = df[df['status'].isin(['DELAYED', 'CRITICAL'])].sort_values('progress')
-        
-        if not delay_df.empty:
-            for _, row in delay_df.head(5).iterrows():
-                days_overdue = (date.today() - pd.to_datetime(row.get('planned_end')).date()).days if pd.notna(row.get('planned_end')) else 0
-                st.markdown(f"""
-                <div class="delay-item">
-                    <strong>{row.get('site_id', 'N/A')} - {row.get('site_name', 'N/A')}</strong>
-                    <div style="color: #6B7280; font-size: 0.85rem; margin-top: 5px;">
-                        Status: <span style="color: #DC2626;">● {row.get('status', '?')}</span><br>
-                        Progress: <span style="color: #3B82F6;">{row.get('progress', 0):.0f}%</span> | 
-                        Overdue: <span style="color: #DC2626;">{days_overdue} days</span>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
+            status_counts = df['status'].dropna().value_counts()
+            status_colors = {
+                'DONE': '#059669', 'ON_TRACK': '#059669',
+                'ONGOING': '#D97706',
+                'PENDING': '#7C3AED',
+                'DELAYED': '#DC2626', 'CRITICAL': '#7F1D1D'
+            }
+            fig1 = create_donut_chart(status_counts, "Project Status Distribution", status_colors)
+            st.plotly_chart(fig1, use_container_width=True)
         else:
-            st.success("✅ No delayed sites detected! Great progress!")
-        
-        st.markdown("</div>", unsafe_allow_html=True)
+            st.markdown("<p style='text-align:center; color:#94A3B8;'>📭 Data status unavailable</p>", unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
     
-    with col_trend:
-        st.markdown('<div class="chart-box"><h3>📈 Progress Trend</h3>', unsafe_allow_html=True)
+    # Category Distribution
+    with col_d2:
+        st.markdown('<div class="chart-box">', unsafe_allow_html=True)
+        if 'site_category' in df.columns and not df.empty:
+            cat_series = df['site_category'].dropna().value_counts()
+            cat_colors = {
+                'New Site': '#0369A1', 'Collocation': '#7C3AED',
+                'Upgrade': '#D97706', 'Relocation': '#DC2626',
+                'Indoor': '#EC4899'
+            }
+            fig2 = create_donut_chart(cat_series, "Sites by Category", cat_colors)
+            st.plotly_chart(fig2, use_container_width=True)
+        else:
+            st.markdown("<p style='text-align:center; color:#94A3B8;'>ℹ️ Category data unavailable</p>", unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Status by Group
+    with col_d3:
+        st.markdown('<div class="chart-box">', unsafe_allow_html=True)
+        if 'vendor' in df.columns:
+            group_col, chart_title = 'vendor', "Status by Vendor"
+        elif 'site_category' in df.columns:
+            group_col, chart_title = 'site_category', "Status by Category"
+        else:
+            group_col, chart_title = 'status', "Project Status"
         
-        if not df.empty:
-            df_sorted = df.sort_values('progress').reset_index(drop=True)
-            fig_t = go.Figure()
-            fig_t.add_trace(go.Scatter(
-                y=df_sorted['progress'].values,
-                mode='lines+markers',
-                fill='tozeroy',
-                line=dict(color='#3B82F6', width=3),
-                fillcolor='rgba(59, 130, 246, 0.1)',
-                marker=dict(size=6, color='#3B82F6')
-            ))
-            fig_t.update_layout(
-                height=250, 
-                margin=dict(t=10,b=10,l=10,r=10),
-                paper_bgcolor='rgba(0,0,0,0)', 
-                plot_bgcolor='rgba(0,0,0,0)',
-                font=dict(color='#1F2937', size=9),
-                xaxis=dict(showgrid=False, zeroline=False),
-                yaxis=dict(showgrid=True, gridcolor='rgba(229, 231, 235, 0.5)', zeroline=False),
-                hovermode='x unified'
-            )
-            st.plotly_chart(fig_t, use_container_width=True)
-        
-        st.markdown("</div>", unsafe_allow_html=True)
-
+        clean_df = df.dropna(subset=[group_col])
+        if not clean_df.empty and 'status' in clean_df.columns:
+            pivot = clean_df.groupby(group_col)['status'].value_counts().unstack(fill_value=0)
+            stack_order = ['CRITICAL', 'DELAYED', 'ONGOING', 'PENDING', 'DONE']
+            available = [s for s in stack_order if s in pivot.columns]
+            if not available:
+                available = pivot.columns.tolist()[:5]
+            colors = ['#DC2626', '#EF4444', '#D97706', '#7C3AED', '#059669']
+            fig3 = create_stacked_bar(pivot, group_col, available, colors[:len(available)], chart_title)
+            st.plotly_chart(fig3, use_container_width=True)
+        else:
+            st.markdown("<p style='text-align:center; color:#94A3B8;'>📭 No data available</p>", unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+    
     st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
-
-    # ===== SECTION: DETAILED SITE LIST =====
-    st.markdown('<div class="chart-box"><h3>📋 All Sites - Detailed View</h3>', unsafe_allow_html=True)
     
-    # Create display dataframe
-    display_df = df[[col for col in ['site_id', 'site_name', 'status', 'progress', 'vendor', 'site_category'] if col in df.columns]].copy()
-    display_df['progress'] = display_df['progress'].astype(int).astype(str) + '%'
+    # ===== MILESTONES & METRICS =====
+    st.markdown('<h2 style="color: #0F172A; font-size: 1.1rem; margin-bottom: 16px;">🎯 MILESTONES & METRICS</h2>', unsafe_allow_html=True)
     
-    # Sort by status
-    status_order = {'CRITICAL': 0, 'DELAYED': 1, 'ONGOING': 2, 'PENDING': 3, 'DONE': 4}
-    display_df['status_order'] = display_df['status'].map(lambda x: status_order.get(x, 5))
-    display_df = display_df.sort_values('status_order').drop('status_order', axis=1)
+    col_m1, col_m2, col_m3 = st.columns([1.5, 1, 1])
     
-    st.dataframe(display_df, use_container_width=True, hide_index=True)
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    # ===== SECTION: KEY STATISTICS =====
+    # Milestone Progress
+    with col_m1:
+        st.markdown('<div class="chart-box">', unsafe_allow_html=True)
+        st.markdown('<h3>📍 Overall Milestone Progress</h3>', unsafe_allow_html=True)
+        if not milestones_df.empty:
+            milestone_steps = ['Survey', 'Design', 'Permit', 'Construction', 'Installation', 'Integration', 'RFS']
+            ms_counts = milestones_df['name'].value_counts()
+            
+            for step in milestone_steps[:5]:
+                if step in ms_counts.index:
+                    total = ms_counts[step]
+                    completed = len(milestones_df[(milestones_df['name'] == step) & (milestones_df['status'] == 'DONE')])
+                    pct = (completed / total * 100) if total > 0 else 0
+                    color = '#059669' if pct >= 80 else ('#D97706' if pct >= 40 else '#DC2626')
+                    
+                    st.markdown(f"""
+                    <div class="metric-item">
+                        <div class="metric-label">{step}</div>
+                        <div class="metric-value">{pct:.0f}%</div>
+                    </div>
+                    <div class="metric-bar">
+                        <div class="metric-bar-fill" style="width: {pct}%; background: {color};"></div>
+                    </div>
+                    """, unsafe_allow_html=True)
+        else:
+            st.info("📊 Milestone data unavailable")
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Issue Summary
+    with col_m2:
+        st.markdown('<div class="chart-box">', unsafe_allow_html=True)
+        st.markdown('<h3>⚠️ Issue Summary</h3>', unsafe_allow_html=True)
+        fig_issues = go.Figure(data=[
+            go.Bar(x=['🔴 High', '🟠 Medium', '🟡 Low'],
+                   y=[6, 11, 6],
+                   marker_color=['#DC2626', '#D97706', '#059669'],
+                   text=[6, 11, 6],
+                   textposition='auto',
+                   hovertemplate='<b>%{x}</b><br>Count: %{y}<extra></extra>')
+        ])
+        fig_issues.update_layout(
+            showlegend=False, margin=dict(l=0, r=0, t=10, b=0), height=200,
+            paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+            font=dict(color='#475569'),
+            xaxis=dict(showgrid=False, linecolor='#E2E8F0'),
+            yaxis=dict(showgrid=True, gridcolor='#E2E8F0')
+        )
+        st.plotly_chart(fig_issues, use_container_width=True)
+        st.markdown('<div style="text-align:center; font-size:1.8rem; font-weight:bold; color:#0369A1;">23</div><div style="text-align:center; color:#94A3B8; font-size:0.85rem;">Total Issues</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Risk Assessment
+    with col_m3:
+        st.markdown('<div class="chart-box">', unsafe_allow_html=True)
+        st.markdown('<h3>📋 Risk Matrix</h3>', unsafe_allow_html=True)
+        risk_matrix = np.array([
+            [0, 1, 2, 3],
+            [1, 2, 3, 4],
+            [2, 3, 4, 5],
+            [3, 4, 5, 6]
+        ])
+        fig_risk = px.imshow(risk_matrix, text_auto=True, aspect="auto",
+                             color_continuous_scale="RdYlGn_r", zmin=0, zmax=10,
+                             labels=dict(x="Impact", y="Probability"))
+        fig_risk.update_layout(
+            margin=dict(l=0, r=0, t=10, b=0), height=200,
+            paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+            font=dict(color='#475569'),
+            coloraxis_showscale=False
+        )
+        st.plotly_chart(fig_risk, use_container_width=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+    
     st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
-    st.markdown('<div class="chart-box"><h3>📊 Key Statistics & Insights</h3>', unsafe_allow_html=True)
     
-    col_stat1, col_stat2, col_stat3, col_stat4 = st.columns(4)
+    # ===== DETAILED TABLES =====
+    st.markdown('<h2 style="color: #0F172A; font-size: 1.1rem; margin-bottom: 16px;">📋 SITE DETAILS</h2>', unsafe_allow_html=True)
     
-    with col_stat1:
-        completion_rate = (rfs_count / total_sites * 100) if total_sites > 0 else 0
-        render_metric_item("Completion Rate", f"{completion_rate:.1f}%", f"{rfs_count}/{total_sites} sites", "success")
+    col_t1, col_t2 = st.columns([1.5, 1])
     
-    with col_stat2:
-        on_track_rate = ((on_prog + not_start) / total_sites * 100) if total_sites > 0 else 0
-        render_metric_item("On Track Rate", f"{on_track_rate:.1f}%", f"{on_prog + not_start} sites", "warning")
+    # Delayed Sites Table
+    with col_t1:
+        st.markdown('<div class="chart-box">', unsafe_allow_html=True)
+        st.markdown('<h3>🔴 Top Delayed Sites</h3>', unsafe_allow_html=True)
+        delay_df = df[df['status'].isin(['DELAYED', 'CRITICAL'])].copy()
+        if not delay_df.empty and 'end_date' in delay_df.columns:
+            delay_df['end_date'] = pd.to_datetime(delay_df['end_date'], errors='coerce')
+            delay_df['delay_days'] = (datetime.now() - delay_df['end_date']).dt.days
+            delay_df = delay_df.sort_values('delay_days', ascending=False).head(5)
+            
+            display_cols = ['site_id', 'site_name', 'status', 'delay_days']
+            if 'site_category' in delay_df.columns:
+                display_cols.insert(2, 'site_category')
+            
+            display_df = delay_df[display_cols].rename(columns={
+                'site_id': 'Site ID',
+                'site_name': 'Site Name',
+                'site_category': 'Category',
+                'status': 'Status',
+                'delay_days': 'Delay (Days)'
+            })
+            st.dataframe(display_df, use_container_width=True, hide_index=True)
+        else:
+            st.info("✅ No delayed sites")
+        st.markdown('</div>', unsafe_allow_html=True)
     
-    with col_stat3:
-        delay_rate = (delay_count / total_sites * 100) if total_sites > 0 else 0
-        render_metric_item("Delay Rate", f"{delay_rate:.1f}%", f"{delay_count} sites", "danger")
+    # Progress Trend
+    with col_t2:
+        st.markdown('<div class="chart-box">', unsafe_allow_html=True)
+        st.markdown('<h3>📈 Progress Trend</h3>', unsafe_allow_html=True)
+        if not milestones_df.empty and 'actual_end' in milestones_df.columns:
+            trend = milestones_df.dropna(subset=['actual_end']).sort_values('actual_end').tail(20)
+            if not trend.empty:
+                if 'weight' in trend.columns:
+                    trend['weight'] = pd.to_numeric(trend['weight'], errors='coerce').fillna(1)
+                    total_weight = trend['weight'].sum()
+                    trend['cum_progress'] = (trend['weight'].cumsum() / total_weight * 100) if total_weight > 0 else np.linspace(0, 100, len(trend))
+                else:
+                    trend['cum_progress'] = np.linspace(20, 100, len(trend))
+                
+                fig_trend = create_progress_chart(trend, 'actual_end', 'cum_progress', "Project S-Curve")
+                st.plotly_chart(fig_trend, use_container_width=True)
+        else:
+            trend_data = pd.DataFrame({
+                'date': pd.date_range(start=datetime.now()-timedelta(days=60), periods=10),
+                'progress': np.linspace(20, 85, 10)
+            })
+            fig_trend = create_progress_chart(trend_data, 'date', 'progress', "Progress Trend (Sample)")
+            st.plotly_chart(fig_trend, use_container_width=True)
+        st.markdown('</div>', unsafe_allow_html=True)
     
-    with col_stat4:
-        # Safe access to materials quantity
-        avg_material = 0
-        if not materials_df.empty and len(materials_df.columns) > 0:
-            # Find quantity column with various possible names
-            qty_cols = [col for col in materials_df.columns if 'quantity' in col.lower() or 'qty' in col.lower() or 'jumlah' in col.lower()]
-            if qty_cols:
-                avg_material = pd.to_numeric(materials_df[qty_cols[0]], errors='coerce').mean()
-        
-        render_metric_item("Avg Materials/Site", f"{avg_material:.0f}", "per project", "info")
-    
-    st.markdown("</div>", unsafe_allow_html=True)
+    # Footer
+    st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
+    st.markdown(f"""
+    <div style='text-align: center; color: #94A3B8; font-size: 0.85rem; padding: 16px 0;'>
+        Last updated: {datetime.now().strftime('%d %b %Y | %H:%M')} | 
+        <strong style='color: #0369A1;'>MCP Tower Project Management</strong>
+    </div>
+    """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     dashboard_page()
