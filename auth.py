@@ -21,49 +21,36 @@ def login_page():
         </div>
         """, unsafe_allow_html=True)
         
-        app_mode = st.radio("Pilih Mode:", ["🏢 Full Dashboard", "📱 Field App"], horizontal=True)
-        
         with st.form("login_form"):
             username = st.text_input("👤 Username", placeholder="Masukkan username")
             password = st.text_input("🔒 Password", type="password", placeholder="Masukkan password")
-            
-            col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
-            with col_btn2:
-                submit = st.form_submit_button("🔐 Login", type="primary", use_container_width=True)
+            submit = st.form_submit_button("🔐 Login", type="primary", use_container_width=True)
             
             if submit:
                 user = check_login(username, password)
                 if user:
                     st.session_state['logged_in'] = True
                     st.session_state['user'] = user
-                    st.session_state['app_mode'] = app_mode
+                    
+                    # AUTO-REDIRECT: PIC ke Field App, Admin/PM/PMO/Planning ke Dashboard
+                    pic_roles = ['sitac', 'engineering', 'procurement', 'project', 'vendor_mgmt', 'legal']
+                    if user.get('role') in pic_roles:
+                        st.session_state['app_mode'] = '📱 Field App'
+                    else:
+                        st.session_state['app_mode'] = '🏢 Full Dashboard'
+                        
                     st.success("✅ Login berhasil!")
                     st.rerun()
                 else:
                     st.error("❌ Username atau password salah!")
-        
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.info("                        💡 SELAMAT BEKERJA")
-
-def logout_button():
-    with st.sidebar:
-        st.markdown("---")
-        user = st.session_state.get('user', {})
-        st.markdown(f"👤 **{user.get('full_name', user.get('username', 'User'))}**")
-        st.caption(f"Role: {user.get('role', 'viewer').upper()}")
-        if st.button("🚪 Logout", use_container_width=True):
-            st.session_state['logged_in'] = False
-            st.session_state['user'] = None
-            st.rerun()
 
 def check_permission(required_role='viewer'):
     user = st.session_state.get('user', {})
     user_role = user.get('role', 'viewer')
-    role_levels = {'admin': 4, 'editor': 3, 'engineer': 2, 'viewer': 1}
+    role_levels = {'admin': 5, 'pm': 4, 'pmo': 4, 'planning': 3, 'sitac': 2, 'engineering': 2, 'procurement': 2, 'project': 2, 'vendor_mgmt': 2, 'legal': 2, 'viewer': 1}
     required_level = role_levels.get(required_role, 1)
     user_level = role_levels.get(user_role, 1)
     return user_level >= required_level
 
 def show_permission_denied():
     st.error("🔒 Anda tidak memiliki akses untuk fitur ini!")
-    st.info(f"Role Anda: {st.session_state.get('user', {}).get('role', 'viewer').upper()}")
