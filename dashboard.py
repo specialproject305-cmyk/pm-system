@@ -431,6 +431,16 @@ def dashboard_page():
             st.info("✨ Export feature coming soon")
     
     st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
+
+    # ===== FILTER BY PM =====
+    col_f1, col_f2 = st.columns([1, 3])
+    with col_f1:
+        pm_list = ['ALL'] + sorted(df['pm'].dropna().unique().tolist()) if 'pm' in df.columns else ['ALL']
+        selected_pm = st.selectbox("👤 Filter by PM:", pm_list, key="dash_pm_filter")
+        if selected_pm != 'ALL':
+            df = df[df['pm'] == selected_pm]
+            valid_sites = df['id'].tolist()
+            milestones_df = milestones_df[milestones_df['project_id'].isin(valid_sites)] if not milestones_df.empty else milestones_df
     
     # ===== KPI SECTION =====
     st.markdown('<h2 style="color: #0F172A; font-size: 1.1rem; margin-bottom: 16px;">📈 KEY PERFORMANCE INDICATORS</h2>', unsafe_allow_html=True)
@@ -456,6 +466,57 @@ def dashboard_page():
         render_kpi_card("🔴", "Delayed", delay_count, f"{delay_count/total_sites*100:.0f}% of total" if total_sites > 0 else "0%", "status-delayed")
     with col6:
         render_kpi_card("📊", "Avg Progress", f"{avg_prog:.1f}%", "Overall completion")
+    
+    st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
+
+        # ===== PIC PERFORMANCE SNAPSHOT =====
+    st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
+    st.markdown('<h2 style="color: #0F172A; font-size: 1.1rem; margin-bottom: 16px;">👷 PIC PERFORMANCE SNAPSHOT</h2>', unsafe_allow_html=True)
+    
+    if not milestones_df.empty and 'assigned_to' in milestones_df.columns:
+        pic_list = ['Sitac', 'Legal', 'Engineering', 'Procurement', 'Project', 'Vendor Management']
+        cols_pic = st.columns(len(pic_list))
+        
+        for i, pic in enumerate(pic_list):
+            pic_tasks = milestones_df[milestones_df['assigned_to'] == pic]
+            total = len(pic_tasks)
+            
+            with cols_pic[i]:
+                if total > 0:
+                    done = len(pic_tasks[pic_tasks['status'] == 'DONE'])
+                    delayed = len(pic_tasks[pic_tasks['status'].isin(['DELAYED', 'CRITICAL'])])
+                    completion_rate = (done / total) * 100
+                    
+                    if completion_rate >= 80:
+                        bg = 'linear-gradient(135deg, #ECFDF5, #D1FAE5)'
+                        border = '#059669'
+                        icon = '🟢'
+                    elif completion_rate >= 50:
+                        bg = 'linear-gradient(135deg, #FFFBEB, #FEF3C7)'
+                        border = '#D97706'
+                        icon = '🟡'
+                    else:
+                        bg = 'linear-gradient(135deg, #FEF2F2, #FEE2E2)'
+                        border = '#DC2626'
+                        icon = '🔴'
+                    
+                    st.markdown(f"""
+                    <div style="background:{bg}; padding:14px; border-radius:12px; border-left:4px solid {border}; text-align:center; margin:2px;">
+                        <div style="font-size:1.2rem; font-weight:800; color:#1E293B;">{icon} {pic}</div>
+                        <div style="font-size:0.85rem; color:#64748B; margin:6px 0;">
+                            📋 {total} | ✅ {done} | 🔴 {delayed}
+                        </div>
+                        <div style="font-size:1.1rem; font-weight:700; color:{border};">{completion_rate:.0f}%</div>
+                        <div style="font-size:0.7rem; color:#94A3B8;">Completion Rate</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                else:
+                    st.markdown(f"""
+                    <div style="background:#F8FAFC; padding:14px; border-radius:12px; text-align:center; border:1px solid #E2E8F0;">
+                        <div style="font-size:1rem; color:#94A3B8;">⚪ {pic}</div>
+                        <div style="font-size:0.8rem; color:#CBD5E1;">No tasks</div>
+                    </div>
+                    """, unsafe_allow_html=True)
     
     st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
     
