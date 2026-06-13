@@ -10,238 +10,49 @@ import numpy as np
 # 🎨 PROFESSIONAL LIGHT THEME CSS
 # ─────────────────────────────────────────────────────────────
 def inject_professional_css():
-    """Inject professional, modern CSS styling"""
     st.markdown("""
     <style>
-        /* MAIN LAYOUT */
-        .stApp {
-            background: linear-gradient(135deg, #F8FAFC 0%, #EFF6FF 100%);
-            color: #1E293B;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
+        .stApp { background: linear-gradient(135deg, #F8FAFC 0%, #EFF6FF 100%); color: #1E293B; font-family: 'Segoe UI', sans-serif; }
         
-        /* HEADER STYLING */
-        .dashboard-header {
-            background: linear-gradient(135deg, #0369A1 0%, #0284C7 100%);
-            padding: 30px 25px;
-            border-radius: 16px;
-            margin-bottom: 25px;
-            box-shadow: 0 4px 20px rgba(3, 105, 161, 0.15);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
+        /* HEADER - lebih kecil */
+        .dashboard-header { background: linear-gradient(135deg, #0369A1 0%, #0284C7 100%); padding: 12px 20px; border-radius: 10px; margin-bottom: 12px; }
+        .dashboard-header h1 { font-size: 1.3rem; margin: 0; color: #FFF; }
+        .dashboard-header p { font-size: 0.7rem; margin: 3px 0 0 0; color: #E0F2FE; }
         
-        .dashboard-header h1 {
-            color: #FFFFFF;
-            margin: 0;
-            font-size: 2.2rem;
-            font-weight: 800;
-            letter-spacing: -0.5px;
-        }
-        
-        .dashboard-header p {
-            color: #E0F2FE;
-            margin: 8px 0 0 0;
-            font-size: 0.95rem;
-            font-weight: 500;
-        }
-        
-        /* KPI CARDS */
-        .kpi-card {
-            background: linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%);
-            border: 2px solid #E2E8F0;
-            border-radius: 14px;
-            padding: 20px 16px;
-            text-align: center;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 12px rgba(15, 23, 42, 0.04);
-        }
-        
-        .kpi-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 24px rgba(3, 105, 161, 0.12);
-            border-color: #0369A1;
-        }
-        
-        .kpi-icon {
-            font-size: 2rem;
-            margin-bottom: 8px;
-        }
-        
-        .kpi-title {
-            font-size: 0.75rem;
-            color: #64748B;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.8px;
-            margin-bottom: 8px;
-        }
-        
-        .kpi-value {
-            font-size: 2.2rem;
-            font-weight: 800;
-            color: #0369A1;
-            margin: 5px 0;
-            line-height: 1.2;
-        }
-        
-        .kpi-subtitle {
-            font-size: 0.8rem;
-            color: #94A3B8;
-            font-weight: 500;
-        }
-        
-        /* STATUS INDICATORS */
+        /* KPI CARDS - lebih kecil */
+        .kpi-card { background: #FFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 8px 6px; text-align: center; }
+        .kpi-icon { font-size: 1.2rem; margin-bottom: 3px; }
+        .kpi-title { font-size: 0.6rem; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
+        .kpi-value { font-size: 1.3rem; font-weight: 800; color: #0369A1; margin: 2px 0; line-height: 1; }
+        .kpi-subtitle { font-size: 0.6rem; color: #94A3B8; }
         .status-done { color: #059669 !important; }
         .status-ongoing { color: #D97706 !important; }
         .status-pending { color: #7C3AED !important; }
         .status-delayed { color: #DC2626 !important; }
         
-        /* CHART CONTAINERS */
-        .chart-box {
-            background: #FFFFFF;
-            border: 1px solid #E2E8F0;
-            border-radius: 14px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 12px rgba(15, 23, 42, 0.04);
-        }
-        
-        .chart-box h3 {
-            color: #0F172A;
-            font-size: 0.95rem;
-            font-weight: 700;
-            margin: 0 0 16px 0;
-            letter-spacing: 0.5px;
-            border-bottom: 3px solid #0369A1;
-            padding-bottom: 12px;
-        }
+        /* CHART BOX - lebih kecil */
+        .chart-box { background: #FFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 8px; margin-bottom: 10px; }
+        .chart-box h3 { font-size: 0.7rem; margin: 0 0 6px 0; padding-bottom: 4px; border-bottom: 2px solid #0369A1; }
         
         /* SECTION DIVIDER */
-        .section-divider {
-            height: 2px;
-            background: linear-gradient(90deg, transparent, #CBD5E1, transparent);
-            margin: 24px 0;
-        }
+        .section-divider { height: 1px; background: #E2E8F0; margin: 10px 0; }
         
-        /* CONTROL PANEL */
-        .control-panel {
-            background: #FFFFFF;
-            border: 1px solid #E2E8F0;
-            border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 20px;
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
+        /* BUTTON */
+        .stButton > button { font-size: 0.7rem !important; padding: 5px 12px !important; border-radius: 6px !important; }
         
-        /* BUTTON STYLING */
-        .stButton > button {
-            background: linear-gradient(135deg, #0369A1 0%, #0284C7 100%) !important;
-            color: white !important;
-            border: none !important;
-            border-radius: 10px !important;
-            font-weight: 600 !important;
-            padding: 10px 20px !important;
-            transition: all 0.3s ease !important;
-            box-shadow: 0 2px 8px rgba(3, 105, 161, 0.2) !important;
-        }
+        /* METRIC */
+        .metric-item { padding: 6px 10px; border-radius: 6px; margin-bottom: 4px; }
+        .metric-label { font-size: 0.7rem; }
+        .metric-value { font-size: 0.8rem; }
+        .metric-bar { height: 4px; margin-top: 4px; }
         
-        .stButton > button:hover {
-            transform: translateY(-2px) !important;
-            box-shadow: 0 6px 16px rgba(3, 105, 161, 0.3) !important;
-        }
-        
-        /* METRIC ROW */
-        .metric-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: #F8FAFC;
-            padding: 12px 16px;
-            border-radius: 10px;
-            margin-bottom: 8px;
-            border-left: 4px solid #0369A1;
-        }
-        
-        .metric-label {
-            font-size: 0.9rem;
-            color: #64748B;
-            font-weight: 600;
-        }
-        
-        .metric-value {
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: #0369A1;
-        }
-        
-        .metric-bar {
-            height: 6px;
-            background: #E2E8F0;
-            border-radius: 3px;
-            overflow: hidden;
-            margin-top: 8px;
-        }
-        
-        .metric-bar-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #0369A1, #0284C7);
-            transition: width 0.5s ease;
-        }
-        
-        /* DATA TABLE */
-        .stDataFrame {
-            border-radius: 12px !important;
-        }
-        
-        [data-testid="stDataFrame"] {
-            background: #FFFFFF !important;
-        }
-        
-        thead th {
-            background: linear-gradient(135deg, #0369A1 0%, #0284C7 100%) !important;
-            color: #FFFFFF !important;
-            font-weight: 700 !important;
-            text-transform: uppercase !important;
-            font-size: 0.8rem !important;
-            letter-spacing: 0.5px !important;
-        }
-        
-        tbody tr {
-            background: #FFFFFF !important;
-            border-bottom: 1px solid #E2E8F0 !important;
-        }
-        
-        tbody td {
-            color: #475569 !important;
-            font-size: 0.9rem !important;
-        }
-        
-        /* ALERT BOXES */
-        .stAlert {
-            border-radius: 12px !important;
-            border: 1px solid #E2E8F0 !important;
-        }
+        /* TABLE */
+        thead th { font-size: 0.65rem !important; padding: 4px 8px !important; }
+        tbody td { font-size: 0.7rem !important; padding: 3px 8px !important; }
         
         /* SIDEBAR */
-        [data-testid="stSidebar"] {
-            background: linear-gradient(180deg, #0F172A 0%, #1E293B 100%);
-        }
-        
-        [data-testid="stSidebar"] * {
-            color: #E2E8F0 !important;
-        }
-        
-        /* RESPONSIVE */
-        @media (max-width: 768px) {
-            .dashboard-header h1 {
-                font-size: 1.5rem;
-            }
-            .kpi-value {
-                font-size: 1.8rem;
-            }
-        }
+        [data-testid="stSidebar"] { background: linear-gradient(180deg, #0F172A 0%, #1E293B 100%); }
+        [data-testid="stSidebar"] * { color: #E2E8F0 !important; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -270,7 +81,7 @@ def create_donut_chart(series, title, color_map):
         fig = go.Figure()
         fig.add_annotation(text="📭 No data", x=0.5, y=0.5, showarrow=False, 
                           font=dict(color='#94A3B8', size=14))
-        fig.update_layout(height=280, margin=dict(l=0, r=0, t=30, b=0),
+        fig.update_layout(height=200, margin=dict(l=0, r=0, t=30, b=0),
                          paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
         return fig
     
@@ -292,7 +103,7 @@ def create_donut_chart(series, title, color_map):
     fig.update_layout(
         showlegend=True,
         margin=dict(l=0, r=0, t=35, b=0),
-        height=280,
+        height=200,
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)',
         font=dict(color='#475569', size=11),
@@ -322,7 +133,7 @@ def create_stacked_bar(df, group_col, categories, colors, title=""):
     fig.update_layout(
         barmode='stack',
         margin=dict(l=0, r=0, t=40, b=0),
-        height=300,
+        height=2200,
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)',
         font=dict(color='#475569'),
@@ -358,7 +169,7 @@ def create_progress_chart(df, date_col, value_col, title):
     
     fig.update_layout(
         margin=dict(l=0, r=0, t=40, b=0),
-        height=280,
+        height=200,
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)',
         font=dict(color='#475569'),
@@ -630,7 +441,7 @@ def dashboard_page():
                    hovertemplate='<b>%{x}</b><br>Count: %{y}<extra></extra>')
         ])
         fig_issues.update_layout(
-            showlegend=False, margin=dict(l=0, r=0, t=10, b=0), height=200,
+            showlegend=False, margin=dict(l=0, r=0, t=10, b=0), height=150,
             paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
             font=dict(color='#475569'),
             xaxis=dict(showgrid=False, linecolor='#E2E8F0'),
@@ -654,7 +465,7 @@ def dashboard_page():
                              color_continuous_scale="RdYlGn_r", zmin=0, zmax=10,
                              labels=dict(x="Impact", y="Probability"))
         fig_risk.update_layout(
-            margin=dict(l=0, r=0, t=10, b=0), height=200,
+            margin=dict(l=0, r=0, t=10, b=0), height=150,
             paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
             font=dict(color='#475569'),
             coloraxis_showscale=False
