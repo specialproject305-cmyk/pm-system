@@ -163,15 +163,24 @@ def presentation_page():
         prj_list = ['ALL Project'] + sorted(master_df['project_name'].unique().tolist()) if not master_df.empty else ['ALL']
         sel_prj = st.selectbox("🏗️ Project", prj_list, key="p_prj", label_visibility="collapsed")
     with cols_filter[4]:
-        # ✨ FITUR EXPORT TO PDF/PPT (Memicu print dialox browser bawaan yang sudah di-styling bersih)
+        # ✨ Solusi Tombol Ekspor Menggunakan Native HTML & JavaScript Browser
         st.markdown("""
-            <script>
-            function convertToPdf() {
-                window.print();
-            }
-            </script>
+            <button onclick="window.print()" style="
+                width: 100%;
+                height: 38px;
+                background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 0.85rem;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            " onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+                📥 Export (PDF/PPT)
+            </button>
         """, unsafe_allow_html=True)
-        st.button("📥 Export Report (PDF/PPT)", on_click=None, help="Klik untuk simpan halaman ini menjadi PDF atau slide presentasi", use_container_width=True)
         
     # Apply Filters
     if sel_pm != 'ALL PM': sites_df = sites_df[sites_df['pm'] == sel_pm]
