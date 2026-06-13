@@ -86,7 +86,7 @@ def project_tracker_page():
                 elif val == 'CRITICAL': return 'background-color: #f8d7da; font-weight: bold'
                 return ''
             
-            display_cols = ['site_id','site_name','site_category','site_type','vendor','pm','tower_height','site_coordinate','status','progress']
+            display_cols = ['site_id','site_name','site_category','site_type','vendor', 'spk_vendor', 'pm','tower_height','site_coordinate','status','progress']
             display_df = filtered_df[[c for c in display_cols if c in filtered_df.columns]]
             st.dataframe(display_df.style.map(color_status, subset=['status']), use_container_width=True, hide_index=True)
 
@@ -124,9 +124,10 @@ def project_tracker_page():
                     with c2:
                         n_pm = st.text_input("PM", value=str(site.get('pm','')))
                         n_vend = st.text_input("Vendor", value=str(site.get('vendor','')))
+                        n_spk_vendor = st.text_input("SPK Vendor", value=site.get('spk_vendor',''))
                     
                     if st.form_submit_button("💾 Update", type="primary", use_container_width=True):
-                        update_row("projects", ridx, {'status': n_stat, 'progress': str(n_prog), 'pm': n_pm, 'vendor': n_vend})
+                        update_row("projects", ridx, {'status': n_stat, 'progress': str(n_prog), 'pm': n_pm, 'vendor': n_vendc, 'spk_vendor': n_spk_vendor,})
                         st.toast("✅ Diupdate!"); st.rerun()
 
                 # Delete section
@@ -173,17 +174,18 @@ def project_tracker_page():
             with c2:
                 s_coord = st.text_input("Koordinat", placeholder="-6.17,106.82")
                 vend = st.text_input("Vendor")
+                spk_vendor = st.text_input("SPK Vendor", placeholder="SPK-001/VII/2025")
                 pm_val = st.text_input("PM")
             if st.form_submit_button("💾 Simpan", type="primary", use_container_width=True):
                 if s_id and s_name and m_pid != "-":
-                    insert_row("projects", {'id': generate_id(), 'master_project_id': m_pid, 'site_id': s_id, 'site_name': s_name, 'site_category': s_cat, 'site_coordinate': s_coord, 'vendor': vend, 'pm': pm_val, 'status': 'ON_TRACK', 'progress': '0', 'start_date': today_str(), 'end_date': today_str()})
+                    insert_row("projects", {'id': generate_id(), 'master_project_id': m_pid, 'site_id': s_id, 'site_name': s_name, 'site_category': s_cat, 'site_coordinate': s_coord, 'vendor': vend, 'pm': pm_val, 'status': 'ON_TRACK', 'progress': '0', 'start_date': today_str(), 'end_date': today_str(),'spk_vendor': spk_vendor})
                     st.toast("✅ Site ditambahkan!"); st.rerun()
                 else: st.error("❌ Lengkapi!")
 
     # ═══════════════ TAB 4: IMPORT CSV ═══════════════
     with tab4:
         st.subheader("📥 Import CSV")
-        template = pd.DataFrame({'master_project_id':['ID_PROYEK'],'site_id':['SITE-001'],'site_name':['Tower A'],'site_category':['New Site'],'vendor':['PT. X'],'pm':['Budi'],'site_coordinate':['-6.17,106.82'],'start_date':[today_str()],'end_date':[today_str()]})
+        template = pd.DataFrame({'master_project_id':['ID_PROYEK'],'site_id':['SITE-001'],'site_name':['Tower A'],'site_category':['New Site'],'vendor':['PT. X'], 'spk_vendor': ['SPK-001/VII/2025'], 'pm':['Budi'],'site_coordinate':['-6.17,106.82'],'start_date':[today_str()],'end_date':[today_str()]})
         st.download_button("📥 Template", template.to_csv(index=False), "template.csv", "text/csv")
         up = st.file_uploader("Upload CSV", type=['csv'])
         if up:
@@ -192,7 +194,7 @@ def project_tracker_page():
                 count = 0
                 for _, r in idf.iterrows():
                     try:
-                        insert_row("projects", {'id': generate_id(), 'master_project_id': str(r.get('master_project_id','')), 'site_id': str(r.get('site_id','')), 'site_name': str(r.get('site_name','')), 'site_category': str(r.get('site_category','New Site')), 'vendor': str(r.get('vendor','')), 'pm': str(r.get('pm','')), 'site_coordinate': str(r.get('site_coordinate','')), 'start_date': str(r.get('start_date',today_str())), 'end_date': str(r.get('end_date',today_str())), 'status': 'ON_TRACK', 'progress': '0'})
+                        insert_row("projects", {'id': generate_id(), 'master_project_id': str(r.get('master_project_id','')), 'site_id': str(r.get('site_id','')), 'site_name': str(r.get('site_name','')), 'site_category': str(r.get('site_category','New Site')), 'vendor': str(r.get('vendor','')),'spk_vendor': str(r.get('spk_vendor', '')), 'pm': str(r.get('pm','')), 'site_coordinate': str(r.get('site_coordinate','')), 'start_date': str(r.get('start_date',today_str())), 'end_date': str(r.get('end_date',today_str())), 'status': 'ON_TRACK', 'progress': '0'})
                         count += 1
                     except: pass
                 st.toast(f"✅ {count} site diimport!"); st.rerun()
