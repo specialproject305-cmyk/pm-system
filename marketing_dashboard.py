@@ -4,91 +4,297 @@ import plotly.express as px
 from datetime import datetime
 from supabase_db import read_sheet
 
+def inject_marketing_css():
+    """Menyuntikkan gaya visual profesional bertema clean-light korporat"""
+    st.markdown("""
+    <style>
+        /* === BASE BACKGROUND & FONT === */
+        .stApp { 
+            background: linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%);
+            color: #1E293B;
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+        }
+        
+        /* === PREMIUM HERO HEADER === */
+        .marketing-header {
+            background: linear-gradient(135deg, #0F172A 0%, #1E3A8A 100%);
+            padding: 24px 30px;
+            border-radius: 16px;
+            margin-bottom: 25px;
+            color: white;
+            box-shadow: 0 10px 25px rgba(30, 58, 138, 0.15);
+            border-left: 6px solid #3B82F6;
+        }
+        .marketing-header h1 {
+            margin: 0;
+            font-size: 2rem;
+            font-weight: 800;
+            color: white !important;
+            letter-spacing: -0.5px;
+        }
+        .marketing-header p {
+            margin: 6px 0 0 0;
+            font-size: 0.95rem;
+            color: #93C5FD;
+        }
+        
+        /* === MODERN KPI CARD DESIGN === */
+        .kpi-box {
+            background: #FFFFFF;
+            padding: 20px 15px;
+            border-radius: 14px;
+            border: 1px solid #E2E8F0;
+            text-align: center;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .kpi-box:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.1);
+            border-color: #3B82F6;
+        }
+        .kpi-val {
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: #0F172A;
+            line-height: 1.1;
+        }
+        .kpi-lbl {
+            font-size: 0.75rem;
+            color: #64748B;
+            text-transform: uppercase;
+            font-weight: 700;
+            margin-top: 8px;
+            letter-spacing: 0.8px;
+        }
+        
+        /* === KPI ACCENT BORDERS === */
+        .kpi-total { border-top: 4px solid #475569; }
+        .kpi-rfs { border-top: 4px solid #10B981; }
+        .kpi-erected { border-top: 4px solid #8B5CF6; }
+        .kpi-progress { border-top: 4px solid #F59E0B; }
+        .kpi-tenant { border-top: 4px solid #3B82F6; }
+
+        /* === CHART CARD WRAPPER === */
+        .chart-card {
+            background: #FFFFFF;
+            padding: 20px;
+            border-radius: 14px;
+            border: 1px solid #E2E8F0;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
+def style_plotly_chart(fig):
+    """Fungsi utilitas untuk membersihkan layout chart dari gridline kaku"""
+    fig.update_layout(
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        font=dict(family="Inter, Segoe UI, sans-serif", color="#334155"),
+        margin=dict(t=30, b=10, l=10, r=10),
+        legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5)
+    )
+    fig.update_xaxes(showgrid=False, color="#64748B")
+    fig.update_yaxes(showgrid=True, gridcolor="#F1F5F9", color="#64748B")
+    return fig
+
 def marketing_dashboard_page():
-    st.title("📢 Marketing Dashboard")
+    inject_marketing_css()
     
+    # ═══════════════════════════════════════
+    # DATA LOADING
+    # ═══════════════════════════════════════
     df = read_sheet("marketing_sites")
     
     if df.empty:
         st.info("📋 Belum ada data marketing site.")
         return
-    
-    # KPI
-    total = len(df)
-    rfs = len(df[df['milestone'] == 'RFS']) if 'milestone' in df.columns else 0
-    erected = len(df[df['milestone'] == 'Erected']) if 'milestone' in df.columns else 0
-    on_progress = len(df[df['milestone'].isin(['On Progress', 'Pending', 'Negosiasi Lahan', 'RFI'])]) if 'milestone' in df.columns else 0
-    tenant_count = df['tenant_index'].nunique() if 'tenant_index' in df.columns else 0
-    
-    col1, col2, col3, col4, col5 = st.columns(5)
-    col1.metric("📢 Total Sites", total)
-    col2.metric("✅ RFS", rfs)
-    col3.metric("🏗️ Erected", erected)
-    col4.metric("🔄 On Progress", on_progress)
-    col5.metric("🏢 Tenants", tenant_count)
-    
-    st.divider()
-    
-    # Charts Row 1
-    col_a, col_b = st.columns(2)
-    
-    with col_a:
-        st.subheader("📊 By Tenant")
-        if 'tenant_index' in df.columns:
-            tenant_counts = df['tenant_index'].value_counts()
-            fig1 = px.bar(x=tenant_counts.index, y=tenant_counts.values, color=tenant_counts.values, color_continuous_scale='Blues')
-            fig1.update_layout(height=300)
-            st.plotly_chart(fig1, use_container_width=True)
-    
-    with col_b:
-        st.subheader("📌 By Milestone")
-        if 'milestone' in df.columns:
-            ms_counts = df['milestone'].value_counts()
-            fig2 = px.pie(values=ms_counts.values, names=ms_counts.index, hole=0.5)
-            fig2.update_layout(height=300)
-            st.plotly_chart(fig2, use_container_width=True)
-    
-    st.divider()
-    
-    # Charts Row 2
-    col_c, col_d = st.columns(2)
-    
-    with col_c:
-        st.subheader("📋 By SPK Status")
-        if 'spk_status' in df.columns:
-            spk_counts = df['spk_status'].value_counts()
-            fig3 = px.pie(values=spk_counts.values, names=spk_counts.index, hole=0.5,
-                         color_discrete_map={'CLOSE':'#10B981','OPEN':'#3B82F6','DROP':'#EF4444'})
-            fig3.update_layout(height=300)
-            st.plotly_chart(fig3, use_container_width=True)
-    
-    with col_d:
-        st.subheader("🏗️ By Work Type")
-        if 'work_type' in df.columns:
-            wt_counts = df['work_type'].value_counts()
-            fig4 = px.pie(values=wt_counts.values, names=wt_counts.index, hole=0.5)
-            fig4.update_layout(height=300)
-            st.plotly_chart(fig4, use_container_width=True)
-    
-    st.divider()
-    
-    # Table
-    st.subheader("📋 Data Marketing Sites")
-    
-    col_f1, col_f2 = st.columns(2)
-    with col_f1:
-        sel_tenant = st.selectbox("🏢 Tenant:", ['ALL'] + sorted(df['tenant_index'].dropna().unique().tolist()) if 'tenant_index' in df.columns else ['ALL'])
-    with col_f2:
-        sel_status = st.selectbox("📋 SPK Status:", ['ALL'] + sorted(df['spk_status'].dropna().unique().tolist()) if 'spk_status' in df.columns else ['ALL'])
-    
+        
+    # ═══════════════════════════════════════
+    # GLOBAL SIDEBAR FILTERS (UPGRADED)
+    # ═══════════════════════════════════════
+    with st.sidebar:
+        st.markdown("<h3 style='margin-bottom:0;'>🎯 Filter Kontrol</h3>", unsafe_allow_html=True)
+        st.caption("Filter ini mengontrol seluruh matriks & grafik")
+        st.markdown("---")
+        
+        sel_tenant = st.selectbox(
+            "🏢 Pilih Tenant:", 
+            ['ALL'] + sorted(df['tenant_index'].dropna().unique().tolist()) if 'tenant_index' in df.columns else ['ALL']
+        )
+        
+        sel_status = st.selectbox(
+            "📋 Pilih SPK Status:", 
+            ['ALL'] + sorted(df['spk_status'].dropna().unique().tolist()) if 'spk_status' in df.columns else ['ALL']
+        )
+        
+        st.markdown("---")
+        # Pindahkan tombol download ke bawah sidebar agar area kerja utama bersih
+        filtered_download = df.copy()
+        if sel_tenant != 'ALL': filtered_download = filtered_download[filtered_download['tenant_index'] == sel_tenant]
+        if sel_status != 'ALL': filtered_download = filtered_download[filtered_download['spk_status'] == sel_status]
+        
+        st.download_button(
+            label="📥 Export Report (CSV)", 
+            data=filtered_download.to_csv(index=False), 
+            file_name=f"marketing_report_{datetime.now().strftime('%Y%m%d')}.csv", 
+            mime="text/csv",
+            use_container_width=True
+        )
+
+    # Aplikasikan filter global ke seluruh dataframe utama dashboard
     filtered = df.copy()
     if sel_tenant != 'ALL': filtered = filtered[filtered['tenant_index'] == sel_tenant]
     if sel_status != 'ALL': filtered = filtered[filtered['spk_status'] == sel_status]
+
+    # ═══════════════════════════════════════
+    # HEADER BANNER
+    # ═══════════════════════════════════════
+    st.markdown(f"""
+    <div class="marketing-header">
+        <h1>📢 Marketing Dashboard Intel</h1>
+        <p>Real-time monitoring analitik site, akuisisi tenant, dan pipeline status SPK • {datetime.now().strftime('%d %B %Y')}</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # ═══════════════════════════════════════
+    # METRICS ROW (CUSTOM CARD STYLING)
+    # ═══════════════════════════════════════
+    total = len(filtered)
+    rfs = len(filtered[filtered['milestone'] == 'RFS']) if 'milestone' in filtered.columns else 0
+    erected = len(filtered[filtered['milestone'] == 'Erected']) if 'milestone' in filtered.columns else 0
+    on_progress = len(filtered[filtered['milestone'].isin(['On Progress', 'Pending', 'Negosiasi Lahan', 'RFI'])]) if 'milestone' in filtered.columns else 0
+    tenant_count = filtered['tenant_index'].nunique() if 'tenant_index' in filtered.columns else 0
+    
+    col1, col2, col3, col4, col5 = st.columns(5)
+    
+    with col1:
+        st.markdown(f'<div class="kpi-box kpi-total"><div class="kpi-val">{total}</div><div class="kpi-lbl">📢 Total Sites</div></div>', unsafe_allow_html=True)
+    with col2:
+        st.markdown(f'<div class="kpi-box kpi-rfs"><div class="kpi-val">{rfs}</div><div class="kpi-lbl">✅ Ready For Service</div></div>', unsafe_allow_html=True)
+    with col3:
+        st.markdown(f'<div class="kpi-box kpi-erected"><div class="kpi-val">{erected}</div><div class="kpi-lbl">🏗️ Tower Erected</div></div>', unsafe_allow_html=True)
+    with col4:
+        st.markdown(f'<div class="kpi-box kpi-progress"><div class="kpi-val">{on_progress}</div><div class="kpi-lbl">🔄 In Pipeline</div></div>', unsafe_allow_html=True)
+    with col5:
+        st.markdown(f'<div class="kpi-box kpi-tenant"><div class="kpi-val">{tenant_count}</div><div class="kpi-lbl">🏢 Active Tenants</div></div>', unsafe_allow_html=True)
+        
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # ═══════════════════════════════════════
+    # CHARTS ROW 1
+    # ═══════════════════════════════════════
+    col_a, col_b = st.columns(2)
+    
+    with col_a:
+        st.markdown('<div class="chart-card">', unsafe_allow_html=True)
+        st.subheader("📊 Site Distribution by Tenant")
+        if 'tenant_index' in filtered.columns and not filtered.empty:
+            tenant_counts = filtered['tenant_index'].value_counts()
+            fig1 = px.bar(
+                x=tenant_counts.index, 
+                y=tenant_counts.values, 
+                color=tenant_counts.values, 
+                color_continuous_scale='Blugrn',
+                labels={'x': 'Tenant', 'y': 'Jumlah Site'}
+            )
+            fig1.update_layout(height=300, coloraxis_showscale=False)
+            st.plotly_chart(style_plotly_chart(fig1), use_container_width=True)
+        else:
+            st.caption("Tidak ada data untuk filter ini.")
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    with col_b:
+        st.markdown('<div class="chart-card">', unsafe_allow_html=True)
+        st.subheader("📌 Project Milestone Breakdown")
+        if 'milestone' in filtered.columns and not filtered.empty:
+            ms_counts = filtered['milestone'].value_counts()
+            fig2 = px.pie(
+                values=ms_counts.values, 
+                names=ms_counts.index, 
+                hole=0.5,
+                color_discrete_sequence=px.colors.qualitative.Safe
+            )
+            fig2.update_traces(textposition='inside', textinfo='percent+label')
+            fig2.update_layout(height=300)
+            st.plotly_chart(style_plotly_chart(fig2), use_container_width=True)
+        else:
+            st.caption("Tidak ada data untuk filter ini.")
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    # ═══════════════════════════════════════
+    # CHARTS ROW 2
+    # ═══════════════════════════════════════
+    col_c, col_d = st.columns(2)
+    
+    with col_c:
+        st.markdown('<div class="chart-card">', unsafe_allow_html=True)
+        st.subheader("💼 SPK Document Status")
+        if 'spk_status' in filtered.columns and not filtered.empty:
+            spk_counts = filtered['spk_status'].value_counts()
+            fig3 = px.pie(
+                values=spk_counts.values, 
+                names=spk_counts.index, 
+                hole=0.5,
+                color=spk_counts.index,
+                color_discrete_map={'CLOSE':'#10B981','OPEN':'#3B82F6','DROP':'#EF4444'}
+            )
+            fig3.update_traces(textposition='inside', textinfo='percent+label')
+            fig3.update_layout(height=300)
+            st.plotly_chart(style_plotly_chart(fig3), use_container_width=True)
+        else:
+            st.caption("Tidak ada data untuk filter ini.")
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    with col_d:
+        st.markdown('<div class="chart-card">', unsafe_allow_html=True)
+        st.subheader("🏗️ Job Share by Work Type")
+        if 'work_type' in filtered.columns and not filtered.empty:
+            wt_counts = filtered['work_type'].value_counts()
+            fig4 = px.pie(
+                values=wt_counts.values, 
+                names=wt_counts.index, 
+                hole=0.5,
+                color_discrete_sequence=px.colors.qualitative.Pastel
+            )
+            fig4.update_traces(textposition='inside', textinfo='percent+label')
+            fig4.update_layout(height=300)
+            st.plotly_chart(style_plotly_chart(fig4), use_container_width=True)
+        else:
+            st.caption("Tidak ada data untuk filter ini.")
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    # ═══════════════════════════════════════
+    # INTERACTIVE DATA TABLE
+    # ═══════════════════════════════════════
+    st.markdown('<div class="chart-card">', unsafe_allow_html=True)
+    st.subheader("📋 Granular Marketing Sites Data Explorer")
+    st.caption("Gunakan fitur sorting pada header kolom atau fitur pencarian bebas di sisi kanan tabel")
     
     display_cols = ['spk_number', 'spk_date', 'tenant_index', 'spk_status', 'site_id_tenant', 'site_name_tenant', 'work_type', 'tower_height', 'milestone']
-    st.dataframe(filtered[[c for c in display_cols if c in filtered.columns]], use_container_width=True, hide_index=True)
+    valid_cols = [c for c in display_cols if c in filtered.columns]
     
-    st.download_button("📥 Download CSV", filtered.to_csv(index=False), f"marketing_report_{datetime.now().strftime('%Y%m%d')}.csv", "text/csv")
+    # Menggunakan data_editor dengan konfigurasi disabled menjadikannya tabel premium yang interaktif
+    st.data_editor(
+        filtered[valid_cols],
+        use_container_width=True,
+        hide_index=True,
+        disabled=True,  # Mengunci tabel agar read-only namun kaya fitur sorting/searching
+        column_config={
+            "spk_number": st.column_config.TextColumn("Nomor SPK"),
+            "spk_date": st.column_config.DateColumn("Tanggal SPK", format="DD/MM/YYYY"),
+            "tenant_index": st.column_config.TextColumn("Tenant ID"),
+            "spk_status": st.column_config.TextColumn("Status"),
+            "site_id_tenant": st.column_config.TextColumn("ID Site Tenant"),
+            "site_name_tenant": st.column_config.TextColumn("Nama Site"),
+            "work_type": st.column_config.TextColumn("Tipe Kerja"),
+            "tower_height": st.column_config.NumberColumn("Tinggi (m)", format="%d m"),
+            "milestone": st.column_config.TextColumn("Milestone")
+        }
+    )
+    st.markdown('</div>', unsafe_allow_html=True)
 
 if __name__ == "__main__":
     marketing_dashboard_page()
