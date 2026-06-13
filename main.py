@@ -96,7 +96,8 @@ with st.sidebar:
     # Menu Navigasi berdasarkan Role
     menu_options = []
     if role in ['admin', 'pm', 'pmo']:
-        menu_options = ["📊 Dashboard", "📁 Site Tracker", "🧱 Milestones", "📋 Kanban Board", "📋 Daily Tasks", "📦 Inventory", "🤖 AI Insights", "🔍 RCA Analysis", "💬 Chat & Notif", "📱 Field App", "📽️ Presentation", "📊 Export Report", "📢 Marketing Sites", "📢 Marketing Dashboard","🔔 Notifications"]
+        menu_options = ["📊 Dashboard", "📁 Site Tracker", "🧱 Milestones", "📋 Kanban Board", "📋 Daily Tasks", "📦 Inventory", "🤖 AI Insights", "🔍 RCA Analysis", "💬 Chat & Notif", "📱 Field App", "📽️ Presentation", "📊 Export Report", "📢 Marketing Sites", "📢 Marketing Dashboard"]
+        menu_options.append("🔔 Notifications")
     elif role == 'planning':
         menu_options = ["📊 Dashboard", "📁 Site Tracker", "🧱 Milestones", "📊 Export Report"]
         menu_options.append("🔔 Notifications")
