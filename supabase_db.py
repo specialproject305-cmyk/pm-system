@@ -257,3 +257,40 @@ def clear_cache():
     """Clear read_sheet cache (untuk debugging)."""
     read_sheet.clear()
     st.toast("🔄 Cache cleared", icon="♻️")
+
+import requests
+
+def send_telegram_notification(message):
+    """Kirim notifikasi ke Telegram Group"""
+    try:
+        settings = read_sheet("settings")
+        if not settings.empty:
+            bot_token = settings.iloc[0].get('telegram_bot_token', '')
+            chat_id = settings.iloc[0].get('telegram_chat_id', '')
+            if bot_token and chat_id:
+                url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+                requests.post(url, data={
+                    "chat_id": chat_id,
+                    "text": message,
+                    "parse_mode": "Markdown"
+                }, timeout=5)
+    except:
+        pass
+
+def notify_update(pic, action, task_name, site_name):
+    """Simpan notifikasi & kirim ke Telegram"""
+    # Simpan ke database
+    insert_row("push_notifications", {
+        'id': generate_id(),
+        'pic': pic,
+        'action': action,
+        'task_name': task_name,
+        'site_name': site_name,
+        'message': f"{pic} {action} task '{task_name}' di {site_name}",
+        'created_at': now_str()
+    })
+    
+    # Kirim ke Telegram
+    emoji = {'DONE': '✅', 'ONGOING': '🔄', 'DELAYED': '⚠️', 'PENDING': '📌'}
+    em = emoji.get(action, '📋')
+    send_telegram_notification(f"{em} *{pic}* {action} task:\n📍 {task_name}\n🏢 {site_name}\n🕐 {now_str()}")
