@@ -651,43 +651,43 @@ def field_app_page():
     
     # ===== TAB 3: KANBAN BOARD =====
     with tab3:
+        import inspect  # Taruh di sini atau di baris paling atas file Anda
         st.subheader("📇 Kanban Board View")
         
         kanban_statuses = ['PENDING', 'ONGOING', 'DONE', 'DELAYED']
-        kanban_colors = {
-            'PENDING': '#9CA3AF',
-            'ONGOING': '#FF8C00',
-            'DONE': '#10B981',
-            'DELAYED': '#DC2626'
-        }
-        
-        kanban_col1, kanban_col2, kanban_col3, kanban_col4 = st.columns(4)
-        kanban_cols = [kanban_col1, kanban_col2, kanban_col3, kanban_col4]
+        kanban_cols = st.columns(4)
         
         for col_idx, status in enumerate(kanban_statuses):
             with kanban_cols[col_idx]:
                 subset = ms_df[ms_df['status'] == status]
                 count = len(subset)
                 
-                st.markdown(f"""
+                # Gunakan inspect.cleandoc agar spasi kiri bawaan editor tidak ikut masuk ke string HTML
+                header_html = inspect.cleandoc(f"""
                 <div class="kanban-column">
-                    <div class="kanban-column-header">
-                        <span>{status}</span>
-                        <span class="kanban-count">{count}</span>
+                    <div class="kanban-column-header" style="margin-bottom: 12px;">
+                        <span style="font-weight: 700; color: #1F2937;">{status}</span>
+                        <span class="kanban-count" style="background: #3B82F6; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.8rem; margin-left: 5px; font-weight: bold;">{count}</span>
                     </div>
-                """, unsafe_allow_html=True)
+                    <div class="kanban-cards-container">
+                """)
                 
+                cards_html = ""
                 for _, task in subset.iterrows():
-                    site_code = site_map.get(task['project_id'], '-')
-                    st.markdown(f"""
-                    <div class="kanban-card" style="border-left-color: {kanban_colors[status]};">
-                        <strong>{task['name']}</strong><br>
-                        <small>📍 {site_code}</small><br>
-                        <small>Progress: {task['progress']}%</small>
+                    cards_html += inspect.cleandoc(f"""
+                    <div class="kanban-card" style="background: #FFFFFF; padding: 12px; border-radius: 8px; border-left: 4px solid #3B82F6; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-top: 1px solid #E5E7EB; border-right: 1px solid #E5E7EB; border-bottom: 1px solid #E5E7EB;">
+                        <div style="font-weight: 600; color: #1F2937; font-size: 0.9rem;">{task["name"]}</div>
+                        <div style="font-size: 0.8rem; color: #6B7280; margin-top: 4px;">Prog: {task["progress"]}%</div>
                     </div>
-                    """, unsafe_allow_html=True)
+                    """) + "\n"
                 
-                st.markdown("</div>", unsafe_allow_html=True)
+                footer_html = "</div>\n</div>"
+                
+                # Gabungkan seluruh string yang sudah bersih dari spasi liar di awal baris
+                kolom_html = header_html + "\n" + cards_html + footer_html
+                
+                # Render total html ke streamlit
+                st.markdown(kolom_html, unsafe_allow_html=True)
     
     # ===== TAB 4: AI FORECAST =====
     with tab4:
