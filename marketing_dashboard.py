@@ -38,38 +38,45 @@ def inject_marketing_css():
             color: #93C5FD;
         }
         
-        /* === MODERN KPI CARD DESIGN === */
+        /* === MODERN KPI CARD DESIGN (RESPONSIVE GRID) === */
+        .kpi-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
         .kpi-box {
             background: #FFFFFF;
-            padding: 20px 15px;
-            border-radius: 14px;
+            padding: 15px 10px;
+            border-radius: 12px;
             border: 1px solid #E2E8F0;
             text-align: center;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
         }
         .kpi-box:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.1);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
             border-color: #3B82F6;
         }
         .kpi-val {
-            font-size: 2.2rem;
+            font-size: 1.8rem;
             font-weight: 800;
             color: #0F172A;
             line-height: 1.1;
         }
         .kpi-lbl {
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             color: #64748B;
             text-transform: uppercase;
             font-weight: 700;
-            margin-top: 8px;
-            letter-spacing: 0.8px;
+            margin-top: 6px;
+            letter-spacing: 0.5px;
         }
         
         /* === KPI ACCENT BORDERS === */
         .kpi-total { border-top: 4px solid #475569; }
+        .kpi-spk { border-top: 4px solid #0EA5E9; }
         .kpi-rfs { border-top: 4px solid #10B981; }
         .kpi-erected { border-top: 4px solid #8B5CF6; }
         .kpi-progress { border-top: 4px solid #F59E0B; }
@@ -88,7 +95,6 @@ def inject_marketing_css():
     """, unsafe_allow_html=True)
 
 def style_plotly_chart(fig):
-    """Fungsi utilitas untuk membersihkan layout chart dari gridline kaku"""
     fig.update_layout(
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)',
@@ -104,13 +110,24 @@ def marketing_dashboard_page():
     inject_marketing_css()
     
     # ═══════════════════════════════════════
-    # DATA LOADING
+    # DATA LOADING & INITIAL PARSING
     # ═══════════════════════════════════════
     df = read_sheet("marketing_sites")
     
     if df.empty:
         st.info("📋 Belum ada data marketing site.")
         return
+
+    # Buat salinan kolom tanggal bertipe datetime untuk kebutuhan filter tahun
+    if 'spk_date' in df.columns:
+        df['spk_date_parsed'] = pd.to_datetime(df['spk_date'], errors='coerce')
+        df['spk_year'] = df['spk_date_parsed'].dt.year.fillna('No Year').astype(str)
+    else:
+        df['spk_year'] = 'No Year'
+
+    # Master data untuk KPI Unik global (tidak terpengaruh filter)
+    absolute_total_spk = df['spk_number'].nunique() if 'spk_number' in df.columns else 0
+    absolute_total_tenant = df['tenant_index'].nunique() if 'tenant_index' in df.columns else 0
         
     # ═══════════════════════════════════════
     # GLOBAL SIDEBAR FILTERS (UPGRADED)
@@ -120,34 +137,48 @@ def marketing_dashboard_page():
         st.caption("Filter ini mengontrol seluruh matriks & grafik")
         st.markdown("---")
         
+        # 1. Filter Kontrol Baru: Year
+        years_list = sorted(df['spk_year'].unique().tolist())
+        if 'No Year' in years_list:
+            years_list.remove('No Year')
+            years_list.append('No Year')
+        sel_year = st.selectbox("📅 Pilih Tahun SPK:", ['ALL'] + years_list)
+        
+        # 2. Filter Kontrol: Tenant
         sel_tenant = st.selectbox(
             "🏢 Pilih Tenant:", 
             ['ALL'] + sorted(df['tenant_index'].dropna().unique().tolist()) if 'tenant_index' in df.columns else ['ALL']
         )
         
+        # 3. Filter Kontrol: SPK Status
         sel_status = st.selectbox(
             "📋 Pilih SPK Status:", 
             ['ALL'] + sorted(df['spk_status'].dropna().unique().tolist()) if 'spk_status' in df.columns else ['ALL']
         )
         
+        # 4. Filter Kontrol Baru: SPK Number (Free Text Search)
+        sel_spk_num = st.text_input("🔍 Cari Nomor SPK:", value="", placeholder="Ketik nomor SPK...")
+        
         st.markdown("---")
-        # Pindahkan tombol download ke bawah sidebar agar area kerja utama bersih
-        filtered_download = df.copy()
-        if sel_tenant != 'ALL': filtered_download = filtered_download[filtered_download['tenant_index'] == sel_tenant]
-        if sel_status != 'ALL': filtered_download = filtered_download[filtered_download['spk_status'] == sel_status]
+        
+        # Penanganan Filter Data Global
+        filtered = df.copy()
+        if sel_year != 'ALL': 
+            filtered = filtered[filtered['spk_year'] == sel_year]
+        if sel_tenant != 'ALL': 
+            filtered = filtered[filtered['tenant_index'] == sel_tenant]
+        if sel_status != 'ALL': 
+            filtered = filtered[filtered['spk_status'] == sel_status]
+        if sel_spk_num.strip() != "": 
+            filtered = filtered[filtered['spk_number'].astype(str).str.contains(sel_spk_num, case=False, na=False)]
         
         st.download_button(
             label="📥 Export Report (CSV)", 
-            data=filtered_download.to_csv(index=False), 
+            data=filtered.to_csv(index=False), 
             file_name=f"marketing_report_{datetime.now().strftime('%Y%m%d')}.csv", 
             mime="text/csv",
             use_container_width=True
         )
-
-    # Aplikasikan filter global ke seluruh dataframe utama dashboard
-    filtered = df.copy()
-    if sel_tenant != 'ALL': filtered = filtered[filtered['tenant_index'] == sel_tenant]
-    if sel_status != 'ALL': filtered = filtered[filtered['spk_status'] == sel_status]
 
     # ═══════════════════════════════════════
     # HEADER BANNER
@@ -160,28 +191,24 @@ def marketing_dashboard_page():
     """, unsafe_allow_html=True)
     
     # ═══════════════════════════════════════
-    # METRICS ROW (CUSTOM CARD STYLING)
+    # METRICS ROW (6 METRICS - RESPONSIVE CONTAINER)
     # ═══════════════════════════════════════
-    total = len(filtered)
-    rfs = len(filtered[filtered['milestone'] == 'RFS']) if 'milestone' in filtered.columns else 0
-    erected = len(filtered[filtered['milestone'] == 'Erected']) if 'milestone' in filtered.columns else 0
+    total_sites_filtered = len(filtered)
+    rfs_count = len(filtered[filtered['milestone'] == 'RFS']) if 'milestone' in filtered.columns else 0
+    erected_count = len(filtered[filtered['milestone'] == 'Erected']) if 'milestone' in filtered.columns else 0
     on_progress = len(filtered[filtered['milestone'].isin(['On Progress', 'Pending', 'Negosiasi Lahan', 'RFI'])]) if 'milestone' in filtered.columns else 0
-    tenant_count = filtered['tenant_index'].nunique() if 'tenant_index' in filtered.columns else 0
     
-    col1, col2, col3, col4, col5 = st.columns(5)
-    
-    with col1:
-        st.markdown(f'<div class="kpi-box kpi-total"><div class="kpi-val">{total}</div><div class="kpi-lbl">📢 Total Sites</div></div>', unsafe_allow_html=True)
-    with col2:
-        st.markdown(f'<div class="kpi-box kpi-rfs"><div class="kpi-val">{rfs}</div><div class="kpi-lbl">✅ Ready For Service</div></div>', unsafe_allow_html=True)
-    with col3:
-        st.markdown(f'<div class="kpi-box kpi-erected"><div class="kpi-val">{erected}</div><div class="kpi-lbl">🏗️ Tower Erected</div></div>', unsafe_allow_html=True)
-    with col4:
-        st.markdown(f'<div class="kpi-box kpi-progress"><div class="kpi-val">{on_progress}</div><div class="kpi-lbl">🔄 In Pipeline</div></div>', unsafe_allow_html=True)
-    with col5:
-        st.markdown(f'<div class="kpi-box kpi-tenant"><div class="kpi-val">{tenant_count}</div><div class="kpi-lbl">🏢 Active Tenants</div></div>', unsafe_allow_html=True)
-        
-    st.markdown("<br>", unsafe_allow_html=True)
+    # Render menggunakan kontainer CSS Grid agar muat 6 kolom dengan seimbang dan tidak sempit
+    st.markdown(f"""
+    <div class="kpi-container">
+        <div class="kpi-box kpi-total"><div class="kpi-val">{total_sites_filtered}</div><div class="kpi-lbl">📢 Total Sites</div></div>
+        <div class="kpi-box kpi-spk"><div class="kpi-val">{absolute_total_spk}</div><div class="kpi-lbl">📄 Total SPK</div></div>
+        <div class="kpi-box kpi-tenant"><div class="kpi-val">{absolute_total_tenant}</div><div class="kpi-lbl">🏢 Total Tenant</div></div>
+        <div class="kpi-box kpi-rfs"><div class="kpi-val">{rfs_count}</div><div class="kpi-lbl">✅ RFS Done</div></div>
+        <div class="kpi-box kpi-erected"><div class="kpi-val">{erected_count}</div><div class="kpi-lbl">🏗️ Erected</div></div>
+        <div class="kpi-box kpi-progress"><div class="kpi-val">{on_progress}</div><div class="kpi-lbl">🔄 In Pipeline</div></div>
+    </div>
+    """, unsafe_allow_html=True)
     
     # ═══════════════════════════════════════
     # CHARTS ROW 1
@@ -271,24 +298,19 @@ def marketing_dashboard_page():
     # ═══════════════════════════════════════
     st.markdown('<div class="chart-card">', unsafe_allow_html=True)
     st.subheader("📋 Granular Marketing Sites Data Explorer")
-    st.caption("Gunakan fitur sorting pada header kolom atau fitur pencarian bebas di sisi kanan tabel")
+    st.caption("Tabel di bawah ini otomatis ter-filter secara real-time berdasarkan input kontrol Anda.")
     
     display_cols = ['spk_number', 'spk_date', 'tenant_index', 'spk_status', 'site_id_tenant', 'site_name_tenant', 'work_type', 'tower_height', 'milestone']
     valid_cols = [c for c in display_cols if c in filtered.columns]
     
-    # --- 🛠️ TAMBAHKAN BLOK FIX TIPE DATA DI SINI ---
     df_display = filtered[valid_cols].copy()
     
-    # 1. Pastikan spk_date adalah tipe datetime agar cocok dengan DateColumn
+    # Sinkronisasi tipe data aman sebelum dikirim ke komponen visual
     if 'spk_date' in df_display.columns:
         df_display['spk_date'] = pd.to_datetime(df_display['spk_date'], errors='coerce')
-        
-    # 2. Pastikan tower_height adalah tipe numerik agar cocok dengan NumberColumn
     if 'tower_height' in df_display.columns:
         df_display['tower_height'] = pd.to_numeric(df_display['tower_height'], errors='coerce')
-    # ───────────────────────────────────────────────
     
-    # Masukkan df_display yang sudah bersih ke data_editor
     st.data_editor(
         df_display,
         use_container_width=True,
