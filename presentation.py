@@ -3,6 +3,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta, date
+import inspect
 from supabase_db import read_all_sheets
 
 # ─────────────────────────────────────────────────────────────
@@ -131,33 +132,9 @@ def inject_presentation_css():
             transform: translateY(-2px);
         }
         
-        .stButton button {
-            background: linear-gradient(135deg, #0284C7 0%, #0369A1 100%);
-            color: white;
-            border-radius: 10px;
-            padding: 10px 20px;
-            font-weight: 600;
-            border: none;
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
-            transition: all 0.3s ease;
-        }
-        
-        .stButton button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);
-        }
-        
         div[data-testid="stMetricValue"] {
             color: #0284C7;
             font-weight: 900;
-        }
-        
-        .metric-row {
-            background: linear-gradient(135deg, #FFFFFF 0%, #F5F9FF 100%);
-            border-radius: 12px;
-            padding: 15px;
-            border: 1px solid #DBEAFE;
-            margin: 8px 0;
         }
     </style>
     """, unsafe_allow_html=True)
@@ -186,7 +163,7 @@ def presentation_page():
         st.warning("📋 No data available.")
         return
     
-    # Data preparation
+    # 🛠️ SINKRONISASI TIPE DATA (FIX SAFETY)
     if 'progress' in sites_df.columns:
         sites_df['progress'] = pd.to_numeric(sites_df['progress'], errors='coerce').fillna(0)
     if not ms_df.empty:
@@ -199,11 +176,14 @@ def presentation_page():
     
     # Calculate KPIs
     total = len(sites_df)
-    avg_prog = sites_df['progress'].mean()
-    on_track = len(sites_df[sites_df['status']=='DONE'])
-    delayed = len(sites_df[sites_df['status'].isin(['DELAYED','CRITICAL'])])
+    avg_prog = sites_df['progress'].mean() if 'progress' in sites_df.columns else 0
+    on_track = len(sites_df[sites_df['status']=='DONE']) if 'status' in sites_df.columns else 0
+    delayed = len(sites_df[sites_df['status'].isin(['DELAYED','CRITICAL'])]) if 'status' in sites_df.columns else 0
     health = round((on_track/total)*100) if total > 0 else 0
-    forecast = datetime.now() + timedelta(days=int((100-avg_prog)*3))
+    
+    # Ambil waktu sekarang berbasis Pandas Timestamp agar satu tipe data saat kalkulasi matematika
+    now_timestamp = pd.Timestamp.now()
+    forecast = now_timestamp + timedelta(days=int((100-avg_prog)*3))
     
     # ===== SLIDE NAVIGATION =====
     st.markdown("<div style='text-align: center; margin-bottom: 15px;'>", unsafe_allow_html=True)
@@ -220,19 +200,20 @@ def presentation_page():
     
     # ===== SLIDE 1: COVER =====
     if "Cover" in slide:
-        st.markdown(f"""
-        <div style="text-align:center; padding:60px 20px; min-height:80vh; display:flex; flex-direction:column; justify-content:center; align-items:center;">
+        # Gunakan inspect.cleandoc agar string HTML bersih total dari spasi liar penulisan Python
+        cover_html = inspect.cleandoc(f"""
+        <div style="text-align:center; padding:60px 20px; min-height:75vh; display:flex; flex-direction:column; justify-content:center; align-items:center;">
             <div style="font-size:5rem; margin-bottom:30px;">🏗️</div>
-            <h1 style="font-size:4rem; color:#0369A1; margin:0; font-weight:900;">PROJECT DASHBOARD</h1>
+            <h1 style="font-size:4rem; color:#0369A1; margin:0; font-weight:900; line-height:1.2;">PROJECT DASHBOARD</h1>
             <p style="font-size:1.5rem; color:#0284C7; margin:20px 0 40px 0; font-weight:500;">Deployment & Progress Report</p>
-            
             <div style="background:white; display:inline-block; padding:20px 40px; border-radius:14px; box-shadow:0 8px 24px rgba(59, 130, 246, 0.2); border:2px solid #DBEAFE;">
-                <p style="font-size:1.1rem; color:#64748B; margin:0; font-weight:600;">📅 {datetime.now().strftime('%d %B %Y')}</p>
+                <p style="font-size:1.1rem; color:#64748B; margin:0; font-weight:600;">📅 {now_timestamp.strftime('%d %B %Y')}</p>
                 <p style="font-size:0.9rem; color:#94A3B8; margin:8px 0 0 0;">Real-time Status Report • PM System v3.0</p>
             </div>
         </div>
         <div class="footer">Confidential • Internal Use Only</div>
-        """, unsafe_allow_html=True)
+        """)
+        st.markdown(cover_html, unsafe_allow_html=True)
     
     # ===== SLIDE 2: EXECUTIVE SUMMARY =====
     elif "Summary" in slide:
@@ -279,76 +260,46 @@ def presentation_page():
         col_a, col_b = st.columns([1.2, 1])
         
         with col_a:
-            # Top 12 Progress
-            top12 = sites_df.nlargest(12, 'progress')
-            fig1 = px.bar(
-                top12,
-                y='site_name',
-                x='progress',
-                orientation='h',
-                color='progress',
-                color_continuous_scale=['#FF8C00', '#3B82F6', '#0284C7', '#10B981'],
-                labels={'progress': 'Progress %', 'site_name': 'Site'},
-                title="Top 12 Sites by Progress"
-            )
-            fig1.update_layout(
-                height=380,
-                paper_bgcolor='rgba(0,0,0,0)',
-                plot_bgcolor='rgba(0,0,0,0)',
-                font=dict(color='#1F2937', size=10),
-                showlegend=False,
-                xaxis_title="Progress %",
-                yaxis_title=""
-            )
-            st.plotly_chart(fig1, use_container_width=True)
+            if not sites_df.empty and 'site_name' in sites_df.columns:
+                top12 = sites_df.nlargest(min(12, len(sites_df)), 'progress')
+                fig1 = px.bar(
+                    top12,
+                    y='site_name',
+                    x='progress',
+                    orientation='h',
+                    color='progress',
+                    color_continuous_scale=['#FF8C00', '#3B82F6', '#0284C7', '#10B981'],
+                    labels={'progress': 'Progress %', 'site_name': 'Site'},
+                    title="Top 12 Sites by Progress"
+                )
+                fig1.update_layout(
+                    height=380, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+                    font=dict(color='#1F2937', size=10), showlegend=False, xaxis_title="Progress %", yaxis_title=""
+                )
+                st.plotly_chart(fig1, use_container_width=True)
         
         with col_b:
-            # Status distribution
             if 'status' in sites_df.columns:
                 status_counts = sites_df['status'].value_counts()
                 fig2 = px.pie(
-                    values=status_counts.values,
-                    names=status_counts.index,
-                    title="Site Status Distribution",
-                    color_discrete_map={
-                        'DONE': '#10B981',
-                        'ON_TRACK': '#3B82F6',
-                        'ONGOING': '#FF8C00',
-                        'PENDING': '#94A3B8',
-                        'DELAYED': '#DC2626',
-                        'CRITICAL': '#991B1B'
-                    }
+                    values=status_counts.values, names=status_counts.index, title="Site Status Distribution",
+                    color_discrete_map={'DONE': '#10B981', 'ON_TRACK': '#3B82F6', 'ONGOING': '#FF8C00', 'PENDING': '#94A3B8', 'DELAYED': '#DC2626', 'CRITICAL': '#991B1B'}
                 )
-                fig2.update_layout(
-                    height=380,
-                    paper_bgcolor='rgba(0,0,0,0)',
-                    font=dict(color='#1F2937', size=10),
-                    showlegend=True
-                )
+                fig2.update_layout(height=380, paper_bgcolor='rgba(0,0,0,0)', font=dict(color='#1F2937', size=10), showlegend=True)
                 st.plotly_chart(fig2, use_container_width=True)
         
-        # S-Curve
+        # S-Curve Fix (Gunakan penanganan copy eksplisit untuk menghindari SettingWithCopyWarning)
         if not ms_df.empty and 'planned_end' in ms_df.columns:
             st.markdown("<br>", unsafe_allow_html=True)
-            ms_df_temp = ms_df.dropna(subset=['planned_end'])
+            ms_df_temp = ms_df.dropna(subset=['planned_end']).copy()
             if not ms_df_temp.empty:
                 ms_df_temp['month'] = ms_df_temp['planned_end'].dt.to_period('M').astype(str)
                 monthly = ms_df_temp.groupby('month').size().cumsum().reset_index(name='cumulative')
                 fig3 = px.line(
-                    monthly,
-                    x='month',
-                    y='cumulative',
-                    title="Cumulative Milestones (S-Curve)",
-                    markers=True,
-                    labels={'month': 'Month', 'cumulative': 'Cumulative Tasks'}
+                    monthly, x='month', y='cumulative', title="Cumulative Milestones (S-Curve)",
+                    markers=True, labels={'month': 'Month', 'cumulative': 'Cumulative Tasks'}
                 )
-                fig3.update_layout(
-                    height=250,
-                    paper_bgcolor='rgba(0,0,0,0)',
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    font=dict(color='#1F2937'),
-                    showlegend=False
-                )
+                fig3.update_layout(height=250, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='#1F2937'), showlegend=False)
                 st.plotly_chart(fig3, use_container_width=True)
     
     # ===== SLIDE 4: SITE STATUS =====
@@ -356,20 +307,15 @@ def presentation_page():
         st.markdown('<div class="slide-title">🗺️ Site Status Matrix</div>', unsafe_allow_html=True)
         st.markdown('<div class="slide-subtitle">Detailed Site-by-Site Analysis</div>', unsafe_allow_html=True)
         
-        # Site table
         display_cols = [col for col in ['site_id', 'site_name', 'status', 'progress', 'pm'] if col in sites_df.columns]
         display_df = sites_df[display_cols].head(15).copy()
         
         def color_row(row):
             status = row.get('status', '')
-            if status == 'CRITICAL':
-                return ['background-color: #FEE2E2; color: #7F1D1D;']*len(row)
-            elif status == 'DELAYED':
-                return ['background-color: #FEF3C7; color: #D97706;']*len(row)
-            elif status == 'DONE':
-                return ['background-color: #DCFCE7; color: #047857;']*len(row)
-            elif status == 'ON_TRACK' or status == 'ONGOING':
-                return ['background-color: #DBEAFE; color: #0369A1;']*len(row)
+            if status == 'CRITICAL': return ['background-color: #FEE2E2; color: #7F1D1D;']*len(row)
+            elif status == 'DELAYED': return ['background-color: #FEF3C7; color: #D97706;']*len(row)
+            elif status == 'DONE': return ['background-color: #DCFCE7; color: #047857;']*len(row)
+            elif status in ['ON_TRACK', 'ONGOING']: return ['background-color: #DBEAFE; color: #0369A1;']*len(row)
             return ['']*len(row)
         
         styled_df = display_df.style.apply(color_row, axis=1)
@@ -378,8 +324,8 @@ def presentation_page():
         st.markdown("<br>", unsafe_allow_html=True)
         col_s1, col_s2, col_s3 = st.columns(3)
         col_s1.metric("🟢 On Track", on_track)
-        col_s2.metric("🟡 Delayed", len(sites_df[sites_df['status']=='DELAYED']))
-        col_s3.metric("🔴 Critical", len(sites_df[sites_df['status']=='CRITICAL']))
+        col_s2.metric("🟡 Delayed", len(sites_df[sites_df['status']=='DELAYED']) if 'status' in sites_df.columns else 0)
+        col_s3.metric("🔴 Critical", len(sites_df[sites_df['status']=='CRITICAL']) if 'status' in sites_df.columns else 0)
     
     # ===== SLIDE 5: CRITICAL ALERTS =====
     elif "Alerts" in slide:
@@ -394,13 +340,20 @@ def presentation_page():
                 delayed_ms = ms_df[ms_df['status'].isin(['DELAYED','CRITICAL'])].sort_values('planned_end')
                 if not delayed_ms.empty:
                     for _, r in delayed_ms.head(6).iterrows():
-                        days_late = (date.today() - pd.to_datetime(r['planned_end']).date()).days if pd.notna(r.get('planned_end')) else 0
-                        st.markdown(f"""
+                        # FIX SAFETY: Hitung hari terlambat menggunakan perbandingan sesama objek Pandas Timestamp
+                        if pd.notna(r.get('planned_end')):
+                            days_late = (now_timestamp - r['planned_end']).days
+                            days_late = max(0, days_late)
+                        else:
+                            days_late = 0
+                            
+                        alert_html = inspect.cleandoc(f"""
                         <div class="alert-red">
                             <strong>{r['name'][:40]}</strong><br>
-                            Status: {r['status']} | Days Late: {max(0, days_late)} | Progress: {r.get('progress', 0):.0f}%
+                            Status: {r['status']} | Days Late: {days_late} | Progress: {r.get('progress', 0):.0f}%
                         </div>
-                        """, unsafe_allow_html=True)
+                        """)
+                        st.markdown(alert_html, unsafe_allow_html=True)
                 else:
                     st.success("✅ No delayed milestones")
         
@@ -410,25 +363,26 @@ def presentation_page():
                 critical_mat = mat_df[mat_df['current_stock'] < mat_df['min_stock']]
                 if not critical_mat.empty:
                     for _, r in critical_mat.head(6).iterrows():
-                        st.markdown(f"""
+                        mat_html = inspect.cleandoc(f"""
                         <div class="alert-yellow">
                             <strong>{r['name'][:40]}</strong><br>
                             Stock: {r['current_stock']:.0f} (Min: {r['min_stock']:.0f})
                         </div>
-                        """, unsafe_allow_html=True)
+                        """)
+                        st.markdown(mat_html, unsafe_allow_html=True)
                 else:
                     st.markdown('<div class="alert-green">✅ All materials in stock</div>', unsafe_allow_html=True)
             
-            # Pending items
-            if not ms_df.empty:
+            if not ms_df.empty and 'status' in ms_df.columns:
                 pending_count = len(ms_df[ms_df['status']=='PENDING'])
                 if pending_count > 0:
-                    st.markdown(f"""
+                    pending_html = inspect.cleandoc(f"""
                     <div class="alert-yellow">
                         <strong>⏳ {pending_count} Pending Milestones</strong><br>
                         Awaiting approval or initiation
                     </div>
-                    """, unsafe_allow_html=True)
+                    """)
+                    st.markdown(pending_html, unsafe_allow_html=True)
     
     # ===== SLIDE 6: AI INSIGHTS =====
     elif "Insights" in slide:
@@ -436,34 +390,22 @@ def presentation_page():
         st.markdown('<div class="slide-subtitle">Predictive Analysis & Recommendations</div>', unsafe_allow_html=True)
         
         col_ai1, col_ai2 = st.columns(2)
-        
         with col_ai1:
             st.markdown(f'<div class="kpi-big"><div class="value">{health}%</div><div class="label">Health Score</div></div>', unsafe_allow_html=True)
-        
         with col_ai2:
             st.markdown(f'<div class="kpi-big"><div class="value">{forecast.strftime("%d %b")}</div><div class="label">Estimated Completion</div></div>', unsafe_allow_html=True)
         
         st.markdown("<br>", unsafe_allow_html=True)
-        
-        # Recommendations
         st.markdown("### 💡 Strategic Recommendations")
         
         recommendations = []
+        if health >= 80: recommendations.append("✅ **Excellent Execution** - Maintain current pace and continue momentum")
+        elif health >= 60: recommendations.append("⚠️ **Moderate Performance** - Review and optimize key processes")
+        else: recommendations.append("🔴 **Critical Intervention Needed** - Escalate and reallocate resources")
         
-        if health >= 80:
-            recommendations.append("✅ **Excellent Execution** - Maintain current pace and continue momentum")
-        elif health >= 60:
-            recommendations.append("⚠️ **Moderate Performance** - Review and optimize key processes")
-        else:
-            recommendations.append("🔴 **Critical Intervention Needed** - Escalate and reallocate resources")
+        if delayed > 0: recommendations.append(f"📅 **Address Delays** - Immediate action on {delayed} delayed sites required")
         
-        if delayed > 0:
-            recommendations.append(f"📅 **Address Delays** - Immediate action on {delayed} delayed sites required")
-        
-        if avg_prog < 40 and (datetime.now() - datetime(2024, 1, 1)).days > 60:
-            recommendations.append("⏰ **Timeline Reassessment** - Current trajectory may impact delivery date")
-        else:
-            recommendations.append("📊 **Timeline On Track** - Expected to meet project deadline")
+        recommendations.append("📊 **Timeline On Track** - Expected to meet macro project deadline" if avg_prog >= 40 else "⏰ **Timeline Reassessment** - Review potential bottleneck risks")
         
         for i, rec in enumerate(recommendations, 1):
             st.markdown(f"**{i}.** {rec}")
@@ -488,12 +430,10 @@ def presentation_page():
                 st.markdown(f"<small>📅 {timeline}</small>", unsafe_allow_html=True)
             st.divider()
         
-        # Contact information
         st.markdown("""
         ### 📞 Contact & Support
         - **Project Manager**: projects@company.com
         - **Technical Lead**: tech@company.com
-        - **Report Issues**: support@company.com
         """)
     
     st.markdown('<div class="footer">PM System v3.0 • AI-Powered Dashboard • © 2026</div>', unsafe_allow_html=True)
