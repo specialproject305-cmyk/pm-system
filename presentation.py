@@ -163,9 +163,11 @@ def presentation_page():
         prj_list = ['ALL Project'] + sorted(master_df['project_name'].unique().tolist()) if not master_df.empty else ['ALL']
         sel_prj = st.selectbox("🏗️ Project", prj_list, key="p_prj", label_visibility="collapsed")
     with cols_filter[4]:
-        # ✨ Solusi Tombol Ekspor Menggunakan Native HTML & JavaScript Browser
-        st.markdown("""
-            <button onclick="window.print()" style="
+        import streamlit.components.v1 as components
+        
+        # Menggunakan komponen HTML Streamlit dengan target window.parent
+        components.html("""
+            <button onclick="window.parent.print()" style="
                 width: 100%;
                 height: 38px;
                 background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
@@ -175,12 +177,12 @@ def presentation_page():
                 font-size: 0.85rem;
                 font-weight: 600;
                 cursor: pointer;
-                transition: all 0.2s ease;
                 box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                font-family: 'Inter', sans-serif;
             " onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
                 📥 Export (PDF/PPT)
             </button>
-        """, unsafe_allow_html=True)
+        """, height=45)
         
     # Apply Filters
     if sel_pm != 'ALL PM': sites_df = sites_df[sites_df['pm'] == sel_pm]
