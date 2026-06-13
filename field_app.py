@@ -532,6 +532,9 @@ def field_app_page():
                             
                             update_row('milestones', task['id'], update_data)
                             st.success(f"✅ {task['name']} updated successfully!")
+                                                        # Kirim notifikasi
+                            site_code = site_map.get(task['project_id'], '-')
+                            notify_update(assigned_to, new_status, task['name'], site_code)
                             st.cache_data.clear()
                             st.rerun()
                     
