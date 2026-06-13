@@ -163,26 +163,55 @@ def presentation_page():
         prj_list = ['ALL Project'] + sorted(master_df['project_name'].unique().tolist()) if not master_df.empty else ['ALL']
         sel_prj = st.selectbox("🏗️ Project", prj_list, key="p_prj", label_visibility="collapsed")
     with cols_filter[4]:
-        import streamlit.components.v1 as components
+        # 📦 ENGINE EXPORT: Mengompilasi semua data halaman ke dalam satu file Excel Multi-Sheet
+        import io
         
-        # Menggunakan komponen HTML Streamlit dengan target window.parent
-        components.html("""
-            <button onclick="window.parent.print()" style="
-                width: 100%;
-                height: 38px;
-                background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
-                color: white;
-                border: none;
-                border-radius: 8px;
-                font-size: 0.85rem;
-                font-weight: 600;
-                cursor: pointer;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-                font-family: 'Inter', sans-serif;
-            " onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
-                📥 Export (PDF/PPT)
-            </button>
-        """, height=45)
+        # Buat buffer memori untuk menyimpan file Excel
+        buffer = io.BytesIO()
+        
+        with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+            # Sheet 1: Executive Summary & Project Status
+            if not sites_df.empty:
+                sites_df[['site_id', 'site_name', 'status', 'progress', 'pm', 'vendor', 'site_category']].to_excel(
+                    writer, sheet_name='1. Executive Summary', index=False
+                )
+            
+            # Sheet 2: PIC & Task Performance
+            if not pic_stats.empty:
+                pic_stats.to_excel(writer, sheet_name='2. PIC Performance', index=False)
+            
+            # Sheet 3: Vendor Breakdown
+            if not ven_stats.empty:
+                ven_stats.to_excel(writer, sheet_name='3. Vendor Performance', index=False)
+                
+            # Sheet 4: Marketing Pipeline & Commercial Leases
+            if not marketing_df.empty:
+                # Menggunakan kolom fallback yang aman agar semua data di halaman 4 terekspor
+                export_mkt = marketing_df.copy()
+                export_mkt['Site Name/ID'] = export_mkt.get('site_name_tenant') or export_mkt.get('site_name') or export_mkt.get('site_id') or "Unknown"
+                export_mkt['Tenant'] = export_mkt.get('tenant_index') or export_mkt.get('tenant') or "No Data"
+                export_mkt['Milestone Stage'] = export_mkt.get('milestone') or "In Progress"
+                
+                export_mkt[['Site Name/ID', 'Tenant', 'Milestone Stage']].to_excel(
+                    writer, sheet_name='4. Commercial Leases', index=False
+                )
+            
+            # Sheet 5: Materials & Safety Stock
+            if not mat_df.empty:
+                mat_df.to_excel(writer, sheet_name='5. Material Logistics', index=False)
+        
+        # Kembalikan penunjuk buffer ke awal file
+        buffer.seek(0)
+        
+        # Gunakan widget download_button asli Streamlit agar file terunduh secara aman ke komputer
+        st.download_button(
+            label="📥 Export All Presentation Data",
+            data=buffer,
+            file_name=f"Master_Presentation_Report_{datetime.now().strftime('%Y%m%d')}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True,
+            help="Klik untuk mengunduh seluruh data dari semua halaman presentasi ke dalam satu file Excel (Multi-Sheet)"
+        )
         
     # Apply Filters
     if sel_pm != 'ALL PM': sites_df = sites_df[sites_df['pm'] == sel_pm]
