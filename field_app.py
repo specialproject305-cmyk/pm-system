@@ -399,7 +399,7 @@ def field_app_page():
     # ═══════════════════════════════════════
     # SIDEBAR
     # ═══════════════════════════════════════
-    with st.sidebar:
+        with st.sidebar:
         st.markdown("---")
         st.markdown(f"### 👷 {assigned_to}")
         st.caption(f"👤 {user.get('full_name', 'User')}")
@@ -411,10 +411,49 @@ def field_app_page():
             st.rerun()
         
         st.markdown("---")
+        st.markdown("### 🔍 Filter Tugas")
+        
+        # Filter by Project
+        if not sites_df.empty:
+            # Gabung dengan master_projects
+            master_df = all_data.get('master_projects', pd.DataFrame())
+            if not master_df.empty:
+                site_master_map = dict(zip(sites_df['id'], sites_df['master_project_id']))
+                ms_df['master_project_id'] = ms_df['project_id'].map(site_master_map)
+                project_options = ['ALL'] + sorted(master_df['project_name'].unique().tolist())
+                sel_project = st.selectbox("🏢 Project:", project_options, key="field_proj_filter")
+                if sel_project != 'ALL':
+                    valid_master_ids = master_df[master_df['project_name'] == sel_project]['id'].tolist()
+                    valid_site_ids = sites_df[sites_df['master_project_id'].isin(valid_master_ids)]['id'].tolist()
+                    ms_df = ms_df[ms_df['project_id'].isin(valid_site_ids)]
+        
+        # Filter by PM
+        if not sites_df.empty and 'pm' in sites_df.columns:
+            pm_options = ['ALL'] + sorted(sites_df['pm'].dropna().unique().tolist())
+            sel_pm = st.selectbox("👤 PM:", pm_options, key="field_pm_filter")
+            if sel_pm != 'ALL':
+                valid_site_ids = sites_df[sites_df['pm'] == sel_pm]['id'].tolist()
+                ms_df = ms_df[ms_df['project_id'].isin(valid_site_ids)]
+        
+        # Filter by Site Name
+        if not sites_df.empty:
+            site_options = ['ALL'] + sorted(sites_df['site_name'].unique().tolist())
+            sel_site = st.selectbox("📍 Site:", site_options, key="field_site_filter")
+            if sel_site != 'ALL':
+                valid_site_ids = sites_df[sites_df['site_name'] == sel_site]['id'].tolist()
+                ms_df = ms_df[ms_df['project_id'].isin(valid_site_ids)]
+        
+        # Recalculate stats after filter
+        total_tasks = len(ms_df)
+        done_count = len(ms_df[ms_df['status'] == 'DONE'])
+        overdue_count = len(ms_df[ms_df['planned_end'] < pd.Timestamp(date.today())])
+        avg_progress = ms_df['progress'].apply(get_safe_numeric).mean() if total_tasks > 0 else 0
+        
+        st.markdown("---")
         st.markdown("### 📊 Quick Summary")
         st.metric("📋 Your Tasks", total_tasks)
         st.metric("✅ Completed", f"{done_count}/{total_tasks}")
-        st.metric("🔴 Overdue", overdue_count, delta=f"{overdue_count} urgent" if overdue_count > 0 else "On track")
+        st.metric("🔴 Overdue", overdue_count)
         st.metric("📈 Avg Progress", f"{avg_progress:.0f}%")
     
     # ═══════════════════════════════════════
