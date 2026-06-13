@@ -1,5 +1,6 @@
 import streamlit as st
 from auth import login_page, check_permission, show_permission_denied
+from bulk_import import bulk_import_page
 
 # ═══════════════════════════════════════════════
 # 🎨 KONFIGURASI HALAMAN & CSS CUSTOM
@@ -94,6 +95,7 @@ with st.sidebar:
         # Menjaga urutan tetap unik tanpa fungsi append berulang
         menu_options.extend(["👥 User Management", "⚙️ Settings"])
         menu_options = list(dict.fromkeys(menu_options))
+        menu_options.append("📥 Bulk Import")
 
     menu = st.sidebar.radio("📂 Navigasi:", menu_options)
     st.markdown("---")
@@ -174,6 +176,7 @@ def main():
     elif menu == "🔔 Notifications":
         from notification_page import notification_page
         notification_page()
+    elif menu == "📥 Bulk Import": bulk_import_page()
 
 if __name__ == "__main__":
     main()
