@@ -130,7 +130,7 @@ def style_plotly_chart(fig):
 def presentation_page():
     inject_presentation_css()
     
-    # Load data
+    # 1. Load data dari Supabase/Sheets
     all_data = read_all_sheets()
     sites_df = all_data.get('projects', pd.DataFrame())
     ms_df = all_data.get('milestones', pd.DataFrame())
@@ -138,9 +138,14 @@ def presentation_page():
     master_df = all_data.get('master_projects', pd.DataFrame())
     marketing_df = all_data.get('marketing_sites', pd.DataFrame())
     
+    # 🌟 TAMBAHKAN INI: Inisialisasi awal agar engine ekspor tidak error 'UnboundLocalError'
+    pic_stats = pd.DataFrame()
+    ven_stats = pd.DataFrame()
+    
     if sites_df.empty:
         st.warning("📋 No data available")
         return
+
     
     # Global filter
     if st.session_state.get('global_project_filter', 'ALL') != "ALL":
