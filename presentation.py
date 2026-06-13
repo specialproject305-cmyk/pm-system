@@ -108,6 +108,16 @@ def inject_presentation_css():
         
         /* === STREAMLIT NATIVE TABLE INHERITANCE === */
         div[data-testid="stDataFrame"] { background: white; border-radius: 8px; overflow: hidden; }
+
+        /* Menghias kontainer border bawaan Streamlit agar menjadi Chart Card yang premium */
+        div[data-testid="stContainer"] {
+            background: #FFFFFF !important;
+            padding: 20px !important;
+            border-radius: 16px !important;
+            border: 1px solid #E2E8F0 !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05) !important;
+            margin-bottom: 15px !important;
+        }
     </style>
     """, unsafe_allow_html=True)
 
@@ -334,36 +344,33 @@ def presentation_page():
         
         c_a, c_b, c_c = st.columns(3)
         with c_a:
-            st.markdown('<div class="chart-card" style="min-height:380px;">', unsafe_allow_html=True)
-            st.markdown("<h4>🚨 Critical Risk Sites</h4>", unsafe_allow_html=True)
-            crit = sites_df[sites_df['status'].isin(['DELAYED','CRITICAL'])]
-            if not crit.empty:
-                for _, r in crit.head(5).iterrows():
-                    st.markdown(f'<div class="alert-r"><b>{r["site_id"]}</b><br>Linear Progress: {r.get("progress",0):.0f}%</div>', unsafe_allow_html=True)
-            else:
-                st.success("All sites operating on normal track.")
-            st.markdown('</div>', unsafe_allow_html=True)
+            with st.container(): # Menggunakan container native Streamlit
+                st.markdown("<h4 style='margin-top:0;'>🚨 Critical Risk Sites</h4>", unsafe_allow_html=True)
+                crit = sites_df[sites_df['status'].isin(['DELAYED','CRITICAL'])]
+                if not crit.empty:
+                    for _, r in crit.head(5).iterrows():
+                        st.markdown(f'<div class="alert-r"><b>{r["site_id"]}</b><br>Linear Progress: {r.get("progress",0):.0f}%</div>', unsafe_allow_html=True)
+                else:
+                    st.success("All sites operating on normal track.")
             
         with c_b:
-            st.markdown('<div class="chart-card" style="min-height:380px;">', unsafe_allow_html=True)
-            st.markdown("<h4>📦 Material Safety Stock Depletion</h4>", unsafe_allow_html=True)
-            if not mat_df.empty:
-                cm = mat_df[mat_df['current_stock']<mat_df['min_stock']]
-                if not cm.empty:
-                    for _, r in cm.head(5).iterrows():
-                        st.markdown(f'<div class="alert-y"><b>{r["name"][:22]}</b><br>Stock Level: {r["current_stock"]:.0f} Pcs (Min: {r["min_stock"]:.0f})</div>', unsafe_allow_html=True)
-                else: 
-                    st.markdown('<div class="alert-g">🛡️ All materials safe above threshold</div>', unsafe_allow_html=True)
-            st.markdown('</div>', unsafe_allow_html=True)
+            with st.container():
+                st.markdown("<h4 style='margin-top:0;'>📦 Material Safety Stock Depletion</h4>", unsafe_allow_html=True)
+                if not mat_df.empty:
+                    cm = mat_df[mat_df['current_stock']<mat_df['min_stock']]
+                    if not cm.empty:
+                        for _, r in cm.head(5).iterrows():
+                            st.markdown(f'<div class="alert-y"><b>{r["name"][:22]}</b><br>Stock Level: {r["current_stock"]:.0f} Pcs (Min: {r["min_stock"]:.0f})</div>', unsafe_allow_html=True)
+                    else: 
+                        st.markdown('<div class="alert-g">🛡️ All materials safe above threshold</div>', unsafe_allow_html=True)
             
         with c_c:
-            st.markdown('<div class="chart-card" style="min-height:380px;">', unsafe_allow_html=True)
-            st.markdown("<h4>📢 Active Commercial Leases</h4>", unsafe_allow_html=True)
-            if not marketing_df.empty:
-                for _, r in marketing_df.head(5).iterrows():
-                    clr = 'alert-g' if r.get('milestone')=='RFS' else ('alert-y' if r.get('milestone') in ['Negosiasi Lahan','RFI'] else 'alert-r')
-                    st.markdown(f'<div class="{clr}"><b>{r.get("site_name_tenant","")[:20]}</b><br>{r.get("tenant_index","")} &bull; {r.get("milestone","")}</div>', unsafe_allow_html=True)
-            st.markdown('</div>', unsafe_allow_html=True)
+            with st.container():
+                st.markdown("<h4 style='margin-top:0;'>📢 Active Commercial Leases</h4>", unsafe_allow_html=True)
+                if not marketing_df.empty:
+                    for _, r in marketing_df.head(5).iterrows():
+                        clr = 'alert-g' if r.get('milestone')=='RFS' else ('alert-y' if r.get('milestone') in ['Negosiasi Lahan','RFI'] else 'alert-r')
+                        st.markdown(f'<div class="{clr}"><b>{r.get("site_name_tenant","")[:20]}</b><br>{r.get("tenant_index","")} &bull; {r.get("milestone","")}</div>', unsafe_allow_html=True)
             
     # ═══════════════════════════════════════
     # 📋 SLIDE 5: ACTIONS & FORECAST
@@ -374,53 +381,50 @@ def presentation_page():
         
         c_a, c_b = st.columns(2)
         with c_a:
-            st.markdown('<div class="chart-card">', unsafe_allow_html=True)
-            st.markdown("<h4>🎯 Next-Week Targeted Performance Output</h4>", unsafe_allow_html=True)
-            st.metric("Target RFS Accumulation", rfs+3, delta="+3 Build Output")
-            st.metric("Target Mean Progress", "75%", delta=f"{75-avg_prog:.1f}% Needed")
-            st.metric("Target Critical Mitigation", "0 Active Case", delta=f"-{delayed} Down")
-            
-            st.markdown("<div style='margin-top:20px;'></div>", unsafe_allow_html=True)
-            st.markdown(f"""
-            <div class="kpi-box" style="background: linear-gradient(135deg, #0F172A 0%, #1E3A8A 100%); border:none;">
-                <div class="val" style="color:#FFFFFF; font-size:2.5rem;">{forecast.strftime('%d %b %Y')}</div>
-                <div class="lbl" style="color:#93C5FD;">Calculated Forecast Completion</div>
-            </div>
-            """, unsafe_allow_html=True)
-            st.markdown('</div>', unsafe_allow_html=True)
-            
-        with c_b:
-            st.markdown('<div class="chart-card" style="min-height:435px;">', unsafe_allow_html=True)
-            st.markdown("<h4>📋 Executive Directed Action Items</h4>", unsafe_allow_html=True)
-            
-            # Rendering list item dengan layout flexbox yang elegan
-            action_items = [
-                ("PROCUREMENT", "Order material kritis akibat stok menipis", "15 Jun"),
-                ("OPERASIONAL", "Tambah 2 tim pendukung di regional kritis", "16 Jun"),
-                ("LEGAL", "Eskalasi percepatan izin warga & KRK", "14 Jun"),
-                ("MARKETING", "Follow up hasil negosiasi harga sewa lahan", "15 Jun"),
-                ("PMO", "Daily status tracking khusus site critical", "Hari ini")
-            ]
-            
-            for pic, act, dl in action_items:
+            with st.container():
+                st.markdown("<h4 style='margin-top:0;'>🎯 Next-Week Targeted Performance Output</h4>", unsafe_allow_html=True)
+                st.metric("Target RFS Accumulation", rfs+3, delta="+3 Build Output")
+                st.metric("Target Mean Progress", "75%", delta=f"{75-avg_prog:.1f}% Needed")
+                st.metric("Target Critical Mitigation", "0 Active Case", delta=f"-{delayed} Down")
+                
+                st.markdown("<div style='margin-top:20px;'></div>", unsafe_allow_html=True)
                 st.markdown(f"""
-                <div style="display:flex; justify-content:between; align-items:center; border-bottom:1px solid #F1F5F9; padding:10px 0;">
-                    <div style="flex:1;">
-                        <span style="background:#E2E8F0; color:#334155; font-size:0.7rem; font-weight:700; padding:3px 8px; border-radius:4px; text-transform:uppercase;">{pic}</span>
-                        <div style="font-size:0.85rem; color:#1E293B; margin-top:4px; font-weight:500;">{act}</div>
-                    </div>
-                    <div style="text-align:right; font-size:0.8rem; color:#64748B; font-weight:600; min-width:70px;">📅 {dl}</div>
+                <div class="kpi-box" style="background: linear-gradient(135deg, #0F172A 0%, #1E3A8A 100%); border:none;">
+                    <div class="val" style="color:#FFFFFF; font-size:2.5rem;">{forecast.strftime('%d %b %Y')}</div>
+                    <div class="lbl" style="color:#93C5FD;">Calculated Forecast Completion</div>
                 </div>
                 """, unsafe_allow_html=True)
+            
+        with c_b:
+            with st.container():
+                st.markdown("<h4 style='margin-top:0;'>📋 Executive Directed Action Items</h4>", unsafe_allow_html=True)
                 
-            st.markdown("<div style='margin-top:20px;'></div>", unsafe_allow_html=True)
-            st.metric("📢 Marketing Target Revenue CLOSE", f"{mkt_rfs+5} Sites", delta="+5 Funnel Up")
-            st.markdown('</div>', unsafe_allow_html=True)
+                action_items = [
+                    ("PROCUREMENT", "Order material kritis akibat stok menipis", "15 Jun"),
+                    ("OPERASIONAL", "Tambah 2 tim pendukung di regional kritis", "16 Jun"),
+                    ("LEGAL", "Eskalasi percepatan izin warga & KRK", "14 Jun"),
+                    ("MARKETING", "Follow up hasil negosiasi harga sewa lahan", "15 Jun"),
+                    ("PMO", "Daily status tracking khusus site critical", "Hari ini")
+                ]
+                
+                for pic, act, dl in action_items:
+                    st.markdown(f"""
+                    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #F1F5F9; padding:10px 0;">
+                        <div style="flex:1;">
+                            <span style="background:#E2E8F0; color:#334155; font-size:0.7rem; font-weight:700; padding:3px 8px; border-radius:4px; text-transform:uppercase;">{pic}</span>
+                            <div style="font-size:0.85rem; color:#1E293B; margin-top:4px; font-weight:500;">{act}</div>
+                        </div>
+                        <div style="text-align:right; font-size:0.8rem; color:#64748B; font-weight:600; min-width:70px;">📅 {dl}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                st.markdown("<div style='margin-top:20px;'></div>", unsafe_allow_html=True)
+                st.metric("📢 Marketing Target Revenue CLOSE", f"{mkt_rfs+5} Sites", delta="+5 Funnel Up")
             
     # ═══════════════════════════════════════
     # FOOTER LOGO BANNER
     # ═══════════════════════════════════════
-    st.markdown(f'<div class="footer">⚡ PM System Executive Workspace • Weekly Master Report • {now_ts.strftime("%d %B %Y")}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="footer">⚡ @SNC • Weekly Master Report • {now_ts.strftime("%d %B %Y")}</div>', unsafe_allow_html=True)
 
 if __name__ == "__main__":
     presentation_page()
