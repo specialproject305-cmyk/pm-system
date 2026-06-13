@@ -62,7 +62,7 @@ role = user.get('role', 'viewer')
 app_mode = st.session_state.get('app_mode', '🏢 Full Dashboard')
 
 # Auto-redirect PIC ke Field App
-pic_roles = ['sitac', 'engineering', 'procurement', 'project', 'vendor_mgmt', 'legal']
+pic_roles = ['sitac', 'engineering', 'procurement', 'project', 'vendor_mgmt', 'legal', 'marketing']
 if role in pic_roles or app_mode == '📱 Field App':
     field_app_page()
     st.stop()
@@ -99,7 +99,7 @@ with st.sidebar:
     elif role == 'planning':
         menu_options = ["📊 Dashboard", "📁 Site Tracker", "🧱 Milestones", "📊 Export Report"]
     elif role == 'marketing':
-        menu_options = ["📊 Dashboard", "📢 Marketing Sites", "💬 Chat & Notif"]
+        menu_options = ["📊 Dashboard", "📢 Marketing Dashboard", "📢 Marketing Sites", "💬 Chat & Notif"]
     else: # viewer
         menu_options = ["📊 Dashboard", "🤖 AI Insights", "💬 Chat & Notif", "📽️ Presentation", "📊 Export Report"]
 
