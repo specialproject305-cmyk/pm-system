@@ -16,6 +16,7 @@ from field_app import field_app_page
 from user_management import user_management_page
 from marketing_page import marketing_page
 from marketing_dashboard import marketing_dashboard_page
+from notification_page import notification_page
 
 # ═══════════════════════════════════════════════
 # 🎨 KONFIGURASI HALAMAN & CSS CUSTOM
@@ -95,17 +96,20 @@ with st.sidebar:
     # Menu Navigasi berdasarkan Role
     menu_options = []
     if role in ['admin', 'pm', 'pmo']:
-        menu_options = ["📊 Dashboard", "📁 Site Tracker", "🧱 Milestones", "📋 Kanban Board", "📋 Daily Tasks", "📦 Inventory", "🤖 AI Insights", "🔍 RCA Analysis", "💬 Chat & Notif", "📱 Field App", "📽️ Presentation", "📊 Export Report", "📢 Marketing Sites", "📢 Marketing Dashboard"]
+        menu_options = ["📊 Dashboard", "📁 Site Tracker", "🧱 Milestones", "📋 Kanban Board", "📋 Daily Tasks", "📦 Inventory", "🤖 AI Insights", "🔍 RCA Analysis", "💬 Chat & Notif", "📱 Field App", "📽️ Presentation", "📊 Export Report", "📢 Marketing Sites", "📢 Marketing Dashboard","🔔 Notifications"]
     elif role == 'planning':
         menu_options = ["📊 Dashboard", "📁 Site Tracker", "🧱 Milestones", "📊 Export Report"]
+        menu_options.append("🔔 Notifications")
     elif role == 'marketing':
         menu_options = ["📊 Dashboard", "📢 Marketing Dashboard", "📢 Marketing Sites", "💬 Chat & Notif"]
+        menu_options.append("🔔 Notifications")
     else: # viewer
         menu_options = ["📊 Dashboard", "🤖 AI Insights", "💬 Chat & Notif", "📽️ Presentation", "📊 Export Report"]
 
     if role == 'admin':
         menu_options.append("👥 User Management")
         menu_options.append("⚙️ Settings")
+        menu_options.append("🔔 Notifications")
 
     menu = st.sidebar.radio("📂 Navigasi:", menu_options)
     st.markdown("---")
@@ -149,6 +153,7 @@ def main():
     elif menu == "⚙️ Settings": settings_page()
     elif menu == "📢 Marketing Sites": marketing_page()
     elif menu == "📢 Marketing Dashboard": marketing_dashboard_page()
+    elif menu == "🔔 Notifications": notification_page()
 
 if __name__ == "__main__":
     main()
