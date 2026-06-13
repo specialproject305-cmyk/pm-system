@@ -16,7 +16,7 @@ def bulk_import_page():
     templates = {
         "projects": pd.DataFrame({
             "site_id": ["SITE-001"], "site_name": ["Tower A"], "site_category": ["New Site"],
-            "site_type": ["SST"], "vendor": ["PT. X"], "pm": ["Budi"],
+            "site_type": ["SST"], "vendor": ["PT. X"],"spk_vendor": ["SPK-001/VII/2025"], "pm": ["Budi"],
             "tower_height": [45], "site_coordinate": ["-6.17,106.82"],
             "start_date": [today_str()], "end_date": [today_str()],
             "master_project_id": [""], "status": ["ON_TRACK"], "progress": ["0"]
