@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta, date
-from supabase_db import read_sheet, update_row, read_all_sheets, insert_row, generate_id, now_str
+from supabase_db import read_sheet, update_row, read_all_sheets, insert_row, generate_id, now_str, notify_update
 
 # ─────────────────────────────────────────────────────────────
 # 🎨 LIGHT PROFESSIONAL THEME FOR FIELD APP
