@@ -7,7 +7,7 @@ import inspect
 from supabase_db import read_all_sheets
 
 # ─────────────────────────────────────────────────────────────
-# 🎨 RE-ENGINEERED PRESENTATION CSS
+# 🎨 RE-ENGINEERED PRESENTATION CSS + PRINT OPTIMIZATION
 # ─────────────────────────────────────────────────────────────
 def inject_presentation_css():
     st.markdown("""
@@ -68,14 +68,14 @@ def inject_presentation_css():
         .kpi-box .val { font-size: 2.2rem; font-weight: 800; color: #1E3A8A; line-height: 1.1; }
         .kpi-box .lbl { font-size: 0.75rem; color: #64748B; text-transform: uppercase; font-weight: 700; margin-top: 6px; letter-spacing: 0.5px; }
         
-        /* === WHITE WRAPPER BLOCK FOR CHARTS & TABLES === */
-        .chart-card {
-            background: #FFFFFF;
-            padding: 20px;
-            border-radius: 16px;
-            border: 1px solid #E2E8F0;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-            margin-bottom: 15px;
+        /* === CONTAINER NATIVE STREAMLIT CARD === */
+        div[data-testid="stContainer"] {
+            background: #FFFFFF !important;
+            padding: 20px !important;
+            border-radius: 16px !important;
+            border: 1px solid #E2E8F0 !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05) !important;
+            margin-bottom: 15px !important;
         }
         
         /* === MODERN CLEAN ALERTS === */
@@ -85,7 +85,7 @@ def inject_presentation_css():
         
         .footer { text-align: center; color: #64748B; margin-top: 30px; font-size: 0.75rem; font-weight: 500; border-top: 1px solid #CBD5E1; padding-top: 15px; }
         
-        /* === NAVIGATION RADIO BUTTONS (TAB STYLE) === */
+        /* === NAVIGATION NAVIGATION TAB STYLE === */
         .stRadio > div { justify-content: center; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
         .stRadio label { 
             background: #FFFFFF !important; 
@@ -106,23 +106,16 @@ def inject_presentation_css():
         }
         .stRadio input:checked + label p { color: white !important; }
         
-        /* === STREAMLIT NATIVE TABLE INHERITANCE === */
-        div[data-testid="stDataFrame"] { background: white; border-radius: 8px; overflow: hidden; }
-
-        /* Menghias kontainer border bawaan Streamlit agar menjadi Chart Card yang premium */
-        div[data-testid="stContainer"] {
-            background: #FFFFFF !important;
-            padding: 20px !important;
-            border-radius: 16px !important;
-            border: 1px solid #E2E8F0 !important;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05) !important;
-            margin-bottom: 15px !important;
+        /* === PRINT OPTIMIZATION (UNTUK SAVE PDF) === */
+        @media print {
+            .stApp { background: white !important; color: black !important; }
+            div[data-testid="stSidebar"], .stRadio, div.stButton { display: none !important; }
+            div[data-testid="stContainer"] { box-shadow: none !important; border: 1px solid #CBD5E1 !important; page-break-inside: avoid; }
         }
     </style>
     """, unsafe_allow_html=True)
 
 def style_plotly_chart(fig):
-    """Fungsi pembantu injection tema grafik agar menyatu dengan background dashboard"""
     fig.update_layout(
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)',
@@ -137,9 +130,7 @@ def style_plotly_chart(fig):
 def presentation_page():
     inject_presentation_css()
     
-    # ═══════════════════════════════════════
-    # DATA LOADING & BACKEND LOGIC (UNTOUCHED)
-    # ═══════════════════════════════════════
+    # Load data
     all_data = read_all_sheets()
     sites_df = all_data.get('projects', pd.DataFrame())
     ms_df = all_data.get('milestones', pd.DataFrame())
@@ -151,26 +142,38 @@ def presentation_page():
         st.warning("📋 No data available")
         return
     
+    # Global filter
     if st.session_state.get('global_project_filter', 'ALL') != "ALL":
         valid = sites_df[sites_df.get('master_project_id', '') == st.session_state.global_project_filter]['id'].tolist()
         sites_df = sites_df[sites_df['id'].isin(valid)]
         ms_df = ms_df[ms_df['project_id'].isin(valid)] if not ms_df.empty else ms_df
     
-    # Dropdown Filter Row
-    c1, c2, c3, c4 = st.columns(4)
-    with c1:
+    # Top Action Row (Filters & Export Button)
+    cols_filter = st.columns([2, 2, 2, 2, 2])
+    with cols_filter[0]:
         pm_list = ['ALL PM'] + sorted(sites_df['pm'].dropna().unique().tolist()) if 'pm' in sites_df.columns else ['ALL']
         sel_pm = st.selectbox("👤 PM", pm_list, key="p_pm", label_visibility="collapsed")
-    with c2:
+    with cols_filter[1]:
         ven_list = ['ALL Vendor'] + sorted(sites_df['vendor'].dropna().unique().tolist()) if 'vendor' in sites_df.columns else ['ALL']
         sel_ven = st.selectbox("🏢 Vendor", ven_list, key="p_ven", label_visibility="collapsed")
-    with c3:
+    with cols_filter[2]:
         cat_list = ['ALL Region'] + sorted(sites_df['site_category'].dropna().unique().tolist()) if 'site_category' in sites_df.columns else ['ALL']
         sel_cat = st.selectbox("📍 Region", cat_list, key="p_cat", label_visibility="collapsed")
-    with c4:
+    with cols_filter[3]:
         prj_list = ['ALL Project'] + sorted(master_df['project_name'].unique().tolist()) if not master_df.empty else ['ALL']
         sel_prj = st.selectbox("🏗️ Project", prj_list, key="p_prj", label_visibility="collapsed")
-    
+    with cols_filter[4]:
+        # ✨ FITUR EXPORT TO PDF/PPT (Memicu print dialox browser bawaan yang sudah di-styling bersih)
+        st.markdown("""
+            <script>
+            function convertToPdf() {
+                window.print();
+            }
+            </script>
+        """, unsafe_allow_html=True)
+        st.button("📥 Export Report (PDF/PPT)", on_click=None, help="Klik untuk simpan halaman ini menjadi PDF atau slide presentasi", use_container_width=True)
+        
+    # Apply Filters
     if sel_pm != 'ALL PM': sites_df = sites_df[sites_df['pm'] == sel_pm]
     if sel_ven != 'ALL Vendor': sites_df = sites_df[sites_df['vendor'] == sel_ven]
     if sel_cat != 'ALL Region': sites_df = sites_df[sites_df['site_category'] == sel_cat]
@@ -181,6 +184,7 @@ def presentation_page():
     valid_sites = sites_df['id'].tolist()
     ms_df = ms_df[ms_df['project_id'].isin(valid_sites)] if not ms_df.empty else ms_df
     
+    # Pemrosesan Data Numerik
     sites_df['progress'] = pd.to_numeric(sites_df['progress'], errors='coerce').fillna(0)
     if not ms_df.empty: ms_df['planned_end'] = pd.to_datetime(ms_df['planned_end'], errors='coerce')
     if not mat_df.empty:
@@ -210,7 +214,7 @@ def presentation_page():
         ven_stats = sites_df.groupby('vendor').agg(total=('id','count'), avg_prog=('progress','mean'), delayed=('status',lambda x:(x.isin(['DELAYED','CRITICAL'])).sum())).reset_index()
         ven_stats['avg_prog'] = ven_stats['avg_prog'].round(1)
 
-    # ===== SLIDE NAVIGATION TAB STYLE =====
+    # ===== SLIDE NAV =====
     slide = st.radio("", ["1. Executive Summary", "2. Site & PIC Performance", "3. Progress & S-Curve", "4. Alerts & Marketing", "5. Actions & Forecast"], horizontal=True, label_visibility="collapsed")
     
     # ═══════════════════════════════════════
@@ -220,7 +224,6 @@ def presentation_page():
         st.markdown('<div class="slide-title">📊 Executive Summary</div>', unsafe_allow_html=True)
         st.markdown('<div class="slide-subtitle">Macro KPIs, Vendor Matrices and Commercial Marketing Funnel</div>', unsafe_allow_html=True)
         
-        # Render KPI dengan CSS Grid agar full container width
         st.markdown(f"""
         <div class="kpi-container">
             <div class="kpi-box"><div class="val">{total}</div><div class="lbl">Total Site</div></div>
@@ -234,25 +237,22 @@ def presentation_page():
         
         c_a, c_b = st.columns(2)
         with c_a:
-            st.markdown('<div class="chart-card">', unsafe_allow_html=True)
-            st.markdown("<h4>🏢 Vendor Performance Leaderboard</h4>", unsafe_allow_html=True)
-            if not ven_stats.empty: 
-                st.dataframe(ven_stats, use_container_width=True, hide_index=True)
-            st.markdown('</div>', unsafe_allow_html=True)
+            with st.container():
+                st.markdown("<h4>🏢 Vendor Performance Leaderboard</h4>", unsafe_allow_html=True)
+                if not ven_stats.empty: st.dataframe(ven_stats, use_container_width=True, hide_index=True)
             
         with c_b:
-            st.markdown('<div class="chart-card">', unsafe_allow_html=True)
-            st.markdown("<h4>📢 Commercial Marketing Pipeline</h4>", unsafe_allow_html=True)
-            m1, m2, m3 = st.columns(3)
-            m1.metric("Total Funnel", mkt_total)
-            m2.metric("RFS Closed", mkt_rfs)
-            m3.metric("Land Nego", mkt_nego)
-            
-            st.markdown("<div style='margin-top:15px; border-top:1px dashed #E2E8F0; padding-top:10px;'>", unsafe_allow_html=True)
-            if not marketing_df.empty and 'tenant_index' in marketing_df.columns:
-                for t, c in marketing_df['tenant_index'].value_counts().items():
-                    st.caption(f"🔹 **Tenant {t}** account shares: **{c} sites**")
-            st.markdown("</div></div>", unsafe_allow_html=True)
+            with st.container():
+                st.markdown("<h4>📢 Commercial Marketing Pipeline</h4>", unsafe_allow_html=True)
+                m1, m2, m3 = st.columns(3)
+                m1.metric("Total Funnel", mkt_total)
+                m2.metric("RFS Closed", mkt_rfs)
+                m3.metric("Land Nego", mkt_nego)
+                st.markdown("<div style='margin-top:15px; border-top:1px dashed #E2E8F0; padding-top:10px;'>", unsafe_allow_html=True)
+                if not marketing_df.empty and 'tenant_index' in marketing_df.columns:
+                    for t, c in marketing_df['tenant_index'].value_counts().items():
+                        st.caption(f"🔹 **Tenant {t}**: **{c} sites**")
+                st.markdown("</div>", unsafe_allow_html=True)
             
     # ═══════════════════════════════════════
     # 🏗️ SLIDE 2: SITE & PIC PERFORMANCE
@@ -263,40 +263,35 @@ def presentation_page():
         
         c_a, c_b = st.columns(2)
         with c_a:
-            st.markdown('<div class="chart-card">', unsafe_allow_html=True)
-            st.markdown("<h4>📍 Live Site Matrix Status</h4>", unsafe_allow_html=True)
-            display = sites_df[['site_id','site_name','status','progress','pm']].head(12)
-            def cr(row):
-                s=row.get('status','')
-                if 'CRITICAL' in str(s): return ['background:#FEE2E2; color:#991B1B; font-weight:600;']*5
-                if 'DELAYED' in str(s): return ['background:#FFFBEB; color:#92400E; font-weight:600;']*5
-                if 'DONE' in str(s) or 'ON_TRACK' in str(s): return ['background:#F0FDF4; color:#166534;']*5
-                return ['']*5
-            st.dataframe(display.style.apply(cr,axis=1), use_container_width=True, hide_index=True)
-            st.markdown('</div>', unsafe_allow_html=True)
+            with st.container():
+                st.markdown("<h4>📍 Live Site Matrix Status</h4>", unsafe_allow_html=True)
+                display = sites_df[['site_id','site_name','status','progress','pm']].head(12)
+                def cr(row):
+                    s=row.get('status','')
+                    if 'CRITICAL' in str(s): return ['background:#FEE2E2; color:#991B1B; font-weight:600;']*5
+                    if 'DELAYED' in str(s): return ['background:#FFFBEB; color:#92400E; font-weight:600;']*5
+                    if 'DONE' in str(s) or 'ON_TRACK' in str(s): return ['background:#F0FDF4; color:#166534;']*5
+                    return ['']*5
+                st.dataframe(display.style.apply(cr,axis=1), use_container_width=True, hide_index=True)
             
         with c_b:
-            st.markdown('<div class="chart-card">', unsafe_allow_html=True)
-            st.markdown("<h4>👷 Task Ownership Achievement (PIC)</h4>", unsafe_allow_html=True)
-            if not pic_stats.empty:
-                for _, r in pic_stats.iterrows():
-                    pct = r['completion']
-                    clr = '#10B981' if pct>=80 else ('#F59E0B' if pct>=50 else '#DC2626')
-                    st.markdown(f"<div style='margin-bottom:8px;'><b>{r['assigned_to']}</b> &mdash; <small style='color:#64748B;'>{r['done']}/{r['total']} tasks resolved ({pct}%)</small></div>", unsafe_allow_html=True)
-                    st.progress(pct/100)
-            st.markdown('</div>', unsafe_allow_html=True)
+            with st.container():
+                st.markdown("<h4>👷 Task Ownership Achievement (PIC)</h4>", unsafe_allow_html=True)
+                if not pic_stats.empty:
+                    for _, r in pic_stats.iterrows():
+                        pct = r['completion']
+                        st.markdown(f"<div style='margin-bottom:8px;'><b>{r['assigned_to']}</b> &mdash; <small style='color:#64748B;'>{r['done']}/{r['total']} tasks ({pct}%)</small></div>", unsafe_allow_html=True)
+                        st.progress(pct/100)
         
-        st.markdown('<div class="chart-card">', unsafe_allow_html=True)
-        st.markdown("<h4>📊 Field Delay Factor Root-Cause Analysis</h4>", unsafe_allow_html=True)
-        if not ms_df.empty and 'delay_reason' in ms_df.columns:
-            reasons = ms_df[ms_df['delay_reason'].notna() & (ms_df['delay_reason']!='') & (ms_df['delay_reason']!='Tidak Ada')]
-            if not reasons.empty:
-                rc = reasons['delay_reason'].value_counts()
-                fig_r = px.pie(values=rc.values, names=rc.index, hole=0.5, height=220, color_discrete_sequence=px.colors.qualitative.Safe)
-                st.plotly_chart(style_plotly_chart(fig_r), use_container_width=True)
-            else:
-                st.info("✅ No outstanding field blockers documented.")
-        st.markdown('</div>', unsafe_allow_html=True)
+        with st.container():
+            st.markdown("<h4>📊 Field Delay Factor Root-Cause Analysis</h4>", unsafe_allow_html=True)
+            if not ms_df.empty and 'delay_reason' in ms_df.columns:
+                reasons = ms_df[ms_df['delay_reason'].notna() & (ms_df['delay_reason']!='') & (ms_df['delay_reason']!='Tidak Ada')]
+                if not reasons.empty:
+                    rc = reasons['delay_reason'].value_counts()
+                    fig_r = px.pie(values=rc.values, names=rc.index, hole=0.5, height=220, color_discrete_sequence=px.colors.qualitative.Safe)
+                    st.plotly_chart(style_plotly_chart(fig_r), use_container_width=True)
+                else: st.info("✅ No outstanding field blockers documented.")
             
     # ═══════════════════════════════════════
     # 📈 SLIDE 3: PROGRESS & S-CURVE
@@ -307,33 +302,30 @@ def presentation_page():
         
         c_a, c_b = st.columns(2)
         with c_a:
-            st.markdown('<div class="chart-card">', unsafe_allow_html=True)
-            st.markdown("<h4>🏆 Top 10 Advanced Active Sites (%)</h4>", unsafe_allow_html=True)
-            top10 = sites_df.nlargest(10,'progress')
-            fig1 = px.bar(top10, y='site_name', x='progress', orientation='h', color='progress', color_continuous_scale='Blugrn', height=260)
-            fig1.update_layout(coloraxis_showscale=False)
-            st.plotly_chart(style_plotly_chart(fig1), use_container_width=True)
-            st.markdown('</div>', unsafe_allow_html=True)
+            with st.container():
+                st.markdown("<h4>🏆 Top 10 Advanced Active Sites (%)</h4>", unsafe_allow_html=True)
+                top10 = sites_df.nlargest(10,'progress')
+                fig1 = px.bar(top10, y='site_name', x='progress', orientation='h', color='progress', color_continuous_scale='Blugrn', height=260)
+                fig1.update_layout(coloraxis_showscale=False)
+                st.plotly_chart(style_plotly_chart(fig1), use_container_width=True)
             
         with c_b:
-            st.markdown('<div class="chart-card">', unsafe_allow_html=True)
-            st.markdown("<h4>📌 Macroscopic Site Status Distribution</h4>", unsafe_allow_html=True)
-            if 'status' in sites_df.columns:
-                sc = sites_df['status'].value_counts()
-                fig2 = px.pie(values=sc.values, names=sc.index, hole=0.5, height=260, color_discrete_map={'DONE':'#10B981','ON_TRACK':'#3B82F6','ONGOING':'#F59E0B','PENDING':'#94A3B8','DELAYED':'#DC2626','CRITICAL':'#991B1B'})
-                st.plotly_chart(style_plotly_chart(fig2), use_container_width=True)
-            st.markdown('</div>', unsafe_allow_html=True)
+            with st.container():
+                st.markdown("<h4>📌 Macroscopic Site Status Distribution</h4>", unsafe_allow_html=True)
+                if 'status' in sites_df.columns:
+                    sc = sites_df['status'].value_counts()
+                    fig2 = px.pie(values=sc.values, names=sc.index, hole=0.5, height=260, color_discrete_map={'DONE':'#10B981','ON_TRACK':'#3B82F6','ONGOING':'#F59E0B','PENDING':'#94A3B8','DELAYED':'#DC2626','CRITICAL':'#991B1B'})
+                    st.plotly_chart(style_plotly_chart(fig2), use_container_width=True)
         
-        st.markdown('<div class="chart-card">', unsafe_allow_html=True)
-        if not ms_df.empty:
-            ms_t = ms_df.dropna(subset=['planned_end']).copy()
-            if not ms_t.empty:
-                ms_t['month'] = ms_t['planned_end'].dt.to_period('M').astype(str)
-                monthly = ms_t.groupby('month').size().cumsum().reset_index(name='cumulative')
-                fig3 = px.line(monthly, x='month', y='cumulative', markers=True, height=240, title="📈 Macro Milestone Accumulation Line (S-Curve)")
-                fig3.update_traces(line_color='#1E3A8A', line_width=3, marker=dict(size=8, color='#3B82F6'))
-                st.plotly_chart(style_plotly_chart(fig3), use_container_width=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+        with st.container():
+            if not ms_df.empty:
+                ms_t = ms_df.dropna(subset=['planned_end']).copy()
+                if not ms_t.empty:
+                    ms_t['month'] = ms_t['planned_end'].dt.to_period('M').astype(str)
+                    monthly = ms_t.groupby('month').size().cumsum().reset_index(name='cumulative')
+                    fig3 = px.line(monthly, x='month', y='cumulative', markers=True, height=240, title="📈 Macro Milestone Accumulation Line (S-Curve)")
+                    fig3.update_traces(line_color='#1E3A8A', line_width=3, marker=dict(size=8, color='#3B82F6'))
+                    st.plotly_chart(style_plotly_chart(fig3), use_container_width=True)
             
     # ═══════════════════════════════════════
     # ⚠️ SLIDE 4: ALERTS & MARKETING
@@ -344,14 +336,13 @@ def presentation_page():
         
         c_a, c_b, c_c = st.columns(3)
         with c_a:
-            with st.container(): # Menggunakan container native Streamlit
+            with st.container():
                 st.markdown("<h4 style='margin-top:0;'>🚨 Critical Risk Sites</h4>", unsafe_allow_html=True)
                 crit = sites_df[sites_df['status'].isin(['DELAYED','CRITICAL'])]
                 if not crit.empty:
                     for _, r in crit.head(5).iterrows():
                         st.markdown(f'<div class="alert-r"><b>{r["site_id"]}</b><br>Linear Progress: {r.get("progress",0):.0f}%</div>', unsafe_allow_html=True)
-                else:
-                    st.success("All sites operating on normal track.")
+                else: st.success("All sites operating on normal track.")
             
         with c_b:
             with st.container():
@@ -361,16 +352,22 @@ def presentation_page():
                     if not cm.empty:
                         for _, r in cm.head(5).iterrows():
                             st.markdown(f'<div class="alert-y"><b>{r["name"][:22]}</b><br>Stock Level: {r["current_stock"]:.0f} Pcs (Min: {r["min_stock"]:.0f})</div>', unsafe_allow_html=True)
-                    else: 
-                        st.markdown('<div class="alert-g">🛡️ All materials safe above threshold</div>', unsafe_allow_html=True)
+                    else: st.markdown('<div class="alert-g">🛡️ All materials safe above threshold</div>', unsafe_allow_html=True)
             
         with c_c:
             with st.container():
                 st.markdown("<h4 style='margin-top:0;'>📢 Active Commercial Leases</h4>", unsafe_allow_html=True)
                 if not marketing_df.empty:
+                    # ✨ FALLBACK RESOLUTION KEY: Menjamin data keluar jika penamaan key berbeda di Supabase
                     for _, r in marketing_df.head(5).iterrows():
-                        clr = 'alert-g' if r.get('milestone')=='RFS' else ('alert-y' if r.get('milestone') in ['Negosiasi Lahan','RFI'] else 'alert-r')
-                        st.markdown(f'<div class="{clr}"><b>{r.get("site_name_tenant","")[:20]}</b><br>{r.get("tenant_index","")} &bull; {r.get("milestone","")}</div>', unsafe_allow_html=True)
+                        name = r.get('site_name_tenant') or r.get('site_name') or r.get('site_id') or "Unknown Site"
+                        tenant = r.get('tenant_index') or r.get('tenant') or "No Tenant Data"
+                        milestone = r.get('milestone') or "In Progress"
+                        
+                        clr = 'alert-g' if milestone == 'RFS' else ('alert-y' if milestone in ['Negosiasi Lahan','RFI'] else 'alert-r')
+                        st.markdown(f'<div class="{clr}"><b>{str(name)[:20]}</b><br>{tenant} &bull; {milestone}</div>', unsafe_allow_html=True)
+                else:
+                    st.info("No active pipeline in marketing database.")
             
     # ═══════════════════════════════════════
     # 📋 SLIDE 5: ACTIONS & FORECAST
@@ -398,7 +395,6 @@ def presentation_page():
         with c_b:
             with st.container():
                 st.markdown("<h4 style='margin-top:0;'>📋 Executive Directed Action Items</h4>", unsafe_allow_html=True)
-                
                 action_items = [
                     ("PROCUREMENT", "Order material kritis akibat stok menipis", "15 Jun"),
                     ("OPERASIONAL", "Tambah 2 tim pendukung di regional kritis", "16 Jun"),
@@ -421,10 +417,7 @@ def presentation_page():
                 st.markdown("<div style='margin-top:20px;'></div>", unsafe_allow_html=True)
                 st.metric("📢 Marketing Target Revenue CLOSE", f"{mkt_rfs+5} Sites", delta="+5 Funnel Up")
             
-    # ═══════════════════════════════════════
-    # FOOTER LOGO BANNER
-    # ═══════════════════════════════════════
-    st.markdown(f'<div class="footer">⚡ @SNC • Weekly Master Report • {now_ts.strftime("%d %B %Y")}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="footer">⚡ PM System Executive Workspace • Weekly Master Report • {now_ts.strftime("%d %B %Y")}</div>', unsafe_allow_html=True)
 
 if __name__ == "__main__":
     presentation_page()
