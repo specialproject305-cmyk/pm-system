@@ -51,8 +51,10 @@ def inject_professional_css():
         tbody td { font-size: 0.7rem !important; padding: 3px 8px !important; }
         
         /* SIDEBAR */
-        [data-testid="stSidebar"] { background: linear-gradient(180deg, #0F172A 0%, #1E293B 100%); }
-        [data-testid="stSidebar"] * { color: #E2E8F0 !important; }
+                /* SIDEBAR - keep main.py styling */
+        [data-testid="stSidebar"] {
+            /* inherit from main.py */
+        }
     </style>
     """, unsafe_allow_html=True)
 
