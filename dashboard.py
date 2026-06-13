@@ -133,7 +133,7 @@ def create_stacked_bar(df, group_col, categories, colors, title=""):
     fig.update_layout(
         barmode='stack',
         margin=dict(l=0, r=0, t=40, b=0),
-        height=2200,
+       180,
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)',
         font=dict(color='#475569'),
