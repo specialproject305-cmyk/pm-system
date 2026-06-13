@@ -276,12 +276,24 @@ def marketing_dashboard_page():
     display_cols = ['spk_number', 'spk_date', 'tenant_index', 'spk_status', 'site_id_tenant', 'site_name_tenant', 'work_type', 'tower_height', 'milestone']
     valid_cols = [c for c in display_cols if c in filtered.columns]
     
-    # Menggunakan data_editor dengan konfigurasi disabled menjadikannya tabel premium yang interaktif
+    # --- 🛠️ TAMBAHKAN BLOK FIX TIPE DATA DI SINI ---
+    df_display = filtered[valid_cols].copy()
+    
+    # 1. Pastikan spk_date adalah tipe datetime agar cocok dengan DateColumn
+    if 'spk_date' in df_display.columns:
+        df_display['spk_date'] = pd.to_datetime(df_display['spk_date'], errors='coerce')
+        
+    # 2. Pastikan tower_height adalah tipe numerik agar cocok dengan NumberColumn
+    if 'tower_height' in df_display.columns:
+        df_display['tower_height'] = pd.to_numeric(df_display['tower_height'], errors='coerce')
+    # ───────────────────────────────────────────────
+    
+    # Masukkan df_display yang sudah bersih ke data_editor
     st.data_editor(
-        filtered[valid_cols],
+        df_display,
         use_container_width=True,
         hide_index=True,
-        disabled=True,  # Mengunci tabel agar read-only namun kaya fitur sorting/searching
+        disabled=True, 
         column_config={
             "spk_number": st.column_config.TextColumn("Nomor SPK"),
             "spk_date": st.column_config.DateColumn("Tanggal SPK", format="DD/MM/YYYY"),
