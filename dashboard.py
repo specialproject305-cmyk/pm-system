@@ -406,11 +406,11 @@ def dashboard_page():
                 legend={
                     'orientation': "h",        # Horizontal layout
                     'yanchor': "top",          # Jangkar di atas kotak legenda
-                    'y': -0.22,                # Didorong lebih bawah lagi (-0.22) agar menjauh dari nama vendor
+                    'y': -0.3,                # Didorong lebih bawah lagi (-0.22) agar menjauh dari nama vendor
                     'xanchor': "center",
                     'x': 0.5,
                     'font': {'size': 9},       # 🌟 DIPERKECIL: Ukuran teks legenda menjadi 9px (Sangat minimalis)
-                    'itemwidth': 30,           # 🌟 DIPERKECIL: Lebar maksimum area item ikon warna
+                    'itemwidth': 20,           # 🌟 DIPERKECIL: Lebar maksimum area item ikon warna
                     'itemsizing': 'constant',  # Memastikan ukuran simbol konisten kecil
                     'traceorder': 'normal'
                 },
