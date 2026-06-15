@@ -393,27 +393,30 @@ def dashboard_page():
             # 1. Generate dasar chart
             fig3 = create_stacked_bar(pivot, group_col, available, colors[:len(available)], chart_title)
             
-            # 2. ✨ RE-FIX LAYOUT: Penempatan legenda presisi di bawah luar chart
+            # 2. ✨ OPTIMASI UKURAN LEGENDA: Diperkecil 50% & Didorong ke Bawah
             fig3.update_layout(
                 title={
                     'text': f"<b>{chart_title}</b>",
-                    'y': 0.95,               # Jaga judul tetap di atas
-                    'x': 0.5,                # Rata tengah
+                    'y': 0.95,
+                    'x': 0.5,
                     'xanchor': 'center',
                     'yanchor': 'top',
-                    'font': {'size': 16, 'color': '#0F172A'}
+                    'font': {'size': 15, 'color': '#0F172A'}
                 },
                 legend={
-                    'orientation': "h",      # Tetap horizontal
-                    'yanchor': "top",        # Mengunci batas atas legenda
-                    'y': -0.15,              # Diturunkan sedikit dari batas sumbu X bawah
+                    'orientation': "h",        # Horizontal layout
+                    'yanchor': "top",          # Jangkar di atas kotak legenda
+                    'y': -0.22,                # Didorong lebih bawah lagi (-0.22) agar menjauh dari nama vendor
                     'xanchor': "center",
-                    'x': 0.5,                # Rata tengah horizontal
-                    'font': {'size': 11, 'color': '#475569'}
+                    'x': 0.5,
+                    'font': {'size': 9},       # 🌟 DIPERKECIL: Ukuran teks legenda menjadi 9px (Sangat minimalis)
+                    'itemwidth': 30,           # 🌟 DIPERKECIL: Lebar maksimum area item ikon warna
+                    'itemsizing': 'constant',  # Memastikan ukuran simbol konisten kecil
+                    'traceorder': 'normal'
                 },
                 margin={
-                    't': 40,                 # Ruang atas untuk judul
-                    'b': 100,                # 🌟 DIPERLEBAR: Ruang bawah ekstra agar legenda tidak menumpuk sumbu X
+                    't': 40,
+                    'b': 110,                  # 🌟 RUANG TAMBAHAN: Jarak bawah dinaikkan ke 110px agar aman
                     'l': 50,
                     'r': 50
                 },
