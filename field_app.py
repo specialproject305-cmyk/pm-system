@@ -144,48 +144,50 @@ def field_app_page():
             task = ms_df[ms_df['id'] == task_id].iloc[0] if task_id in ms_df['id'].values else None
             
             if task is not None:
-                # Overlay + Modal
-                st.markdown(f"""
-                <div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;">
-                <div style="background:white;border-radius:16px;padding:24px;width:450px;max-width:90vw;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
-                <h3>✏️ Update: {task['name'][:40]}</h3>
-                <p style="color:#64748B;">📍 {site_map.get(task['project_id'],'-')}</p>
+                # Overlay background
+                st.markdown("""
+                <style>
+                    .modal-bg { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; }
+                </style>
+                <div class="modal-bg"></div>
                 """, unsafe_allow_html=True)
                 
-                with st.form(key=f"modal_form_{task_id}", clear_on_submit=False):
-                    c1, c2 = st.columns(2)
-                    with c1:
-                        new_status = st.selectbox("Status", ['PENDING','ONGOING','DONE','DELAYED'],
-                            index=['PENDING','ONGOING','DONE','DELAYED'].index(task.get('status','PENDING')))
-                        new_progress = st.slider("Progress %", 0, 100, int(task.get('progress',0)))
-                    with c2:
+                # Form di luar HTML
+                with st.container():
+                    st.markdown(f"### ✏️ Update: {task['name'][:40]}")
+                    st.caption(f"📍 {site_map.get(task['project_id'],'-')} | 📅 {task['planned_end'].strftime('%d %b %Y') if pd.notna(task['planned_end']) else '-'}")
+                    
+                    new_status = st.selectbox("Status", ['PENDING','ONGOING','DONE','DELAYED'],
+                        index=['PENDING','ONGOING','DONE','DELAYED'].index(task.get('status','PENDING')),
+                        key=f"st_{task_id}")
+                    
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        new_progress = st.slider("Progress %", 0, 100, int(task.get('progress',0)), key=f"pr_{task_id}")
                         as_d = pd.to_datetime(task.get('actual_start')).date() if pd.notna(task.get('actual_start')) else None
-                        new_as = st.date_input("Actual Start", value=as_d)
+                        new_as = st.date_input("Actual Start", value=as_d, key=f"as_{task_id}")
+                    with col2:
                         ae_d = pd.to_datetime(task.get('actual_end')).date() if pd.notna(task.get('actual_end')) else None
-                        new_ae = st.date_input("Actual End", value=ae_d)
+                        new_ae = st.date_input("Actual End", value=ae_d, key=f"ae_{task_id}")
                     
                     col_btn1, col_btn2 = st.columns(2)
                     with col_btn1:
-                        save_btn = st.form_submit_button("💾 Simpan", type="primary", use_container_width=True)
+                        if st.button("💾 Simpan", type="primary", use_container_width=True, key=f"save_{task_id}"):
+                            update_data = {'status': new_status, 'progress': str(new_progress)}
+                            if new_as: update_data['actual_start'] = new_as.strftime('%Y-%m-%d')
+                            if new_ae: update_data['actual_end'] = new_ae.strftime('%Y-%m-%d')
+                            if new_status == 'DONE' and not new_ae: update_data['actual_end'] = date.today().strftime('%Y-%m-%d')
+                            update_row('milestones', task_id, update_data)
+                            notify_update(assigned_to, new_status, task['name'], site_map.get(task['project_id'],'-'))
+                            st.cache_data.clear()
+                            st.session_state.selected_task = None
+                            st.rerun()
                     with col_btn2:
-                        cancel_btn = st.form_submit_button("❌ Cancel", use_container_width=True)
+                        if st.button("❌ Cancel", use_container_width=True, key=f"cancel_{task_id}"):
+                            st.session_state.selected_task = None
+                            st.rerun()
                     
-                    if save_btn:
-                        update_data = {'status': new_status, 'progress': str(new_progress)}
-                        if new_as: update_data['actual_start'] = new_as.strftime('%Y-%m-%d')
-                        if new_ae: update_data['actual_end'] = new_ae.strftime('%Y-%m-%d')
-                        if new_status == 'DONE' and not new_ae: update_data['actual_end'] = date.today().strftime('%Y-%m-%d')
-                        update_row('milestones', task_id, update_data)
-                        notify_update(assigned_to, new_status, task['name'], site_map.get(task['project_id'],'-'))
-                        st.cache_data.clear()
-                        st.session_state.selected_task = None
-                        st.rerun()
-                    
-                    if cancel_btn:
-                        st.session_state.selected_task = None
-                        st.rerun()
-                
-                st.markdown("</div></div>", unsafe_allow_html=True)
+                    st.markdown("---")
     
     # ===== TAB 2: SITE OVERVIEW (seperti Planning) =====
     with tab2:
