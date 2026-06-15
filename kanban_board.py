@@ -22,7 +22,7 @@ def inject_field_css():
             box-shadow: none !important;
         }
         div.stButton > button:hover {
-            color: #6366F1 !important;
+            color: #2563EB !important;
             background-color: transparent !important;
             border: none !important;
         }
@@ -143,7 +143,7 @@ def kanban_page():
     
     # Kanban Column Status Mapping
     statuses = ['PENDING', 'ONGOING', 'DONE', 'DELAYED']
-    colors = {'PENDING':'#6366F1', 'ONGOING':'#3B82F6', 'DONE':'#10B981', 'DELAYED':'#EF4444'}
+    colors = {'PENDING':'#2563EB', 'ONGOING':'#3B82F6', 'DONE':'#10B981', 'DELAYED':'#EF4444'}
     
     cols = st.columns(4)
     for i, status in enumerate(statuses):
@@ -155,7 +155,7 @@ def kanban_page():
             # Looping render masing-masing kartu menggunakan container ber-border native
             for _, task in subset.iterrows():
                 pct = task['progress']
-                bar_color = colors.get(status, '#6366F1')
+                bar_color = colors.get(status, '#2563EB')
                 assigned_pic = task.get('assigned_to', '-')
                 
                 # Menggunakan Container Ber-border resmi dari Streamlit
