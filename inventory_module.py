@@ -16,16 +16,23 @@ def inventory_page():
             st.metric("Total Records", len(df))
             
             # Filter
-            col_f1, col_f2 = st.columns(2)
+                        # Filter terintegrasi
+            projects_df = read_sheet("projects")
+            
+            col_f1, col_f2, col_f3 = st.columns(3)
             with col_f1:
                 vendor_list = ['ALL'] + sorted(df['vendor'].dropna().unique().tolist()) if 'vendor' in df.columns else ['ALL']
                 sel_vendor = st.selectbox("🏢 Vendor:", vendor_list)
             with col_f2:
+                site_list = ['ALL'] + sorted(projects_df['site_name'].dropna().unique().tolist()) if not projects_df.empty else ['ALL']
+                sel_site = st.selectbox("📍 Site Name:", site_list)
+            with col_f3:
                 status_list = ['ALL'] + sorted(df['settle_status'].dropna().unique().tolist()) if 'settle_status' in df.columns else ['ALL']
                 sel_status = st.selectbox("📌 Status:", status_list)
             
             filtered = df.copy()
             if sel_vendor != 'ALL': filtered = filtered[filtered['vendor'] == sel_vendor]
+            if sel_site != 'ALL': filtered = filtered[filtered['site_name'] == sel_site]
             if sel_status != 'ALL': filtered = filtered[filtered['settle_status'] == sel_status]
             
             display_cols = ['warehouse', 'vendor', 'site_id', 'site_name', 'spk_vendor', 'item_code', 'item_description', 'mr_number', 'mr_transact_date', 'settle_status', 'project_name']
