@@ -65,7 +65,10 @@ def render_update_modal(task, site_code, assigned_to):
             
             # Eksekusi database
             update_row('milestones', task_id, update_data)
-            notify_update(assigned_to, new_status, task['name'], site_code)
+            try:
+                notify_update(assigned_to, new_status, task['name'], site_code)
+            except:
+                pass
             
             st.cache_data.clear()
             st.session_state.selected_task = None
@@ -82,7 +85,8 @@ def field_app_page():
     user = st.session_state.get('user', {})
     role = user.get('role', 'engineer')
     
-        role_map = {
+    # 🛠️ FIXED INDENTATION DI SINI
+    role_map = {
         'sitac': 'Sitac', 'legal': 'Legal', 'engineering': 'Engineering',
         'procurement': 'Procurement', 'project': 'Project',
         'vendor_mgmt': 'Vendor Management',
@@ -92,16 +96,20 @@ def field_app_page():
     
     if role == 'marketing':
         from marketing_dashboard import marketing_dashboard_page
-        marketing_dashboard_page(); st.stop()
+        marketing_dashboard_page()
+        st.stop()
     
     try:
         all_data = read_all_sheets()
         ms_df = all_data.get('milestones', pd.DataFrame())
         sites_df = all_data.get('projects', pd.DataFrame())
     except Exception as e:
-        st.error(f"⚠️ Error: {e}"); return
+        st.error(f"⚠️ Error: {e}")
+        return
     
-    if ms_df.empty: st.info("📋 No milestones."); return
+    if ms_df.empty: 
+        st.info("📋 No milestones.")
+        return
     
     ms_df = ms_df[ms_df['assigned_to'] == assigned_to].copy()
     ms_df['planned_end'] = pd.to_datetime(ms_df['planned_end'], errors='coerce')
@@ -130,7 +138,10 @@ def field_app_page():
     # SIDEBAR
     with st.sidebar:
         st.markdown(f"### 👷 {assigned_to}")
-        if st.button("🚪 Logout", use_container_width=True): st.session_state.clear(); st.session_state['logged_in']=False; st.rerun()
+        if st.button("🚪 Logout", use_container_width=True): 
+            st.session_state.clear()
+            st.session_state['logged_in']=False
+            st.rerun()
         st.markdown("---")
         st.markdown("### 🔍 Filter")
         if not sites_df.empty:
@@ -145,9 +156,11 @@ def field_app_page():
                     ms_df = ms_df[ms_df['project_id'].isin(sids)]
             if 'pm' in sites_df.columns:
                 sel_pm = st.selectbox("👤 PM:", ['ALL']+sorted(sites_df['pm'].dropna().unique()), key="f_pm")
-                if sel_pm!='ALL': ms_df = ms_df[ms_df['project_id'].isin(sites_df[sites_df['pm']==sel_pm]['id'])]
+                if sel_pm!='ALL': 
+                    ms_df = ms_df[ms_df['project_id'].isin(sites_df[sites_df['pm']==sel_pm]['id'])]
             sel_site = st.selectbox("📍 Site:", ['ALL']+sorted(sites_df['site_name'].unique()), key="f_site")
-            if sel_site!='ALL': ms_df = ms_df[ms_df['project_id'].isin(sites_df[sites_df['site_name']==sel_site]['id'])]
+            if sel_site!='ALL': 
+                ms_df = ms_df[ms_df['project_id'].isin(sites_df[sites_df['site_name']==sel_site]['id'])]
     
     site_map = dict(zip(sites_df['id'], sites_df['site_id'])) if not sites_df.empty else {}
     site_name_map = dict(zip(sites_df['id'], sites_df['site_name'])) if not sites_df.empty else {}
@@ -186,7 +199,6 @@ def field_app_page():
             if not task_row.empty:
                 current_task = task_row.iloc[0]
                 current_site_code = site_map.get(current_task['project_id'], '-')
-                # Panggil modal dialog resmi Streamlit
                 render_update_modal(current_task, current_site_code, assigned_to)
     
     # ===== TAB 2: SITE OVERVIEW =====
