@@ -38,7 +38,7 @@ def inject_professional_css():
         .kpi-subtitle { font-size: 0.6rem; color: #94A3B8; }
         .status-done { color: #059669 !important; }
         .status-ongoing { color: #D97706 !important; }
-        .status-pending { color: #7C3AED !important; }
+        .status-pending { color: #2563EB !important; }
         .status-delayed { color: #DC2626 !important; }
         
         /* CHART BOX */
@@ -309,7 +309,7 @@ def dashboard_page():
         st.markdown('<div class="chart-box">', unsafe_allow_html=True)
         if 'status' in df.columns and not df.empty:
             status_counts = df['status'].dropna().value_counts()
-            status_colors = {'DONE': '#059669', 'ON_TRACK': '#059669', 'ONGOING': '#D97706', 'PENDING': '#7C3AED', 'DELAYED': '#DC2626', 'CRITICAL': '#7F1D1D'}
+            status_colors = {'DONE': '#059669', 'ON_TRACK': '#059669', 'ONGOING': '#D97706', 'PENDING': '#2563EB', 'DELAYED': '#DC2626', 'CRITICAL': '#7F1D1D'}
             fig1 = create_donut_chart(status_counts, "Project Status Distribution", status_colors)
             st.plotly_chart(fig1, use_container_width=True)
         else:
@@ -321,7 +321,7 @@ def dashboard_page():
         st.markdown('<div class="chart-box">', unsafe_allow_html=True)
         if 'site_category' in df.columns and not df.empty:
             cat_series = df['site_category'].dropna().value_counts()
-            cat_colors = {'New Site': '#0369A1', 'Collocation': '#7C3AED', 'Upgrade': '#D97706', 'Relocation': '#DC2626', 'Indoor': '#EC4899'}
+            cat_colors = {'New Site': '#0369A1', 'Collocation': '#2563EB', 'Upgrade': '#D97706', 'Relocation': '#DC2626', 'Indoor': '#EC4899'}
             fig2 = create_donut_chart(cat_series, "Sites by Category", cat_colors)
             st.plotly_chart(fig2, use_container_width=True)
         else:
@@ -339,7 +339,7 @@ def dashboard_page():
             stack_order = ['CRITICAL', 'DELAYED', 'ONGOING', 'PENDING', 'DONE']
             available = [s for s in stack_order if s in pivot.columns]
             if not available: available = pivot.columns.tolist()[:5]
-            colors = ['#DC2626', '#EF4444', '#D97706', '#7C3AED', '#059669']
+            colors = ['#DC2626', '#EF4444', '#D97706', '#2563EB', '#059669']
             
             fig3 = create_stacked_bar(pivot, group_col, available, colors[:len(available)], chart_title)
             st.plotly_chart(fig3, use_container_width=True)
