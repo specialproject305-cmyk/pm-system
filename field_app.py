@@ -21,10 +21,15 @@ def inject_field_css():
         .status-card.danger { border-left: 4px solid #DC2626; }
         .status-card.info { border-left: 4px solid #3B82F6; }
         
-        .kanban-column { background: white; border-radius: 12px; border: 2px solid #DBEAFE; padding: 12px; min-height: 400px; }
-        .kanban-column-header { font-weight: 700; color: #1F2937; font-size: 0.9rem; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 2px solid #DBEAFE; display: flex; justify-content: space-between; }
-        .kanban-card { background: #FFF; padding: 10px; border-radius: 8px; border-left: 4px solid #3B82F6; margin-bottom: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); cursor: pointer; transition: all 0.2s; }
-        .kanban-card:hover { box-shadow: 0 4px 8px rgba(59,130,246,0.15); transform: translateY(-2px); }
+        .kanban-column { background: rgba(255,255,255,0.8); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-radius: 14px; border: 1px solid rgba(0,0,0,0.06); padding: 14px; min-height: 400px; box-shadow: 0 4px 20px rgba(0,0,0,0.04); }
+        .kanban-column-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; margin-bottom: 10px; border-bottom: 2px solid #E2E8F0; font-weight: 700; font-size: 0.85rem; color: #1E293B; text-transform: uppercase; }
+        .kanban-count { background: #6366F1; color: white; padding: 2px 10px; border-radius: 12px; font-size: 0.7rem; font-weight: 700; }
+        .kanban-card { background: white; border-radius: 10px; padding: 10px; margin-bottom: 6px; border-left: 4px solid #6366F1; box-shadow: 0 2px 8px rgba(0,0,0,0.04); cursor: pointer; transition: all 0.2s; }
+        .kanban-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
+        .kanban-card.pending { border-left-color: #94A3B8; }
+        .kanban-card.ongoing { border-left-color: #3B82F6; }
+        .kanban-card.done { border-left-color: #10B981; }
+        .kanban-card.delayed { border-left-color: #EF4444; }
         .section-divider { height: 2px; background: linear-gradient(90deg, transparent, #3B82F6, transparent); margin: 20px 0; }
     </style>
     """, unsafe_allow_html=True)
@@ -138,15 +143,42 @@ def field_app_page():
         
         st.divider()
         
-        # Form update untuk task yang dipilih
+                # ===== POP-UP MODAL UNTUK UPDATE TASK =====
         if st.session_state.selected_task:
             task_id = st.session_state.selected_task
             task = ms_df[ms_df['id'] == task_id].iloc[0] if task_id in ms_df['id'].values else None
             
             if task is not None:
-                st.markdown(f"### ✏️ Update: {task['name']}")
+                # Overlay background gelap
+                st.markdown("""
+                <style>
+                    .modal-overlay {
+                        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                        background: rgba(0,0,0,0.6); z-index: 9998;
+                        display: flex; align-items: center; justify-content: center;
+                    }
+                    .modal-content {
+                        background: white; border-radius: 16px; padding: 24px;
+                        width: 500px; max-width: 90%; z-index: 9999;
+                        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                        animation: slideUp 0.3s ease;
+                    }
+                    @keyframes slideUp {
+                        from { transform: translateY(50px); opacity: 0; }
+                        to { transform: translateY(0); opacity: 1; }
+                    }
+                </style>
+                """, unsafe_allow_html=True)
                 
-                with st.form(f"update_kanban_{task_id}", clear_on_submit=False):
+                # Modal container
+                st.markdown('<div class="modal-overlay"><div class="modal-content">', unsafe_allow_html=True)
+                
+                st.markdown(f"### ✏️ Update Task")
+                st.markdown(f"**{task['name']}**")
+                site_code = site_map.get(task['project_id'], '-')
+                st.caption(f"📍 {site_code} | 📅 {task['planned_end'].strftime('%d %b %Y') if pd.notna(task['planned_end']) else '-'}")
+                
+                with st.form(f"modal_update_{task_id}", clear_on_submit=False):
                     c1, c2 = st.columns(2)
                     with c1:
                         new_status = st.selectbox("Status", ['PENDING','ONGOING','DONE','DELAYED'],
@@ -158,17 +190,29 @@ def field_app_page():
                         ae_d = pd.to_datetime(task.get('actual_end')).date() if pd.notna(task.get('actual_end')) else None
                         new_ae = st.date_input("Actual End", value=ae_d)
                     
-                    if st.form_submit_button("💾 Simpan Update", type="primary", use_container_width=True):
+                    col_btn1, col_btn2 = st.columns(2)
+                    with col_btn1:
+                        save_btn = st.form_submit_button("💾 Simpan", type="primary", use_container_width=True)
+                    with col_btn2:
+                        cancel_btn = st.form_submit_button("❌ Cancel", use_container_width=True)
+                    
+                    if save_btn:
                         update_data = {'status': new_status, 'progress': str(new_progress)}
                         if new_as: update_data['actual_start'] = new_as.strftime('%Y-%m-%d')
                         if new_ae: update_data['actual_end'] = new_ae.strftime('%Y-%m-%d')
                         if new_status == 'DONE' and not new_ae: update_data['actual_end'] = date.today().strftime('%Y-%m-%d')
                         update_row('milestones', task_id, update_data)
-                        st.success("✅ Updated!"); st.cache_data.clear(); st.session_state.selected_task = None; st.rerun()
+                        notify_update(assigned_to, new_status, task['name'], site_code)
+                        st.success("✅ Updated!")
+                        st.cache_data.clear()
+                        st.session_state.selected_task = None
+                        st.rerun()
+                    
+                    if cancel_btn:
+                        st.session_state.selected_task = None
+                        st.rerun()
                 
-                if st.button("❌ Batal", key="cancel_update"):
-                    st.session_state.selected_task = None
-                    st.rerun()
+                st.markdown('</div></div>', unsafe_allow_html=True)
     
     # ===== TAB 2: SITE OVERVIEW (seperti Planning) =====
     with tab2:
