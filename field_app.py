@@ -57,7 +57,7 @@ def render_update_modal(task, site_code, assigned_to):
     
     col_btn1, col_btn2 = st.columns(2)
     with col_btn1:
-        if st.button("💾 Simpan", type="primary", use_container_width=True, key=f"save_{task_id}"):
+        if st.button("💾 Save Change", type="primary", use_container_width=True, key=f"save_{task_id}"):
             update_data = {'status': new_status, 'progress': str(new_progress)}
             if new_as: update_data['actual_start'] = new_as.strftime('%Y-%m-%d')
             if new_ae: update_data['actual_end'] = new_ae.strftime('%Y-%m-%d')
