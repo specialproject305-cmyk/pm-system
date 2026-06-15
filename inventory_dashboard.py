@@ -26,11 +26,11 @@ def inject_css():
         .stat-card .lbl { font-size:0.75rem; color:#64748B; text-transform:uppercase; font-weight:600; margin-top:4px; }
         
         .chart-box {
-            background: white; border-radius: 14px; padding: 16px;
+            background: white; border-radius: 14px; padding: 10px;
             box-shadow: 0 4px 16px rgba(0,0,0,0.06); border:1px solid #E2E8F0;
-            margin-bottom: 16px;
+            margin-bottom: 10px;
         }
-        .chart-box h3 { font-size:0.9rem; color:#1E293B; margin:0 0 12px 0; font-weight:700; }
+        .chart-box h3 { font-size:0.75rem; color:#1E293B; margin:0 0 4px 0; padding-bottom:4px; font-weight:700; border-bottom:1px solid #E2E8F0; }
         
         .filter-bar {
             background: white; border-radius: 12px; padding: 14px 18px;
