@@ -24,10 +24,10 @@ st.markdown("""
     
     /* ===== GLASSMORPHISM SIDEBAR ===== */
     [data-testid="stSidebar"] {
-        background: rgba(15, 23, 42, 0.95) !important;
+        background: linear-gradient(180deg, #1E3A5F 0%, #2563EB 40%, #F59E0B 100%) !important;
         backdrop-filter: blur(20px) !important;
         -webkit-backdrop-filter: blur(20px) !important;
-        border-right: 1px solid rgba(255,255,255,0.08) !important;
+        border-right: 1px solid rgba(255,255,255,0.1) !important;
     }
     [data-testid="stSidebar"] * {
         color: #E2E8F0 !important;
