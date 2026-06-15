@@ -3,6 +3,7 @@ from auth import login_page, check_permission, show_permission_denied
 from bulk_import import bulk_import_page
 from workforce_page import workforce_page
 from user_manual import user_manual_page
+from inventory_dashboard import inventory_dashboard_page
 
 
 
@@ -178,13 +179,13 @@ with st.sidebar:
 
     # Penentuan Menu Navigasi (Clean & No Duplicate)
     if role in ['admin', 'pm', 'pmo']:
-        menu_options = ["📊 Dashboard", "📁 Site Tracker", "🧱 Milestones", "👷 Workforce", "📋 Kanban Board", "📋 Daily Tasks", "📦 Inventory", "🤖 AI Insights", "🔍 RCA Analysis", "💬 Chat & Notif", "📱 Field App", "📽️ Presentation", "📊 Export Report", "📢 Marketing Sites", "📢 Marketing Dashboard", "🔔 Notifications","📖 User Manual"]
+        menu_options = ["📊 Dashboard","📦 Inventory Dashboard", "📁 Site Tracker", "🧱 Milestones", "👷 Workforce", "📋 Kanban Board", "📋 Daily Tasks", "📦 Inventory", "🤖 AI Insights", "🔍 RCA Analysis", "💬 Chat & Notif", "📱 Field App", "📽️ Presentation", "📊 Export Report", "📢 Marketing Sites", "📢 Marketing Dashboard", "🔔 Notifications","📖 User Manual"]
     elif role == 'planning':
-        menu_options = ["📊 Dashboard", "📁 Site Tracker", "🧱 Milestones", "📊 Export Report", "🔔 Notifications","📖 User Manual"]
+        menu_options = ["📊 Dashboard","📦 Inventory Dashboard", "📁 Site Tracker", "🧱 Milestones", "📊 Export Report", "🔔 Notifications","📖 User Manual"]
     elif role == 'marketing':
         menu_options = ["📊 Dashboard", "📢 Marketing Dashboard", "📢 Marketing Sites", "💬 Chat & Notif", "🔔 Notifications","📖 User Manual"]
     else: # viewer
-        menu_options = ["📊 Dashboard", "🤖 AI Insights", "💬 Chat & Notif", "📽️ Presentation", "📊 Export Report","📖 User Manual"]
+        menu_options = ["📊 Dashboard","📦 Inventory Dashboard", "🤖 AI Insights", "💬 Chat & Notif", "📽️ Presentation", "📊 Export Report","📖 User Manual"]
 
     if role == 'admin':
         # Menjaga urutan tetap unik tanpa fungsi append berulang
@@ -275,6 +276,7 @@ def main():
     elif menu == "📥 Bulk Import": bulk_import_page()
     elif menu == "👷 Workforce": workforce_page()
     elif menu == "📖 User Manual": user_manual_page()
+    elif menu == "📦 Inventory Dashboard": inventory_dashboard_page()
 
 if __name__ == "__main__":
     main()
