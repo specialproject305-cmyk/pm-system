@@ -148,7 +148,7 @@ def workforce_page():
                     st.info("Belum ada data pekerja terdaftar di database.")
         
         with col2:
-            st.subheader("➕ Registrasi Pekerja Baru")
+            st.subheader("➕ Registrasi Pekerja")
             with st.form("add_worker"):
                 name = st.text_input("Nama Lengkap")
                 role = st.selectbox("Role / Posisi Utama", ["Engineer", "Technician", "Rigger", "Supervisor", "Driver", "Admin", "Other"])
@@ -240,7 +240,6 @@ def workforce_page():
                             current_status = match['status'].values[0]
                             match_id = match['id'].values[0] if 'id' in match.columns else None
                     
-                    # Pemilihan skema warna label status premium
                     bg_color = {'Present': '#DCFCE7', 'Absent': '#FEE2E2', 'Leave': '#FEF3C7', 'Not Set': '#F1F5F9'}.get(current_status, '#F1F5F9')
                     text_color = {'Present': '#15803D', 'Absent': '#B91C1C', 'Leave': '#B45309', 'Not Set': '#475569'}.get(current_status, '#475569')
                     
@@ -254,7 +253,6 @@ def workforce_page():
                     </div>
                     """, unsafe_allow_html=True)
                     
-                    # Re-design tombol aksi mikro agar presisi & minimalis
                     c1, c2, c3 = st.columns(3)
                     with c1:
                         if st.button("✅", key=f"p_{w['id']}", help=f"Set {w['name']} Hadir"): 
@@ -273,4 +271,34 @@ def workforce_page():
                             st.rerun()
                     st.markdown("<div style='margin-bottom:20px;'></div>", unsafe_allow_html=True)
         else:
-            st.info("Silakan
+            st.info("Silakan master data pekerja terlebih dahulu.")
+            
+    # =========================================================
+    # 📊 TAB 4: UTILIZATION
+    # =========================================================
+    with tab4:
+        with st.container():
+            st.markdown("<h3 style='margin-top:0; color:#0F172A;'>📊 Manpower Resource Utilization Rate</h3>", unsafe_allow_html=True)
+            st.markdown("<p style='color:#64748B; font-size:0.85rem; margin-top:-5px;'>Rasio efektivitas penyelesaian target pekerjaan/milestone oleh masing-masing tenaga ahli.</p>", unsafe_allow_html=True)
+            st.divider()
+            
+            if not wf_df.empty and not assign_df.empty:
+                for _, w in wf_df.iterrows():
+                    total_assign = len(assign_df[assign_df['workforce_id'] == w['id']]) if 'workforce_id' in assign_df.columns else 0
+                    done_assign = len(assign_df[(assign_df['workforce_id'] == w['id']) & (assign_df['status'] == 'Completed')]) if total_assign > 0 and 'status' in assign_df.columns else 0
+                    
+                    rate = (done_assign / total_assign * 100) if total_assign > 0 else 0
+                    bar_color = '#10B981' if rate >= 80 else ('#F59E0B' if rate >= 50 else '#EF4444')
+                    
+                    col_worker, col_bar = st.columns([1, 2])
+                    with col_worker:
+                        st.markdown(f"<div style='padding-top:5px;'><b>{w['name']}</b><br><small style='color:#64748B;'>{w['role']}</small></div>", unsafe_allow_html=True)
+                    with col_bar:
+                        st.progress(rate / 100)
+                        st.markdown(f"<small style='color:#475569;'>Selesai: <b>{done_assign}</b> dari <b>{total_assign}</b> tugas &bull; Efisiensi: <b style='color:{bar_color};'>{rate:.0f}%</b></small>", unsafe_allow_html=True)
+                    st.markdown("<div style='border-bottom: 1px solid #F1F5F9; margin: 10px 0;'></div>", unsafe_allow_html=True)
+            else:
+                st.info("Belum ada data distribusi proyek aktif untuk kalkulasi beban kerja tim.")
+
+if __name__ == "__main__":
+    workforce_page()
