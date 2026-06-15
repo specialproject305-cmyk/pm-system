@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
-from supabase_db import read_sheet
+from supabase_db import read_sheet, read_all_sheets
 
 def inject_css():
     st.markdown("""
@@ -44,72 +44,97 @@ def inventory_dashboard_page():
     inject_css()
     st.markdown('<div class="inv-header"><h1>📦 Inventory Dashboard</h1><p>Real-time inventory analytics & monitoring</p></div>', unsafe_allow_html=True)
     
-    df = read_sheet("inventory_transactions")
-    projects_df = read_sheet("projects")
+    # ===== LOAD SEMUA DATA UTAMA & MASTER RELASI =====
+    try:
+        try:
+            all_data = read_all_sheets()
+            df = all_data.get('inventory_transactions', pd.DataFrame())
+            sites_df = all_data.get('projects', pd.DataFrame())
+            master_df = all_data.get('master_projects', pd.DataFrame())
+        except:
+            df = read_sheet("inventory_transactions")
+            sites_df = read_sheet("projects")
+            master_df = read_sheet("master_projects")
+    except Exception as e:
+        st.error(f"⚠️ Error loading data: {e}")
+        return
     
     if df.empty:
         st.info("📋 Belum ada data inventory."); return
     
-    # Numeric conversion
+    # Konversi numerik awal
     for col in ['mr_qty','nod_qty','issue_qty','return_qty','reloc_qty','mr_transact_qty']:
         if col in df.columns: 
             df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
             
-    # ===== INTEGRASI RELASI DATA TABEL =====
-    # Sinkronisasi metadata site_name & project_name dari projects_df ke df induk berdasarkan project_id / site_id
-    if not projects_df.empty and 'project_id' in df.columns:
-        site_id_map = dict(zip(projects_df['id'], projects_df['site_id']))
-        site_name_map = dict(zip(projects_df['id'], projects_df['site_name']))
+    # ===== INTEGRASI RE-MAPPING SINKRONISASI TABEL RELASI =====
+    # Pastikan data transaksi mengacu ke data master project asli
+    if not sites_df.empty and 'project_id' in df.columns:
+        # Relasikan project_id transaksi ke site master info
+        site_code_map = dict(zip(sites_df['id'], sites_df['site_id']))
+        site_name_map = dict(zip(sites_df['id'], sites_df['site_name']))
+        spk_vendor_map = dict(zip(sites_df['id'], sites_df['spk_vendor'])) if 'spk_vendor' in sites_df.columns else {}
+        master_proj_id_map = dict(zip(sites_df['id'], sites_df['master_project_id'])) if 'master_project_id' in sites_df.columns else {}
         
-        # Override data transaksi agar mengacu pada ground-truth master data project
-        df['site_id'] = df['project_id'].map(site_id_map).fillna(df.get('site_id', '-'))
+        df['site_id'] = df['project_id'].map(site_code_map).fillna(df.get('site_id', '-'))
         df['site_name'] = df['project_id'].map(site_name_map).fillna(df.get('site_name', '-'))
+        
+        # Integrasi SPK Vendor langsung dari tabel master project jika ada
+        if spk_vendor_map:
+            df['spk_vendor'] = df['project_id'].map(spk_vendor_map).fillna(df.get('spk_vendor', '-'))
+            
+        # Integrasi Nama Master Project (By Project)
+        if master_proj_id_map and not master_df.empty:
+            master_name_map = dict(zip(master_df['id'], master_df['project_name']))
+            df['master_project_name'] = df['project_id'].map(master_proj_id_map).map(master_name_map).fillna(df.get('project_name', '-'))
+        else:
+            df['master_project_name'] = df.get('project_name', '-')
+    else:
+        df['master_project_name'] = df.get('project_name', '-')
 
-    # ===== FILTER BAR (Koneksi Antar Relasi Dropdown) =====
+    # ===== FILTER BAR INTEGRASI MULTI-TABEL =====
     st.markdown('<div class="filter-bar">', unsafe_allow_html=True)
     c1, c2, c3, c4, c5 = st.columns(5)
     
     with c1:
         vendors = ['ALL'] + sorted(df['vendor'].dropna().unique().tolist()) if 'vendor' in df.columns else ['ALL']
-        sel_vendor = st.selectbox("🏢 Vendor", vendors, key="inv_filter_vendor")
+        sel_vendor = st.selectbox("🏢 Vendor", vendors, key="inv_f_vendor")
     
-    # Cascading/Relational logic filter untuk Project
-    sub_project_df = df.copy()
+    # 1. Filter Berantai untuk Master Project Name
+    sub_df = df.copy()
     if sel_vendor != 'ALL':
-        sub_project_df = sub_project_df[sub_project_df['vendor'] == sel_vendor]
+        sub_df = sub_df[sub_df['vendor'] == sel_vendor]
         
     with c2:
-        projects = ['ALL'] + sorted(sub_project_df['project_name'].dropna().unique().tolist()) if 'project_name' in sub_project_df.columns else ['ALL']
-        sel_project = st.selectbox("📁 Project", projects, key="inv_filter_project")
+        master_projects = ['ALL'] + sorted(sub_df['master_project_name'].dropna().unique().tolist())
+        sel_project = st.selectbox("📁 Master Project", master_projects, key="inv_f_project")
         
-    # Cascading logic filter untuk Site Name
-    sub_site_df = sub_project_df.copy()
+    # 2. Filter Berantai untuk Site Name (Terintegrasi tabel projects)
     if sel_project != 'ALL':
-        sub_site_df = sub_site_df[sub_site_df['project_name'] == sel_project]
+        sub_df = sub_df[sub_df['master_project_name'] == sel_project]
         
     with c3:
-        site_list = ['ALL'] + sorted(sub_site_df['site_name'].dropna().unique().tolist()) if 'site_name' in sub_site_df.columns else ['ALL']
-        sel_site = st.selectbox("📍 Site Name", site_list, key="inv_filter_site")
+        site_list = ['ALL'] + sorted(sub_df['site_name'].dropna().unique().tolist())
+        sel_site = st.selectbox("📍 Site Name", site_list, key="inv_f_site")
         
-    # Cascading logic filter untuk SPK Vendor
-    sub_spk_df = sub_site_df.copy()
+    # 3. Filter Berantai untuk Nomor SPK Vendor (Terintegrasi tabel projects)
     if sel_site != 'ALL':
-        sub_spk_df = sub_spk_df[sub_spk_df['site_name'] == sel_site]
+        sub_df = sub_df[sub_df['site_name'] == sel_site]
         
     with c4:
-        spk_list = ['ALL'] + sorted(sub_spk_df['spk_vendor'].dropna().unique().tolist()) if 'spk_vendor' in sub_spk_df.columns else ['ALL']
-        sel_spk = st.selectbox("📄 SPK Vendor", spk_list, key="inv_filter_spk")
+        spk_list = ['ALL'] + sorted(sub_df['spk_vendor'].dropna().unique().tolist()) if 'spk_vendor' in sub_df.columns else ['ALL']
+        sel_spk = st.selectbox("📄 SPK Vendor", spk_list, key="inv_f_spk")
     
     with c5:
         st.markdown("<div style='padding-top:24px;'></div>", unsafe_allow_html=True)
-        if st.button("🔄 Reset Filter", use_container_width=True, key="inv_reset_filter_btn"):
+        if st.button("🔄 Reset Filter", use_container_width=True, key="inv_reset_filter_core"):
             st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
     
-    # Final Apply Filters
+    # ===== APPLY FINAL FILTER KE DATASET TRANSAKSI =====
     filtered = df.copy()
     if sel_vendor != 'ALL': filtered = filtered[filtered['vendor'] == sel_vendor]
-    if sel_project != 'ALL': filtered = filtered[filtered['project_name'] == sel_project]
+    if sel_project != 'ALL': filtered = filtered[filtered['master_project_name'] == sel_project]
     if sel_site != 'ALL': filtered = filtered[filtered['site_name'] == sel_site]
     if sel_spk != 'ALL': filtered = filtered[filtered['spk_vendor'] == sel_spk]
     
@@ -141,7 +166,7 @@ def inventory_dashboard_page():
             vendor_counts.columns = ['Vendor', 'Count']
             fig1 = px.bar(vendor_counts, x='Vendor', y='Count', color='Count', color_continuous_scale=['#3B82F6','#1E40AF'])
             fig1.update_layout(height=300, margin=dict(t=10,b=10,l=10,r=10), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', showlegend=False)
-            st.plotly_chart(fig1, use_container_width=True, key="chart_vendor_bar")
+            st.plotly_chart(fig1, use_container_width=True, key="chart_vendor_bar_v2")
         st.markdown('</div>', unsafe_allow_html=True)
     
     with col_b:
@@ -150,7 +175,7 @@ def inventory_dashboard_page():
             status_counts = filtered['settle_status'].value_counts()
             fig2 = px.pie(values=status_counts.values, names=status_counts.index, hole=0.5, color_discrete_map={'Settle Done':'#10B981','Partial':'#F59E0B','Pending':'#EF4444'})
             fig2.update_layout(height=300, margin=dict(t=10,b=10,l=10,r=10), paper_bgcolor='rgba(0,0,0,0)')
-            st.plotly_chart(fig2, use_container_width=True, key="chart_settle_pie")
+            st.plotly_chart(fig2, use_container_width=True, key="chart_settle_pie_v2")
         st.markdown('</div>', unsafe_allow_html=True)
     
     # ===== CHARTS ROW 2 =====
@@ -162,8 +187,7 @@ def inventory_dashboard_page():
             mr_counts = filtered['status_mr_new'].value_counts()
             fig3 = px.pie(values=mr_counts.values, names=mr_counts.index, hole=0.5, color_discrete_map={'DONE':'#10B981','PARTIAL':'#F59E0B','PENDING':'#94A3B8'})
             fig3.update_layout(height=300, margin=dict(t=10,b=10,l=10,r=10), paper_bgcolor='rgba(0,0,0,0)')
-            # FIXED: Menambahkan key eksplisit unik agar tidak dideteksi sebagai duplikat dari fig2
-            st.plotly_chart(fig3, use_container_width=True, key="chart_mr_status_pie")
+            st.plotly_chart(fig3, use_container_width=True, key="chart_mr_status_pie_v2")
         st.markdown('</div>', unsafe_allow_html=True)
     
     with col_d:
@@ -173,13 +197,15 @@ def inventory_dashboard_page():
             item_counts.columns = ['Item', 'Count']
             fig4 = px.bar(item_counts, y='Item', x='Count', orientation='h', color='Count', color_continuous_scale=['#3B82F6','#1E40AF'])
             fig4.update_layout(height=300, margin=dict(t=10,b=10,l=10,r=10), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', showlegend=False)
-            st.plotly_chart(fig4, use_container_width=True, key="chart_top_items_bar")
+            st.plotly_chart(fig4, use_container_width=True, key="chart_top_items_bar_v2")
         st.markdown('</div>', unsafe_allow_html=True)
     
-    # ===== TABLE =====
+    # ===== TABLE DATA DISPLAY =====
     st.divider()
     st.subheader("📋 Recent Transactions")
-    display_cols = ['warehouse','vendor','site_id','site_name','item_description','mr_number','mr_transact_date','settle_status','project_name']
+    # Memasukkan master_project_name ke kolom visualisasi tabel agar sinkron
+    filtered['project_name'] = filtered['master_project_name']
+    display_cols = ['warehouse', 'vendor', 'site_id', 'site_name', 'spk_vendor', 'item_description', 'mr_number', 'mr_transact_date', 'settle_status', 'project_name']
     st.dataframe(filtered[[c for c in display_cols if c in filtered.columns]].head(20), use_container_width=True, hide_index=True)
     
     st.download_button(
@@ -187,7 +213,7 @@ def inventory_dashboard_page():
         filtered.to_csv(index=False), 
         f"inventory_report_{datetime.now().strftime('%Y%m%d')}.csv", 
         "text/csv",
-        key="inv_download_csv_btn"
+        key="inv_download_csv_final"
     )
 
 if __name__ == "__main__":
