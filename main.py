@@ -43,7 +43,7 @@ st.markdown("""
     }
     [data-testid="stSidebar"] .stButton > button:hover {
         background: rgba(99, 102, 241, 0.2) !important;
-        border-color: #6366F1 !important;
+        border-color: #2563EB !important;
         transform: translateY(-2px) !important;
     }
     [data-testid="stSidebar"] .stSelectbox > div {
@@ -54,7 +54,7 @@ st.markdown("""
     
     /* ===== GLOBAL BUTTON ===== */
     .stButton > button {
-        background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%) !important;
+        background: linear-gradient(135deg, #2563EB 0%, #3B82F6 100%) !important;
         color: white !important;
         border: none !important;
         border-radius: 10px !important;
@@ -76,7 +76,7 @@ st.markdown("""
         transition: all 0.3s ease !important;
     }
     .stTextInput > div > div:focus-within, .stSelectbox > div > div:focus-within {
-        border-color: #6366F1 !important;
+        border-color: #2563EB !important;
         box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1) !important;
     }
     
@@ -87,7 +87,7 @@ st.markdown("""
         box-shadow: 0 4px 20px rgba(0,0,0,0.06) !important;
     }
     thead th {
-        background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%) !important;
+        background: linear-gradient(135deg, #2563EB 0%, #3B82F6 100%) !important;
         color: white !important;
         font-weight: 600 !important;
         font-size: 0.75rem !important;
