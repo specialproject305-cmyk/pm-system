@@ -54,7 +54,7 @@ def inventory_page():
             df['status'] = df.apply(get_status, axis=1)
             
             # Display columns
-            display_cols = ['code', 'name', 'unit', 'current_stock', 'min_stock', 'status', 'unit_price']
+            display_cols = ['warehouse', 'vendor', 'site_id', 'site_name', 'spk_vendor', 'item_code', 'item_description', 'mr_number', 'mr_transact_date', 'settle_status', 'project_name']
             available_cols = [c for c in display_cols if c in df.columns]
             
             # Color-coded dataframe
