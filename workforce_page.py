@@ -118,7 +118,7 @@ def workforce_page():
         
         if not wf_df.empty and not assign_df.empty:
             for _, w in wf_df.iterrows():
-                total_assign = len(assign_df[assign_df['workforce_id']==w['id']])
+                total_assign = len(assign_df[assign_df['workforce_id']==w['id']]) if not assign_df.empty and 'workforce_id' in assign_df.columns else 0
                 done_assign = len(assign_df[(assign_df['workforce_id']==w['id']) & (assign_df['status']=='Completed')])
                 
                 rate = (done_assign/total_assign*100) if total_assign > 0 else 0
