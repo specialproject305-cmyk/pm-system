@@ -53,21 +53,33 @@ def inventory_dashboard_page():
     for col in ['mr_qty','nod_qty','issue_qty','return_qty','reloc_qty','mr_transact_qty']:
         if col in df.columns: df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
     
-    # ===== FILTER BAR =====
+    # ===== FILTER BAR (Terintegrasi dengan sistem) =====
+    # Load data dari tabel lain untuk filter
+    projects_df = read_sheet("projects")
+    
     st.markdown('<div class="filter-bar">', unsafe_allow_html=True)
     c1, c2, c3, c4, c5 = st.columns(5)
+    
     with c1:
+        # Vendor dari tabel inventory
         vendors = ['ALL'] + sorted(df['vendor'].dropna().unique().tolist()) if 'vendor' in df.columns else ['ALL']
         sel_vendor = st.selectbox("🏢 Vendor", vendors)
+    
     with c2:
+        # Project Name dari tabel inventory
         projects = ['ALL'] + sorted(df['project_name'].dropna().unique().tolist()) if 'project_name' in df.columns else ['ALL']
         sel_project = st.selectbox("📁 Project", projects)
+    
     with c3:
-        statuses = ['ALL'] + sorted(df['settle_status'].dropna().unique().tolist()) if 'settle_status' in df.columns else ['ALL']
-        sel_status = st.selectbox("📌 Status", statuses)
+        # Site Name dari tabel projects (terintegrasi)
+        site_list = ['ALL'] + sorted(projects_df['site_name'].dropna().unique().tolist()) if not projects_df.empty else ['ALL']
+        sel_site = st.selectbox("📍 Site Name", site_list)
+    
     with c4:
-        warehouses = ['ALL'] + sorted(df['warehouse'].dropna().unique().tolist()) if 'warehouse' in df.columns else ['ALL']
-        sel_wh = st.selectbox("🏭 Warehouse", warehouses)
+        # SPK Vendor dari tabel inventory
+        spk_list = ['ALL'] + sorted(df['spk_vendor'].dropna().unique().tolist()) if 'spk_vendor' in df.columns else ['ALL']
+        sel_spk = st.selectbox("📄 SPK Vendor", spk_list)
+    
     with c5:
         if st.button("🔄 Reset Filter", use_container_width=True): st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
@@ -76,8 +88,8 @@ def inventory_dashboard_page():
     filtered = df.copy()
     if sel_vendor != 'ALL': filtered = filtered[filtered['vendor'] == sel_vendor]
     if sel_project != 'ALL': filtered = filtered[filtered['project_name'] == sel_project]
-    if sel_status != 'ALL': filtered = filtered[filtered['settle_status'] == sel_status]
-    if sel_wh != 'ALL': filtered = filtered[filtered['warehouse'] == sel_wh]
+    if sel_site != 'ALL': filtered = filtered[filtered['site_name'] == sel_site]
+    if sel_spk != 'ALL': filtered = filtered[filtered['spk_vendor'] == sel_spk]
     
     # ===== KPI CARDS =====
     total_records = len(filtered)
