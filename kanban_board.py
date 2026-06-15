@@ -10,70 +10,91 @@ def inject_field_css():
         
         /* KANBAN LAYOUT STRUCTURE */
         .kanban-column { 
-            background: white; 
-            border-radius: 12px; 
-            border: 2px solid #DBEAFE; 
-            padding: 12px; 
-            min-height: 450px; 
+            background: rgba(255,255,255,0.8); 
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 14px; 
+            border: 1px solid rgba(0,0,0,0.06); 
+            padding: 14px; 
+            min-height: 500px; 
+            box-shadow: 0 4px 20px rgba(0,0,0,0.04);
             margin-bottom: 20px;
         }
         .kanban-column-header { 
             font-weight: 700; 
-            color: #1F2937; 
-            font-size: 0.9rem; 
+            color: #1E293B; 
+            font-size: 0.85rem; 
             margin-bottom: 12px; 
-            padding-bottom: 8px; 
-            border-bottom: 2px solid #DBEAFE; 
+            padding-bottom: 10px; 
+            border-bottom: 2px solid #E2E8F0; 
             display: flex; 
             justify-content: space-between; 
             align-items: center;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         .kanban-count {
-            background: #3B82F6; 
+            background: #6366F1; 
             color: white; 
-            padding: 2px 8px;
+            padding: 2px 10px;
             border-radius: 12px; 
-            font-size: 0.75rem; 
+            font-size: 0.7rem; 
             font-weight: 700;
         }
         
-        /* CARD MANAGEMENT STYLE */
+        /* CARD CONTAINER MANAGEMENT */
+        .card-wrapper {
+            position: relative;
+            margin-bottom: 10px;
+        }
+        
         .kanban-card { 
-            background: #FFF; 
+            background: white; 
             padding: 12px; 
-            border-radius: 8px; 
-            border-left: 4px solid #3B82F6; 
-            margin-bottom: 10px; 
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05); 
+            border-radius: 10px; 
+            border-left: 4px solid #6366F1; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            transition: all 0.2s ease;
+            pointer-events: none; /* Mengabaikan klik agar tembus ke tombol di bawahnya */
         }
+        .card-wrapper:hover .kanban-card { 
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.08); 
+        }
+        
         .kanban-card.pending { border-left-color: #94A3B8; }
-        .kanban-card.ongoing { border-left-color: #F59E0B; }
+        .kanban-card.ongoing { border-left-color: #3B82F6; }
         .kanban-card.done { border-left-color: #10B981; }
-        .kanban-card.delayed { border-left-color: #DC2626; }
+        .kanban-card.delayed { border-left-color: #EF4444; }
         
-        .card-title { font-weight: 700; color: #1F2937; font-size: 0.85rem; margin-bottom: 4px; line-height: 1.3; }
-        .card-meta { font-size: 0.75rem; color: #6B7280; margin-top: 2px; }
-        .card-progress { height: 6px; background: #E5E7EB; border-radius: 3px; margin-top: 8px; overflow: hidden; }
-        .card-progress-bar { height: 100%; border-radius: 3px; }
+        .card-title { font-weight: 600; color: #1E293B; font-size: 0.85rem; margin-bottom: 4px; line-height: 1.3; }
+        .card-meta { font-size: 0.7rem; color: #64748B; margin-top: 2px; }
+        .card-progress { height: 4px; background: #E2E8F0; border-radius: 2px; margin-top: 8px; overflow: hidden; }
+        .card-progress-bar { height: 100%; border-radius: 2px; }
         
-        /* OVERRIDE STREAMLIT BUTTON INSIDE KANBAN TO LOOK LIKE AN ATTACHED CARD */
-        .stButton > button {
-            text-align: left !important;
-            padding: 0px !important;
-            border: none !important;
-            background: transparent !important;
+        /* TOMBOL TRANSPARAN DI ATAS KARTU */
+        .clickable-overlay button {
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
             width: 100% !important;
-            box-shadow: none !important;
-            margin: 0px !important;
-        }
-        .stButton > button:hover {
+            height: 100% !important;
             background: transparent !important;
             border: none !important;
+            color: transparent !important;
+            cursor: pointer !important;
+            z-index: 10 !important;
+            box-shadow: none !important;
+        }
+        .clickable-overlay button:hover, .clickable-overlay button:active, .clickable-overlay button:focus {
+            background: transparent !important;
+            border: none !important;
+            color: transparent !important;
+            box-shadow: none !important;
         }
     </style>
     """, unsafe_allow_html=True)
 
-# 🔥 DIALOG POP-UP MODAL SEPERTI DI FIELD MANAGEMENT APP
 @st.dialog("✏️ Update Milestone Task")
 def render_update_modal(task, site_code, assigned_to):
     task_id = task['id']
@@ -103,14 +124,10 @@ def render_update_modal(task, site_code, assigned_to):
             if new_ae: update_data['actual_end'] = new_ae.strftime('%Y-%m-%d')
             if new_status == 'DONE' and not new_ae: update_data['actual_end'] = date.today().strftime('%Y-%m-%d')
             
-            # Eksekusi update data ke database
             update_row('milestones', task_id, update_data)
             
-            # Cek fungsi notify_update jika tersedia
-            try:
-                notify_update(assigned_to, new_status, task['name'], site_code)
-            except:
-                pass
+            try: notify_update(assigned_to, new_status, task['name'], site_code)
+            except: pass
                 
             st.cache_data.clear()
             st.session_state.selected_task = None
@@ -126,12 +143,10 @@ def kanban_page():
 
     st.title("📋 Kanban Board")
     
-    # Inisialisasi state tracking pop-up
     if 'selected_task' not in st.session_state:
         st.session_state.selected_task = None
     
     try:
-        # Menggunakan read_all_sheets jika tersedia untuk optimalisasi, fallback ke read_sheet
         try:
             all_data = read_all_sheets()
             sites_df = all_data.get('projects', pd.DataFrame())
@@ -140,12 +155,10 @@ def kanban_page():
             sites_df = read_sheet("projects")
             ms_df = read_sheet("milestones")
     except Exception as e:
-        st.error(f"⚠️ Error loading data: {e}")
-        return
+        st.error(f"⚠️ Error loading data: {e}"); return
         
     if ms_df.empty:
-        st.info("📋 Belum ada milestone.")
-        return
+        st.info("📋 Belum ada milestone."); return
     
     # Global filter
     if st.session_state.get('global_project_filter', 'ALL') != "ALL":
@@ -181,13 +194,13 @@ def kanban_page():
     col1, col2, col3 = st.columns(3)
     col1.metric("📋 Total Tasks", total)
     col2.metric("✅ Done", done)
-    col3.metric("🔴 Delayed / Critical", delayed)
+    col3.metric("🔴 Delayed", delayed)
     
     st.divider()
     
     # Kanban Configuration Mapping
     statuses = ['PENDING', 'ONGOING', 'DONE', 'DELAYED']
-    colors = {'PENDING':'#94A3B8', 'ONGOING':'#F59E0B', 'DONE':'#10B981', 'DELAYED':'#DC2626'}
+    colors = {'PENDING':'#94A3B8', 'ONGOING':'#3B82F6', 'DONE':'#10B981', 'DELAYED':'#EF4444'}
     css_class = {'PENDING':'pending', 'ONGOING':'ongoing', 'DONE':'done', 'DELAYED':'delayed'}
     
     cols = st.columns(4)
@@ -196,41 +209,46 @@ def kanban_page():
             subset = ms_df[ms_df['status'] == status]
             count = len(subset)
             
-            # Header dari kolom Kanban
-            st.markdown(f"""
+            # Render Header Kolom Kanban
+            st.html(f"""
             <div class="kanban-column">
                 <div class="kanban-column-header">
                     <span>{status}</span>
                     <span class="kanban-count">{count}</span>
                 </div>
-            """, unsafe_allow_html=True)
+            """)
             
-            # Perulangan Item Kartu Task
+            # Render Item Kartu secara aman
             for _, task in subset.iterrows():
                 pct = task['progress']
-                bar_color = colors.get(status, '#3B82F6')
+                bar_color = colors.get(status, '#6366F1')
                 current_css = css_class.get(status, '')
                 assigned_pic = task.get('assigned_to', '-')
                 
-                # HTML template untuk struktur kartu kanban
-                card_html = f"""
-                <div class="kanban-card {current_css}">
-                    <div class="card-title">{task['name'][:40]}</div>
-                    <div class="card-meta">📍 {task['site_code']} | 👷 {assigned_pic}</div>
-                    <div class="card-progress">
-                        <div class="card-progress-bar" style="width:{pct}%; background:{bar_color};"></div>
+                # Sediakan Container Relatif
+                st.html(f"""
+                <div class="card-wrapper">
+                    <div class="kanban-card {current_css}">
+                        <div class="card-title">{task['name'][:40]}</div>
+                        <div class="card-meta">📍 {task['site_code']} | 👷 {assigned_pic}</div>
+                        <div class="card-progress">
+                            <div class="card-progress-bar" style="width:{pct}%; background:{bar_color};"></div>
+                        </div>
+                        <div class="card-meta" style="margin-top:4px;">{pct:.0f}%</div>
                     </div>
-                    <div class="card-meta" style="margin-top:6px; font-weight:700; color:{bar_color};">{pct:.0f}% Complete</div>
-                </div>
-                """
+                    <div class="clickable-overlay">
+                """)
                 
-                # Membungkus HTML card di dalam Tombol Streamlit transparan agar bisa diklik
-                if st.button(card_html, key=f"card_btn_{task['id']}", use_container_width=True):
+                # Tombol transparan ditaruh tepat di atas HTML card
+                if st.button("", key=f"overlay_btn_{task['id']}", use_container_width=True):
                     st.session_state.selected_task = task['id']
                     st.rerun()
+                
+                # Tutup wrapper elemen kartu
+                st.html("</div></div>")
             
-            # Menutup tag kontainer `.kanban-column` secara aman
-            st.markdown("</div>", unsafe_allow_html=True)
+            # Tutup kontainer kolom kanban
+            st.html("</div>")
             
     # ===== RENDER DIALOG UPDATE POP-UP =====
     if st.session_state.selected_task:
@@ -242,7 +260,6 @@ def kanban_page():
             current_site_code = site_map.get(current_task['project_id'], '-')
             current_pic = current_task.get('assigned_to', '-')
             
-            # Panggil modal pop-up resmi Streamlit dialog
             render_update_modal(current_task, current_site_code, current_pic)
 
 if __name__ == "__main__":
