@@ -35,7 +35,7 @@ def inject_professional_css():
         .chart-box h3 { font-size: 0.7rem; margin: 0 0 6px 0; padding-bottom: 4px; border-bottom: 2px solid #0369A1; }
         
         /* SECTION DIVIDER */
-        .section-divider { height: 1px; background: #E2E8F0; margin: 10px 0; }
+        .section-divider { height: 0.5px; background: #E2E8F0; margin: 5px 0; }
         
         /* BUTTON */
         .stButton > button { font-size: 0.7rem !important; padding: 5px 12px !important; border-radius: 6px !important; }
@@ -389,7 +389,38 @@ def dashboard_page():
             if not available:
                 available = pivot.columns.tolist()[:5]
             colors = ['#DC2626', '#EF4444', '#D97706', '#7C3AED', '#059669']
+            
+            # 1. Generate dasar chart dari fungsi custom Anda
             fig3 = create_stacked_bar(pivot, group_col, available, colors[:len(available)], chart_title)
+            
+            # 2. ✨ FIXING LAYOUT: Atur margin, posisi judul, dan posisi legend agar tidak bertabrakan
+            fig3.update_layout(
+                title={
+                    'text': f"<b>{chart_title}</b>",
+                    'y': 0.95,               # Posisi vertikal judul di paling atas canvas
+                    'x': 0.5,                # Membuat judul rata tengah (center)
+                    'xanchor': 'center',
+                    'yanchor': 'top',
+                    'font': {'size': 16, 'color': '#0F172A'}
+                },
+                legend={
+                    'orientation': "h",      # Legend horizontal
+                    'yanchor': "bottom",
+                    'y': -0.25,              # Pindahkan legend ke bawah chart (nilai minus keluar dari area chart)
+                    'xanchor': "center",
+                    'x': 0.5,                # Posisi legend rata tengah di bawah
+                    'font': {'size': 11, 'color': '#475569'}
+                },
+                margin={
+                    't': 60,                 # Berikan ruang kosong 60px di atas chart agar judul leluasa
+                    'b': 60,                 # Berikan ruang kosong 60px di bawah chart untuk tempat legend baru
+                    'l': 40,
+                    'r': 40
+                },
+                hovermode="x unified",       # Pengalaman hover data yang lebih interaktif dan profesional
+                barmode="stack"              # Menegaskan tipe bar tetap bertumpuk
+            )
+            
             st.plotly_chart(fig3, use_container_width=True)
         else:
             st.markdown("<p style='text-align:center; color:#94A3B8;'>📭 No data available</p>", unsafe_allow_html=True)
