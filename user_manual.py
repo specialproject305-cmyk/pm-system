@@ -72,7 +72,7 @@ def user_manual_page():
     # 2. Cara Login
     st.markdown('<div class="section-box" id="2-cara-login--role-pengguna">', unsafe_allow_html=True)
     st.markdown("### 2. CARA LOGIN & ROLE PENGGUNA")
-    st.markdown("**URL Akses:** `https://pm-system-xxx.streamlit.app`")
+    st.markdown("**URL Akses:** `https://pm-system-cpewiwc2aeslca5bejnj2r.streamlit.app/`")
     st.markdown("")
     st.markdown("**Role Pengguna:**")
     st.markdown("| Role | Akses |")
