@@ -116,8 +116,8 @@ def inventory_dashboard_page():
         st.markdown('<div class="chart-box"><h3>📊 By Vendor</h3>', unsafe_allow_html=True)
         if 'vendor' in filtered.columns:
             vendor_counts = filtered['vendor'].value_counts().head(10)
-            fig1 = px.bar(x=vendor_counts.index, y=vendor_counts.values, color=vendor_counts.values, color_continuous_scale=['#3B82F6','#1E40AF'])
-            fig1.update_layout(height=300, margin=dict(t=0,b=0), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', showlegend=False)
+            fig1 = px.bar(x=vendor_counts.index.astype(str), y=vendor_counts.values)
+            fig1.update_traces(marker_color='#3B82F6')
             st.plotly_chart(fig1, use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
     
