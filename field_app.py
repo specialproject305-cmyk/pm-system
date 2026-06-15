@@ -13,9 +13,25 @@ def inject_field_css():
     <style>
         /* === BASE STYLING === */
         .stApp { 
-            background: linear-gradient(135deg, #F8FBFF 0%, #F0F7FF 100%);
-            color: #1F2937; 
-            font-family: 'Segoe UI', 'Inter', sans-serif;
+            background: linear-gradient(135deg, #F8FAFC 0%, #EFF6FF 100%);
+            font-family: 'Inter', sans-serif;
+        }
+        .field-header {
+            background: rgba(255,255,255,0.75);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(255,255,255,0.5);
+            border-radius: 16px;
+            padding: 16px 22px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.05);
+        }
+        .task-card {
+            background: rgba(255,255,255,0.75);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.5);
+            border-radius: 14px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.04);
         }
         
         /* === HEADER === */
