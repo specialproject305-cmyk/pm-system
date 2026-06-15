@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 from datetime import datetime, timedelta, date
 from supabase_db import read_sheet, update_row, read_all_sheets, insert_row, generate_id, now_str, notify_update
 import inspect
@@ -10,27 +9,46 @@ def inject_field_css():
     st.markdown("""
     <style>
         .stApp { background: linear-gradient(135deg, #F8FAFC 0%, #EFF6FF 100%); font-family: 'Inter', sans-serif; }
-        .field-header { background: linear-gradient(135deg, #3B82F6 0%, #1E40AF 100%); padding: 20px 25px; border-radius: 14px; margin-bottom: 20px; color: white; box-shadow: 0 8px 24px rgba(59, 130, 246, 0.2); }
-        .field-header h1 { margin: 0; font-size: 1.8rem; font-weight: 900; color: white; }
-        .field-header p { margin: 5px 0 0 0; font-size: 0.9rem; color: #E0E7FF; }
-        .status-card { background: white; padding: 15px; border-radius: 12px; border: 2px solid #DBEAFE; text-align: center; }
-        .status-card .count { font-size: 2rem; font-weight: 900; color: #1F2937; }
-        .status-card .label { font-size: 0.75rem; color: #6B7280; text-transform: uppercase; font-weight: 600; }
-        .status-card.success { border-left: 4px solid #10B981; }
-        .status-card.warning { border-left: 4px solid #F59E0B; }
-        .status-card.danger { border-left: 4px solid #DC2626; }
-        .status-card.info { border-left: 4px solid #3B82F6; }
+        .field-header { background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%); padding: 16px 22px; border-radius: 14px; margin-bottom: 16px; color: white; box-shadow: 0 8px 24px rgba(99,102,241,0.2); }
+        .field-header h1 { margin: 0; font-size: 1.5rem; font-weight: 800; }
+        .field-header p { margin: 4px 0 0 0; font-size: 0.85rem; opacity: 0.9; }
         
-        .kanban-column { background: rgba(255,255,255,0.8); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-radius: 14px; border: 1px solid rgba(0,0,0,0.06); padding: 14px; min-height: 400px; box-shadow: 0 4px 20px rgba(0,0,0,0.04); }
-        .kanban-column-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; margin-bottom: 10px; border-bottom: 2px solid #E2E8F0; font-weight: 700; font-size: 0.85rem; color: #1E293B; text-transform: uppercase; }
-        .kanban-count { background: #6366F1; color: white; padding: 2px 10px; border-radius: 12px; font-size: 0.7rem; font-weight: 700; }
-        .kanban-card { background: white; border-radius: 10px; padding: 10px; margin-bottom: 6px; border-left: 4px solid #6366F1; box-shadow: 0 2px 8px rgba(0,0,0,0.04); cursor: pointer; transition: all 0.2s; }
-        .kanban-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
+        .kpi-card { background: rgba(255,255,255,0.8); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-radius: 12px; padding: 12px 8px; text-align: center; border: 1px solid rgba(0,0,0,0.06); box-shadow: 0 4px 15px rgba(0,0,0,0.04); }
+        .kpi-card .val { font-size: 1.5rem; font-weight: 800; color: #6366F1; line-height: 1; }
+        .kpi-card .lbl { font-size: 0.65rem; color: #64748B; text-transform: uppercase; font-weight: 600; margin-top: 3px; }
+        .kpi-card.green { border-left: 3px solid #10B981; }
+        .kpi-card.yellow { border-left: 3px solid #F59E0B; }
+        .kpi-card.red { border-left: 3px solid #EF4444; }
+        .kpi-card.blue { border-left: 3px solid #6366F1; }
+        
+        .kanban-column { background: rgba(255,255,255,0.8); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-radius: 12px; border: 1px solid rgba(0,0,0,0.06); padding: 12px; min-height: 400px; box-shadow: 0 4px 15px rgba(0,0,0,0.04); }
+        .kanban-column-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px; margin-bottom: 8px; border-bottom: 2px solid #E2E8F0; font-weight: 700; font-size: 0.8rem; color: #1E293B; text-transform: uppercase; }
+        .kanban-count { background: #6366F1; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: 700; }
+        .kanban-card { background: white; border-radius: 8px; padding: 10px; margin-bottom: 6px; border-left: 4px solid #6366F1; box-shadow: 0 2px 6px rgba(0,0,0,0.04); cursor: pointer; transition: all 0.2s; font-size: 0.8rem; }
+        .kanban-card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.08); }
         .kanban-card.pending { border-left-color: #94A3B8; }
         .kanban-card.ongoing { border-left-color: #3B82F6; }
         .kanban-card.done { border-left-color: #10B981; }
         .kanban-card.delayed { border-left-color: #EF4444; }
-        .section-divider { height: 2px; background: linear-gradient(90deg, transparent, #3B82F6, transparent); margin: 20px 0; }
+        .kanban-card .card-title { font-weight: 600; color: #1E293B; margin-bottom: 3px; }
+        .kanban-card .card-meta { font-size: 0.7rem; color: #64748B; }
+        .kanban-card .card-progress { height: 4px; background: #E2E8F0; border-radius: 2px; margin-top: 4px; overflow: hidden; }
+        .kanban-card .card-progress-bar { height: 100%; border-radius: 2px; }
+        
+        .section-divider { height: 1px; background: linear-gradient(90deg, transparent, #E2E8F0, transparent); margin: 14px 0; }
+        
+        /* MODAL POP-UP */
+        div[data-testid="stVerticalBlock"] > div:has(.modal-container) {
+            position: fixed !important; top: 0 !important; left: 0 !important;
+            width: 100vw !important; height: 100vh !important;
+            background: rgba(0,0,0,0.5) !important; z-index: 9999 !important;
+            display: flex !important; align-items: center !important; justify-content: center !important;
+        }
+        .modal-container {
+            background: white !important; border-radius: 16px !important;
+            padding: 24px !important; width: 480px !important; max-width: 90vw !important;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3) !important;
+        }
     </style>
     """, unsafe_allow_html=True)
 
@@ -55,12 +73,9 @@ def field_app_page():
         from marketing_dashboard import marketing_dashboard_page
         marketing_dashboard_page(); st.stop()
     
-    try:
-        all_data = read_all_sheets()
-        ms_df = all_data.get('milestones', pd.DataFrame())
-        sites_df = all_data.get('projects', pd.DataFrame())
-    except Exception as e:
-        st.error(f"⚠️ Error: {e}"); return
+    all_data = read_all_sheets()
+    ms_df = all_data.get('milestones', pd.DataFrame())
+    sites_df = all_data.get('projects', pd.DataFrame())
     
     if ms_df.empty: st.info("📋 No milestones."); return
     
@@ -76,109 +91,76 @@ def field_app_page():
     completion_rate = (done_count/total_tasks*100) if total_tasks>0 else 0
     
     # HEADER
-    st.markdown(f"""<div class="field-header"><h1>📱 Field Management App</h1><p>👷 {user.get('full_name', assigned_to)} • Role: {assigned_to}</p></div>""", unsafe_allow_html=True)
+    st.markdown(f"""<div class="field-header"><h1>📱 Field App</h1><p>👷 {user.get('full_name', assigned_to)} • {assigned_to}</p></div>""", unsafe_allow_html=True)
     
-    # QUICK STATS
+    # 6 KPI CARDS
     c1,c2,c3,c4,c5,c6 = st.columns(6)
-    c1.markdown(f'<div class="status-card info"><div class="count">{total_tasks}</div><div class="label">Total</div></div>', unsafe_allow_html=True)
-    c2.markdown(f'<div class="status-card success"><div class="count">{done_count}</div><div class="label">Done</div></div>', unsafe_allow_html=True)
-    c3.markdown(f'<div class="status-card warning"><div class="count">{ongoing_count}</div><div class="label">Ongoing</div></div>', unsafe_allow_html=True)
-    c4.markdown(f'<div class="status-card"><div class="count">{pending_count}</div><div class="label">Pending</div></div>', unsafe_allow_html=True)
-    c5.markdown(f'<div class="status-card danger"><div class="count">{delayed_count}</div><div class="label">Delayed</div></div>', unsafe_allow_html=True)
-    c6.markdown(f'<div class="status-card"><div class="count">{completion_rate:.0f}%</div><div class="label">Completion</div></div>', unsafe_allow_html=True)
+    c1.markdown(f'<div class="kpi-card blue"><div class="val">{total_tasks}</div><div class="lbl">Total</div></div>', unsafe_allow_html=True)
+    c2.markdown(f'<div class="kpi-card green"><div class="val">{done_count}</div><div class="lbl">Done</div></div>', unsafe_allow_html=True)
+    c3.markdown(f'<div class="kpi-card yellow"><div class="val">{ongoing_count}</div><div class="lbl">Ongoing</div></div>', unsafe_allow_html=True)
+    c4.markdown(f'<div class="kpi-card"><div class="val">{pending_count}</div><div class="lbl">Pending</div></div>', unsafe_allow_html=True)
+    c5.markdown(f'<div class="kpi-card red"><div class="val">{delayed_count}</div><div class="lbl">Delayed</div></div>', unsafe_allow_html=True)
+    c6.markdown(f'<div class="kpi-card blue"><div class="val">{completion_rate:.0f}%</div><div class="lbl">Completion</div></div>', unsafe_allow_html=True)
     st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
     
     # SIDEBAR
     with st.sidebar:
         st.markdown(f"### 👷 {assigned_to}")
         if st.button("🚪 Logout", use_container_width=True): st.session_state.clear(); st.session_state['logged_in']=False; st.rerun()
-        st.markdown("---")
-        st.markdown("### 🔍 Filter")
-        if not sites_df.empty:
-            master_df = all_data.get('master_projects', pd.DataFrame())
-            if not master_df.empty:
-                site_master_map = dict(zip(sites_df['id'], sites_df['master_project_id']))
-                ms_df['master_project_id'] = ms_df['project_id'].map(site_master_map)
-                sel_proj = st.selectbox("🏢 Project:", ['ALL']+sorted(master_df['project_name'].unique()), key="f_proj")
-                if sel_proj!='ALL':
-                    mids = master_df[master_df['project_name']==sel_proj]['id'].tolist()
-                    sids = sites_df[sites_df['master_project_id'].isin(mids)]['id'].tolist()
-                    ms_df = ms_df[ms_df['project_id'].isin(sids)]
-            if 'pm' in sites_df.columns:
-                sel_pm = st.selectbox("👤 PM:", ['ALL']+sorted(sites_df['pm'].dropna().unique()), key="f_pm")
-                if sel_pm!='ALL': ms_df = ms_df[ms_df['project_id'].isin(sites_df[sites_df['pm']==sel_pm]['id'])]
-            sel_site = st.selectbox("📍 Site:", ['ALL']+sorted(sites_df['site_name'].unique()), key="f_site")
-            if sel_site!='ALL': ms_df = ms_df[ms_df['project_id'].isin(sites_df[sites_df['site_name']==sel_site]['id'])]
     
     site_map = dict(zip(sites_df['id'], sites_df['site_id'])) if not sites_df.empty else {}
-    site_name_map = dict(zip(sites_df['id'], sites_df['site_name'])) if not sites_df.empty else {}
     
-    # ===== TABS =====
+    # TABS
     tab1, tab2, tab3, tab4 = st.tabs(["📇 Kanban Board", "📍 Site Overview", "📊 Dashboard", "🤖 AI & Issues"])
     
-    # ===== TAB 1: KANBAN BOARD (dengan tombol update di tiap task) =====
+    if 'selected_task' not in st.session_state:
+        st.session_state.selected_task = None
+    
+    # ===== TAB 1: KANBAN BOARD =====
     with tab1:
         st.subheader("📇 Kanban Board — Klik task untuk update")
         
-        if 'selected_task' not in st.session_state:
-            st.session_state.selected_task = None
-        
         kanban_statuses = ['PENDING', 'ONGOING', 'DONE', 'DELAYED']
+        css_class = {'PENDING':'pending', 'ONGOING':'ongoing', 'DONE':'done', 'DELAYED':'delayed'}
+        colors = {'PENDING':'#94A3B8', 'ONGOING':'#3B82F6', 'DONE':'#10B981', 'DELAYED':'#EF4444'}
         cols = st.columns(4)
         
         for i, status in enumerate(kanban_statuses):
             with cols[i]:
                 subset = ms_df[ms_df['status'] == status]
-                st.markdown(f"**{status}** ({len(subset)})")
+                st.markdown(f"""
+                <div class="kanban-column">
+                    <div class="kanban-column-header"><span>{status}</span><span class="kanban-count">{len(subset)}</span></div>
+                """, unsafe_allow_html=True)
                 
                 for _, task in subset.iterrows():
-                    site_code = site_map.get(task['project_id'], '-')
-                    deadline = task['planned_end'].strftime('%d %b') if pd.notna(task['planned_end']) else '-'
+                    pct = task['progress']
+                    st.markdown(f"""
+                    <div class="kanban-card {css_class.get(status,'')}">
+                        <div class="card-title">{task['name'][:35]}</div>
+                        <div class="card-meta">📍 {site_map.get(task['project_id'],'-')} | 👷 {task.get('assigned_to','-')}</div>
+                        <div class="card-progress"><div class="card-progress-bar" style="width:{pct}%; background:{colors.get(status,'#6366F1')};"></div></div>
+                        <div class="card-meta" style="margin-top:3px;">{pct:.0f}%</div>
+                    </div>
+                    """, unsafe_allow_html=True)
                     
-                    # Tombol untuk membuka form update
-                    btn_label = f"{task['name'][:25]} ({task['progress']}%)"
-                    if st.button(btn_label, key=f"kanban_{task['id']}", use_container_width=True):
+                    if st.button("✏️ Update", key=f"kbtn_{task['id']}"):
                         st.session_state.selected_task = task['id']
                         st.rerun()
+                
+                st.markdown("</div>", unsafe_allow_html=True)
         
-        st.divider()
-        
-                # ===== POP-UP MODAL UNTUK UPDATE TASK =====
+        # ===== POP-UP MODAL =====
         if st.session_state.selected_task:
             task_id = st.session_state.selected_task
             task = ms_df[ms_df['id'] == task_id].iloc[0] if task_id in ms_df['id'].values else None
             
             if task is not None:
-                # Overlay background gelap
-                st.markdown("""
-                <style>
-                    .modal-overlay {
-                        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-                        background: rgba(0,0,0,0.6); z-index: 9998;
-                        display: flex; align-items: center; justify-content: center;
-                    }
-                    .modal-content {
-                        background: white; border-radius: 16px; padding: 24px;
-                        width: 500px; max-width: 90%; z-index: 9999;
-                        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-                        animation: slideUp 0.3s ease;
-                    }
-                    @keyframes slideUp {
-                        from { transform: translateY(50px); opacity: 0; }
-                        to { transform: translateY(0); opacity: 1; }
-                    }
-                </style>
-                """, unsafe_allow_html=True)
+                st.markdown('<div class="modal-container">', unsafe_allow_html=True)
+                st.markdown(f"### ✏️ Update: {task['name'][:40]}")
+                st.caption(f"📍 {site_map.get(task['project_id'],'-')}")
                 
-                # Modal container
-                st.markdown('<div class="modal-overlay"><div class="modal-content">', unsafe_allow_html=True)
-                
-                st.markdown(f"### ✏️ Update Task")
-                st.markdown(f"**{task['name']}**")
-                site_code = site_map.get(task['project_id'], '-')
-                st.caption(f"📍 {site_code} | 📅 {task['planned_end'].strftime('%d %b %Y') if pd.notna(task['planned_end']) else '-'}")
-                
-                with st.form(f"modal_update_{task_id}", clear_on_submit=False):
+                with st.form(f"modal_{task_id}", clear_on_submit=False):
                     c1, c2 = st.columns(2)
                     with c1:
                         new_status = st.selectbox("Status", ['PENDING','ONGOING','DONE','DELAYED'],
@@ -190,104 +172,47 @@ def field_app_page():
                         ae_d = pd.to_datetime(task.get('actual_end')).date() if pd.notna(task.get('actual_end')) else None
                         new_ae = st.date_input("Actual End", value=ae_d)
                     
-                    col_btn1, col_btn2 = st.columns(2)
-                    with col_btn1:
-                        save_btn = st.form_submit_button("💾 Simpan", type="primary", use_container_width=True)
-                    with col_btn2:
-                        cancel_btn = st.form_submit_button("❌ Cancel", use_container_width=True)
-                    
-                    if save_btn:
-                        update_data = {'status': new_status, 'progress': str(new_progress)}
-                        if new_as: update_data['actual_start'] = new_as.strftime('%Y-%m-%d')
-                        if new_ae: update_data['actual_end'] = new_ae.strftime('%Y-%m-%d')
-                        if new_status == 'DONE' and not new_ae: update_data['actual_end'] = date.today().strftime('%Y-%m-%d')
-                        update_row('milestones', task_id, update_data)
-                        notify_update(assigned_to, new_status, task['name'], site_code)
-                        st.success("✅ Updated!")
-                        st.cache_data.clear()
-                        st.session_state.selected_task = None
-                        st.rerun()
-                    
-                    if cancel_btn:
-                        st.session_state.selected_task = None
-                        st.rerun()
+                    b1, b2 = st.columns(2)
+                    with b1:
+                        if st.form_submit_button("💾 Simpan", type="primary", use_container_width=True):
+                            update_data = {'status': new_status, 'progress': str(new_progress)}
+                            if new_as: update_data['actual_start'] = new_as.strftime('%Y-%m-%d')
+                            if new_ae: update_data['actual_end'] = new_ae.strftime('%Y-%m-%d')
+                            if new_status == 'DONE' and not new_ae: update_data['actual_end'] = date.today().strftime('%Y-%m-%d')
+                            update_row('milestones', task_id, update_data)
+                            st.cache_data.clear(); st.session_state.selected_task = None; st.rerun()
+                    with b2:
+                        if st.form_submit_button("❌ Cancel", use_container_width=True):
+                            st.session_state.selected_task = None; st.rerun()
                 
-                st.markdown('</div></div>', unsafe_allow_html=True)
+                st.markdown('</div>', unsafe_allow_html=True)
     
-    # ===== TAB 2: SITE OVERVIEW (seperti Planning) =====
+    # ===== TAB 2: SITE OVERVIEW =====
     with tab2:
         st.subheader("📍 Site Overview")
-        
         if not sites_df.empty:
-            # Merge data site dengan milestone
-            site_stats = []
-            for _, site in sites_df.iterrows():
-                site_ms = ms_df[ms_df['project_id'] == site['id']]
-                total = len(site_ms)
-                done = len(site_ms[site_ms['status']=='DONE'])
-                delayed = len(site_ms[site_ms['status']=='DELAYED'])
-                pct = (done/total*100) if total>0 else 0
-                
-                site_stats.append({
-                    'Site ID': site.get('site_id','-'),
-                    'Site Name': site.get('site_name','-'),
-                    'PM': site.get('pm','-'),
-                    'Vendor': site.get('vendor','-'),
-                    'Total Tasks': total,
-                    'Done': done,
-                    'Delayed': delayed,
-                    'Progress': f"{pct:.0f}%"
-                })
-            
-            if site_stats:
-                site_df = pd.DataFrame(site_stats)
-                
-                def color_row(row):
-                    try:
-                        p = int(row['Progress'].replace('%',''))
-                        if p>=80: return ['background:#DCFCE7']*8
-                        elif p>=50: return ['background:#FEF3C7']*8
-                        elif row['Delayed']>0: return ['background:#FEE2E2']*8
-                    except: pass
-                    return ['']*8
-                
-                st.dataframe(site_df.style.apply(color_row, axis=1), use_container_width=True, hide_index=True)
-                
-                # Chart
-                fig = px.bar(site_df, x='Site ID', y=[1]*len(site_df), color='Progress', 
-                           color_discrete_sequence=['#10B981'], text='Site Name')
-                fig.update_layout(height=300, showlegend=False, paper_bgcolor='rgba(0,0,0,0)')
-                st.plotly_chart(fig, use_container_width=True)
+            display = sites_df[['site_id','site_name','pm','vendor','status','progress']].head(20)
+            st.dataframe(display, use_container_width=True, hide_index=True)
     
     # ===== TAB 3: DASHBOARD =====
     with tab3:
-        st.subheader("📊 Your Performance Dashboard")
-        c1, c2 = st.columns(2)
-        with c1:
-            if not ms_df.empty:
-                fig = px.pie(values=ms_df['status'].value_counts().values, names=ms_df['status'].value_counts().index, hole=0.5, height=280)
-                st.plotly_chart(fig, use_container_width=True)
-        with c2:
-            if not ms_df.empty:
-                fig2 = px.bar(ms_df.nlargest(10,'progress'), x='name', y='progress', color='progress', height=280)
-                fig2.update_layout(showlegend=False)
-                st.plotly_chart(fig2, use_container_width=True)
-        st.metric("Completion Rate", f"{completion_rate:.1f}%")
+        st.subheader("📊 Performance")
+        if not ms_df.empty:
+            fig = px.pie(values=ms_df['status'].value_counts().values, names=ms_df['status'].value_counts().index, hole=0.5, height=280)
+            st.plotly_chart(fig, use_container_width=True)
+        st.metric("Completion", f"{completion_rate:.1f}%")
     
     # ===== TAB 4: AI & ISSUES =====
     with tab4:
-        st.subheader("🤖 AI Forecast & Issues")
-        c1, c2 = st.columns(2)
-        with c1:
-            if completion_rate>=80: st.success("🎯 On Track!")
-            elif completion_rate>=50: st.warning("⚠️ Moderate")
-            else: st.error("🔴 Needs Attention")
-            st.metric("Completion", f"{completion_rate:.1f}%")
-        with c2:
-            delayed = ms_df[ms_df['status']=='DELAYED']
-            if not delayed.empty:
-                for _, t in delayed.head(5).iterrows():
-                    st.markdown(f"🔴 {t['name'][:30]} — {t.get('delay_reason','?')}")
+        st.subheader("🤖 AI & Issues")
+        if completion_rate>=80: st.success("🎯 On Track!")
+        elif completion_rate>=50: st.warning("⚠️ Moderate")
+        else: st.error("🔴 Needs Attention")
+        
+        delayed = ms_df[ms_df['status']=='DELAYED']
+        if not delayed.empty:
+            for _, t in delayed.head(5).iterrows():
+                st.markdown(f"🔴 {t['name'][:30]} — {t.get('delay_reason','?')}")
 
 if __name__ == "__main__":
     field_app_page()
