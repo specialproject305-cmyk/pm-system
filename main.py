@@ -1,6 +1,8 @@
 import streamlit as st
 from auth import login_page, check_permission, show_permission_denied
 from bulk_import import bulk_import_page
+from workforce_page import workforce_page
+
 
 # ═══════════════════════════════════════════════
 # 🎨 KONFIGURASI HALAMAN & CSS CUSTOM
@@ -174,7 +176,7 @@ with st.sidebar:
 
     # Penentuan Menu Navigasi (Clean & No Duplicate)
     if role in ['admin', 'pm', 'pmo']:
-        menu_options = ["📊 Dashboard", "📁 Site Tracker", "🧱 Milestones", "📋 Kanban Board", "📋 Daily Tasks", "📦 Inventory", "🤖 AI Insights", "🔍 RCA Analysis", "💬 Chat & Notif", "📱 Field App", "📽️ Presentation", "📊 Export Report", "📢 Marketing Sites", "📢 Marketing Dashboard", "🔔 Notifications"]
+        menu_options = ["📊 Dashboard", "📁 Site Tracker", "🧱 Milestones", "👷 Workforce", "📋 Kanban Board", "📋 Daily Tasks", "📦 Inventory", "🤖 AI Insights", "🔍 RCA Analysis", "💬 Chat & Notif", "📱 Field App", "📽️ Presentation", "📊 Export Report", "📢 Marketing Sites", "📢 Marketing Dashboard", "🔔 Notifications"]
     elif role == 'planning':
         menu_options = ["📊 Dashboard", "📁 Site Tracker", "🧱 Milestones", "📊 Export Report", "🔔 Notifications"]
     elif role == 'marketing':
@@ -268,6 +270,7 @@ def main():
         from notification_page import notification_page
         notification_page()
     elif menu == "📥 Bulk Import": bulk_import_page()
+    elif menu == "👷 Workforce": workforce_page()
 
 if __name__ == "__main__":
     main()
