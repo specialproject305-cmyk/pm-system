@@ -45,46 +45,68 @@ def inventory_dashboard_page():
     st.markdown('<div class="inv-header"><h1>📦 Inventory Dashboard</h1><p>Real-time inventory analytics & monitoring</p></div>', unsafe_allow_html=True)
     
     df = read_sheet("inventory_transactions")
+    projects_df = read_sheet("projects")
     
     if df.empty:
         st.info("📋 Belum ada data inventory."); return
     
     # Numeric conversion
     for col in ['mr_qty','nod_qty','issue_qty','return_qty','reloc_qty','mr_transact_qty']:
-        if col in df.columns: df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
-    
-    # ===== FILTER BAR (Terintegrasi dengan sistem) =====
-    # Load data dari tabel lain untuk filter
-    projects_df = read_sheet("projects")
-    
+        if col in df.columns: 
+            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+            
+    # ===== INTEGRASI RELASI DATA TABEL =====
+    # Sinkronisasi metadata site_name & project_name dari projects_df ke df induk berdasarkan project_id / site_id
+    if not projects_df.empty and 'project_id' in df.columns:
+        site_id_map = dict(zip(projects_df['id'], projects_df['site_id']))
+        site_name_map = dict(zip(projects_df['id'], projects_df['site_name']))
+        
+        # Override data transaksi agar mengacu pada ground-truth master data project
+        df['site_id'] = df['project_id'].map(site_id_map).fillna(df.get('site_id', '-'))
+        df['site_name'] = df['project_id'].map(site_name_map).fillna(df.get('site_name', '-'))
+
+    # ===== FILTER BAR (Koneksi Antar Relasi Dropdown) =====
     st.markdown('<div class="filter-bar">', unsafe_allow_html=True)
     c1, c2, c3, c4, c5 = st.columns(5)
     
     with c1:
-        # Vendor dari tabel inventory
         vendors = ['ALL'] + sorted(df['vendor'].dropna().unique().tolist()) if 'vendor' in df.columns else ['ALL']
-        sel_vendor = st.selectbox("🏢 Vendor", vendors)
+        sel_vendor = st.selectbox("🏢 Vendor", vendors, key="inv_filter_vendor")
     
+    # Cascading/Relational logic filter untuk Project
+    sub_project_df = df.copy()
+    if sel_vendor != 'ALL':
+        sub_project_df = sub_project_df[sub_project_df['vendor'] == sel_vendor]
+        
     with c2:
-        # Project Name dari tabel inventory
-        projects = ['ALL'] + sorted(df['project_name'].dropna().unique().tolist()) if 'project_name' in df.columns else ['ALL']
-        sel_project = st.selectbox("📁 Project", projects)
-    
+        projects = ['ALL'] + sorted(sub_project_df['project_name'].dropna().unique().tolist()) if 'project_name' in sub_project_df.columns else ['ALL']
+        sel_project = st.selectbox("📁 Project", projects, key="inv_filter_project")
+        
+    # Cascading logic filter untuk Site Name
+    sub_site_df = sub_project_df.copy()
+    if sel_project != 'ALL':
+        sub_site_df = sub_site_df[sub_site_df['project_name'] == sel_project]
+        
     with c3:
-        # Site Name dari tabel projects (terintegrasi)
-        site_list = ['ALL'] + sorted(projects_df['site_name'].dropna().unique().tolist()) if not projects_df.empty else ['ALL']
-        sel_site = st.selectbox("📍 Site Name", site_list)
-    
+        site_list = ['ALL'] + sorted(sub_site_df['site_name'].dropna().unique().tolist()) if 'site_name' in sub_site_df.columns else ['ALL']
+        sel_site = st.selectbox("📍 Site Name", site_list, key="inv_filter_site")
+        
+    # Cascading logic filter untuk SPK Vendor
+    sub_spk_df = sub_site_df.copy()
+    if sel_site != 'ALL':
+        sub_spk_df = sub_spk_df[sub_spk_df['site_name'] == sel_site]
+        
     with c4:
-        # SPK Vendor dari tabel inventory
-        spk_list = ['ALL'] + sorted(df['spk_vendor'].dropna().unique().tolist()) if 'spk_vendor' in df.columns else ['ALL']
-        sel_spk = st.selectbox("📄 SPK Vendor", spk_list)
+        spk_list = ['ALL'] + sorted(sub_spk_df['spk_vendor'].dropna().unique().tolist()) if 'spk_vendor' in sub_spk_df.columns else ['ALL']
+        sel_spk = st.selectbox("📄 SPK Vendor", spk_list, key="inv_filter_spk")
     
     with c5:
-        if st.button("🔄 Reset Filter", use_container_width=True): st.rerun()
+        st.markdown("<div style='padding-top:24px;'></div>", unsafe_allow_html=True)
+        if st.button("🔄 Reset Filter", use_container_width=True, key="inv_reset_filter_btn"):
+            st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
     
-    # Apply filters
+    # Final Apply Filters
     filtered = df.copy()
     if sel_vendor != 'ALL': filtered = filtered[filtered['vendor'] == sel_vendor]
     if sel_project != 'ALL': filtered = filtered[filtered['project_name'] == sel_project]
@@ -114,21 +136,21 @@ def inventory_dashboard_page():
     
     with col_a:
         st.markdown('<div class="chart-box"><h3>📊 By Vendor</h3>', unsafe_allow_html=True)
-        if 'vendor' in filtered.columns:
+        if 'vendor' in filtered.columns and not filtered.empty:
             vendor_counts = filtered['vendor'].value_counts().head(10).reset_index()
             vendor_counts.columns = ['Vendor', 'Count']
             fig1 = px.bar(vendor_counts, x='Vendor', y='Count', color='Count', color_continuous_scale=['#3B82F6','#1E40AF'])
-            fig1.update_layout(height=300, margin=dict(t=0,b=0), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', showlegend=False)
-            st.plotly_chart(fig1, use_container_width=True)
+            fig1.update_layout(height=300, margin=dict(t=10,b=10,l=10,r=10), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', showlegend=False)
+            st.plotly_chart(fig1, use_container_width=True, key="chart_vendor_bar")
         st.markdown('</div>', unsafe_allow_html=True)
     
     with col_b:
         st.markdown('<div class="chart-box"><h3>📌 By Settle Status</h3>', unsafe_allow_html=True)
-        if 'settle_status' in filtered.columns:
+        if 'settle_status' in filtered.columns and not filtered.empty:
             status_counts = filtered['settle_status'].value_counts()
             fig2 = px.pie(values=status_counts.values, names=status_counts.index, hole=0.5, color_discrete_map={'Settle Done':'#10B981','Partial':'#F59E0B','Pending':'#EF4444'})
-            fig2.update_layout(height=300, margin=dict(t=0,b=0), paper_bgcolor='rgba(0,0,0,0)')
-            st.plotly_chart(fig2, use_container_width=True)
+            fig2.update_layout(height=300, margin=dict(t=10,b=10,l=10,r=10), paper_bgcolor='rgba(0,0,0,0)')
+            st.plotly_chart(fig2, use_container_width=True, key="chart_settle_pie")
         st.markdown('</div>', unsafe_allow_html=True)
     
     # ===== CHARTS ROW 2 =====
@@ -136,21 +158,22 @@ def inventory_dashboard_page():
     
     with col_c:
         st.markdown('<div class="chart-box"><h3>📈 By Status MR</h3>', unsafe_allow_html=True)
-        if 'status_mr_new' in filtered.columns:
+        if 'status_mr_new' in filtered.columns and not filtered.empty:
             mr_counts = filtered['status_mr_new'].value_counts()
             fig3 = px.pie(values=mr_counts.values, names=mr_counts.index, hole=0.5, color_discrete_map={'DONE':'#10B981','PARTIAL':'#F59E0B','PENDING':'#94A3B8'})
-            fig3.update_layout(height=300, margin=dict(t=0,b=0), paper_bgcolor='rgba(0,0,0,0)')
-            st.plotly_chart(fig3, use_container_width=True)
+            fig3.update_layout(height=300, margin=dict(t=10,b=10,l=10,r=10), paper_bgcolor='rgba(0,0,0,0)')
+            # FIXED: Menambahkan key eksplisit unik agar tidak dideteksi sebagai duplikat dari fig2
+            st.plotly_chart(fig3, use_container_width=True, key="chart_mr_status_pie")
         st.markdown('</div>', unsafe_allow_html=True)
     
     with col_d:
         st.markdown('<div class="chart-box"><h3>📊 Top Items</h3>', unsafe_allow_html=True)
-        if 'item_description' in filtered.columns:
+        if 'item_description' in filtered.columns and not filtered.empty:
             item_counts = filtered['item_description'].value_counts().head(8).reset_index()
             item_counts.columns = ['Item', 'Count']
             fig4 = px.bar(item_counts, y='Item', x='Count', orientation='h', color='Count', color_continuous_scale=['#3B82F6','#1E40AF'])
-            fig4.update_layout(height=300, margin=dict(t=0,b=0), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', showlegend=False)
-            st.plotly_chart(fig4, use_container_width=True)
+            fig4.update_layout(height=300, margin=dict(t=10,b=10,l=10,r=10), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', showlegend=False)
+            st.plotly_chart(fig4, use_container_width=True, key="chart_top_items_bar")
         st.markdown('</div>', unsafe_allow_html=True)
     
     # ===== TABLE =====
@@ -159,7 +182,13 @@ def inventory_dashboard_page():
     display_cols = ['warehouse','vendor','site_id','site_name','item_description','mr_number','mr_transact_date','settle_status','project_name']
     st.dataframe(filtered[[c for c in display_cols if c in filtered.columns]].head(20), use_container_width=True, hide_index=True)
     
-    st.download_button("📥 Download Filtered CSV", filtered.to_csv(index=False), f"inventory_report_{datetime.now().strftime('%Y%m%d')}.csv", "text/csv")
+    st.download_button(
+        "📥 Download Filtered CSV", 
+        filtered.to_csv(index=False), 
+        f"inventory_report_{datetime.now().strftime('%Y%m%d')}.csv", 
+        "text/csv",
+        key="inv_download_csv_btn"
+    )
 
 if __name__ == "__main__":
     inventory_dashboard_page()
