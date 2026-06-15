@@ -136,9 +136,11 @@ def field_app_page():
     st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
     
     # SIDEBAR
+    
     with st.sidebar:
         st.markdown(f"### 👷 {assigned_to}")
-        if st.button("🚪 Logout", use_container_width=True): 
+        # Menambahkan parameter key agar ID tombol tidak duplikat
+        if st.button("🚪 Logout", use_container_width=True, key="field_app_logout_btn"): 
             st.session_state.clear()
             st.session_state['logged_in']=False
             st.rerun()
