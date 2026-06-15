@@ -390,35 +390,35 @@ def dashboard_page():
                 available = pivot.columns.tolist()[:5]
             colors = ['#DC2626', '#EF4444', '#D97706', '#7C3AED', '#059669']
             
-            # 1. Generate dasar chart dari fungsi custom Anda
+            # 1. Generate dasar chart
             fig3 = create_stacked_bar(pivot, group_col, available, colors[:len(available)], chart_title)
             
-            # 2. ✨ FIXING LAYOUT: Atur margin, posisi judul, dan posisi legend agar tidak bertabrakan
+            # 2. ✨ RE-FIX LAYOUT: Penempatan legenda presisi di bawah luar chart
             fig3.update_layout(
                 title={
                     'text': f"<b>{chart_title}</b>",
-                    'y': 0.95,               # Posisi vertikal judul di paling atas canvas
-                    'x': 0.5,                # Membuat judul rata tengah (center)
+                    'y': 0.95,               # Jaga judul tetap di atas
+                    'x': 0.5,                # Rata tengah
                     'xanchor': 'center',
                     'yanchor': 'top',
                     'font': {'size': 16, 'color': '#0F172A'}
                 },
                 legend={
-                    'orientation': "h",      # Legend horizontal
-                    'yanchor': "bottom",
-                    'y': -0.25,              # Pindahkan legend ke bawah chart (nilai minus keluar dari area chart)
+                    'orientation': "h",      # Tetap horizontal
+                    'yanchor': "top",        # Mengunci batas atas legenda
+                    'y': -0.15,              # Diturunkan sedikit dari batas sumbu X bawah
                     'xanchor': "center",
-                    'x': 0.5,                # Posisi legend rata tengah di bawah
+                    'x': 0.5,                # Rata tengah horizontal
                     'font': {'size': 11, 'color': '#475569'}
                 },
                 margin={
-                    't': 60,                 # Berikan ruang kosong 60px di atas chart agar judul leluasa
-                    'b': 60,                 # Berikan ruang kosong 60px di bawah chart untuk tempat legend baru
-                    'l': 40,
-                    'r': 40
+                    't': 40,                 # Ruang atas untuk judul
+                    'b': 100,                # 🌟 DIPERLEBAR: Ruang bawah ekstra agar legenda tidak menumpuk sumbu X
+                    'l': 50,
+                    'r': 50
                 },
-                hovermode="x unified",       # Pengalaman hover data yang lebih interaktif dan profesional
-                barmode="stack"              # Menegaskan tipe bar tetap bertumpuk
+                hovermode="x unified",
+                barmode="stack"
             )
             
             st.plotly_chart(fig3, use_container_width=True)
