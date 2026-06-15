@@ -87,8 +87,11 @@ def workforce_page():
             cols = st.columns(4)
             for i, (_, w) in enumerate(wf_df.iterrows()):
                 with cols[i % 4]:
-                    status = att_df[(att_df['workforce_id']==w['id']) & (att_df['date']==today)]['status'].values
-                    current_status = status[0] if len(status) > 0 else 'Not Set'
+                    current_status = 'Not Set'
+                        if not att_df.empty and 'workforce_id' in att_df.columns and 'date' in att_df.columns:
+                            match = att_df[(att_df['workforce_id']==w['id']) & (att_df['date']==today)]
+                            if not match.empty:
+                                current_status = match['status'].values[0]
                     
                     color = {'Present':'#DCFCE7','Absent':'#FEE2E2','Leave':'#FEF3C7','Not Set':'#F8FAFC'}
                     st.markdown(f"""
