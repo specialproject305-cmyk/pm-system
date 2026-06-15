@@ -115,9 +115,10 @@ def inventory_dashboard_page():
     with col_a:
         st.markdown('<div class="chart-box"><h3>📊 By Vendor</h3>', unsafe_allow_html=True)
         if 'vendor' in filtered.columns:
-            vendor_counts = filtered['vendor'].value_counts().head(10)
-            fig1 = px.bar(x=vendor_counts.index.astype(str), y=vendor_counts.values)
-            fig1.update_traces(marker_color='#3B82F6')
+            vendor_counts = filtered['vendor'].value_counts().head(10).reset_index()
+            vendor_counts.columns = ['Vendor', 'Count']
+            fig1 = px.bar(vendor_counts, x='Vendor', y='Count', color='Count', color_continuous_scale=['#3B82F6','#1E40AF'])
+            fig1.update_layout(height=300, margin=dict(t=0,b=0), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', showlegend=False)
             st.plotly_chart(fig1, use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
     
@@ -145,8 +146,9 @@ def inventory_dashboard_page():
     with col_d:
         st.markdown('<div class="chart-box"><h3>📊 Top Items</h3>', unsafe_allow_html=True)
         if 'item_description' in filtered.columns:
-            item_counts = filtered['item_description'].value_counts().head(8)
-            fig4 = px.bar(y=item_counts.index, x=item_counts.values, orientation='h', color=item_counts.values, color_continuous_scale=['#3B82F6','#1E40AF'])
+            item_counts = filtered['item_description'].value_counts().head(8).reset_index()
+            item_counts.columns = ['Item', 'Count']
+            fig4 = px.bar(item_counts, y='Item', x='Count', orientation='h', color='Count', color_continuous_scale=['#3B82F6','#1E40AF'])
             fig4.update_layout(height=300, margin=dict(t=0,b=0), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', showlegend=False)
             st.plotly_chart(fig4, use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
