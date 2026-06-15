@@ -10,16 +10,107 @@ st.set_page_config(page_title="PM System", page_icon="🏗️", layout="wide", i
 # Inject CSS sekaligus untuk efisiensi render
 st.markdown("""
 <style>
-    div[data-testid="stSidebar"] .stButton > button,
-    div[data-testid="stSidebar"] .stSelectbox > div {
-        background: linear-gradient(90deg, #1E293B 0%, #0F172A 100%) !important;
-        color: #FFFFFF !important;
-        border: 1px solid #334155;
-        border-radius: 8px;
+    /* ===== GLOBAL PREMIUM STYLING ===== */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+    
+    .stApp {
+        background: linear-gradient(135deg, #F8FAFC 0%, #E2E8F0 100%);
+        color: #1E293B;
+        font-family: 'Inter', 'SF Pro Display', -apple-system, sans-serif;
+        letter-spacing: -0.2px;
     }
+    
+    /* ===== GLASSMORPHISM SIDEBAR ===== */
+    [data-testid="stSidebar"] {
+        background: rgba(15, 23, 42, 0.95) !important;
+        backdrop-filter: blur(20px) !important;
+        -webkit-backdrop-filter: blur(20px) !important;
+        border-right: 1px solid rgba(255,255,255,0.08) !important;
+    }
+    [data-testid="stSidebar"] * {
+        color: #E2E8F0 !important;
+    }
+    [data-testid="stSidebar"] .stButton > button {
+        background: rgba(255,255,255,0.08) !important;
+        backdrop-filter: blur(10px) !important;
+        border: 1px solid rgba(255,255,255,0.12) !important;
+        border-radius: 10px !important;
+        color: #E2E8F0 !important;
+        font-weight: 500 !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+    [data-testid="stSidebar"] .stButton > button:hover {
+        background: rgba(99, 102, 241, 0.2) !important;
+        border-color: #6366F1 !important;
+        transform: translateY(-2px) !important;
+    }
+    [data-testid="stSidebar"] .stSelectbox > div {
+        background: rgba(255,255,255,0.06) !important;
+        border: 1px solid rgba(255,255,255,0.12) !important;
+        border-radius: 10px !important;
+    }
+    
+    /* ===== GLOBAL BUTTON ===== */
+    .stButton > button {
+        background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 10px !important;
+        font-weight: 600 !important;
+        font-size: 0.85rem !important;
+        padding: 8px 18px !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        box-shadow: 0 4px 15px rgba(99, 102, 241, 0.25) !important;
+    }
+    .stButton > button:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 8px 25px rgba(99, 102, 241, 0.35) !important;
+    }
+    
+    /* ===== GLOBAL INPUT ===== */
+    .stTextInput > div > div, .stSelectbox > div > div {
+        border-radius: 10px !important;
+        border: 1px solid #E2E8F0 !important;
+        transition: all 0.3s ease !important;
+    }
+    .stTextInput > div > div:focus-within, .stSelectbox > div > div:focus-within {
+        border-color: #6366F1 !important;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1) !important;
+    }
+    
+    /* ===== GLOBAL TABLE ===== */
+    [data-testid="stDataFrame"] {
+        border-radius: 12px !important;
+        overflow: hidden !important;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.06) !important;
+    }
+    thead th {
+        background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%) !important;
+        color: white !important;
+        font-weight: 600 !important;
+        font-size: 0.75rem !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.5px !important;
+        padding: 10px 12px !important;
+    }
+    tbody tr {
+        transition: background 0.2s ease !important;
+    }
+    tbody tr:hover {
+        background: rgba(99, 102, 241, 0.04) !important;
+    }
+    tbody td {
+        font-size: 0.85rem !important;
+        padding: 8px 12px !important;
+    }
+    
+    /* ===== SCROLLBAR PREMIUM ===== */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
 </style>
 """, unsafe_allow_html=True)
-
 # ═══════════════════════════════════════════════
 # 🧠 SESSION STATE INITIALIZATION
 # ═══════════════════════════════════════════════
