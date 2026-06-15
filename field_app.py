@@ -82,10 +82,11 @@ def field_app_page():
     user = st.session_state.get('user', {})
     role = user.get('role', 'engineer')
     
-    role_map = {
+        role_map = {
         'sitac': 'Sitac', 'legal': 'Legal', 'engineering': 'Engineering',
         'procurement': 'Procurement', 'project': 'Project',
-        'vendor_mgmt': 'Vendor Management'
+        'vendor_mgmt': 'Vendor Management',
+        'planning': 'Planning'
     }
     assigned_to = role_map.get(role, role)
     
