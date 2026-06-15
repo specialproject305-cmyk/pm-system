@@ -13,11 +13,16 @@ def inject_presentation_css():
     st.markdown("""
     <style>
         /* === BASE CANVAS BACKGROUND === */
-        .stApp { 
-            background: linear-gradient(135deg, #F8FAFC 0%, #E2E8F0 100%) !important;
-            color: #1E293B;
-            font-family: 'Inter', 'Segoe UI', sans-serif;
-            padding: 15px;
+        .stApp {
+            background: linear-gradient(180deg, #F0F4FF 0%, #E8EDFF 50%, #F8FAFC 100%) !important;
+        }
+        .kpi-big {
+            background: rgba(255,255,255,0.75);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.5);
+            border-radius: 16px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.05);
         }
         section.main > div { padding: 0 !important; }
         
