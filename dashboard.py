@@ -345,7 +345,7 @@ def dashboard_page():
     # ─────────────────────────────────────────────────────────────
     # TAB 4: WORKFORCE PERFORMANCE
     # ─────────────────────────────────────────────────────────────
-    with tab_workforce = tab_workforce:
+    with tab_workforce:
         st.markdown('<div class="section-header">Monitoring Alokasi Beban Tugas Tim Lapangan</div>', unsafe_allow_html=True)
         
         # Penanganan snapshot tim pelaksana lapangan secara komprehensif
