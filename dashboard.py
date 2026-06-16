@@ -335,26 +335,32 @@ def dashboard_page():
                     color_discrete_map={'DONE': '#059669', 'ONGOING': '#D97706', 'PENDING': '#2563EB', 'DELAYED': '#DC2626', 'CRITICAL': '#7F1D1D'}
                 )
                 # 🛠️ UPDATE LAYOUT: MEMINDAHKAN LEGEND KE BAWAH JUDUL & HORIZONTAL CENTER
+                # 🛠️ UPDATE LAYOUT: MENGUNCI LEGEND HARUS 1 BARIS HORIZONTAL DI TENGAH
                 fig_vendor.update_layout(
                     barmode='stack',
-                    height=300, # Sedikit dinaikkan agar ruang bar chart tetap luas
-                    margin=dict(l=140, r=10, t=60, b=10), # l=140 memberikan ruang aman bagi nama vendor di kiri
+                    height=300, # Ditambah sedikit ruang vertikal agar tidak sesak
+                    margin=dict(l=140, r=20, t=70, b=20), # Space aman untuk nama vendor di kiri
                     
-                    # Pengaturan posisi Legend agar Horizontal, Center, dan di bawah judul
+                    # Pengaturan Mutlak Legend 1 Baris Center
                     showlegend=True,
                     legend=dict(
-                        orientation="h",     # Mengubah orientasi menjadi horizontal
+                        orientation="h",        # Horizontal
                         yanchor="bottom",
-                        y=1.02,              # Menempatkan legend tepat di atas area grafik (di bawah judul)
+                        y=1.05,                 # Naikkan sedikit di atas chart (tepat di bawah judul)
                         xanchor="center",
-                        x=0,               # Memposisikan legend tepat di tengah (Center)
+                        x=0,                  # Centered di tengah-tengah chart
                         font=dict(size=9),
-                        title=None           # Menghapus teks judul 'status' yang bikin sempit
+                        title=None,             # Hapus judul status yang memakan space
+                        itemwidth=30,           # Mengatur jarak lebar antar item agar rapat menyamping
+                        traceorder="normal"     # Mengurutkan baris secara normal satu baris lurus
                     ),
                     
                     yaxis=dict(tickfont=dict(size=10), title=None),
-                    xaxis=dict(title=None, dtick=1) # Menyisipkan garis skala per satuan bulat
+                    xaxis=dict(title=None, dtick=1)
                 )
+                
+                # Memaksa container Plotly tidak membungkus item legend ke bawah (Wrap Off)
+                fig_vendor.update_traces(legendgroup="")
                 st.plotly_chart(fig_vendor, use_container_width=True)
             st.markdown('</div>', unsafe_allow_html=True)
 
