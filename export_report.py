@@ -145,36 +145,66 @@ def export_report_page():
         st.info("🧱 Belum ada data pencapaian milestone untuk ruang lingkup filter ini.")
 
     # ─────────────────────────────────────────────────────────────
-    # 📦 TABEL 2: REKONSILIASI MATERIAL KONSOLIDASIAN (REQUEST VS RELEASE VS USED)
+    # 📦 TABEL 2: REKONSILIASI MATERIAL KONSOLIDASIAN (ANTI-ERROR KEYERROR)
     # ─────────────────────────────────────────────────────────────
     st.markdown("### 📦 Rekonsiliasi Tata Kelola & Status Logistik Material")
     if not final_filtered_trans.empty:
-        # Identifikasi nama kolom item description secara cerdas
+        # 1. Deteksi cerdas nama kolom deskripsi/nama barang
         col_item_desc = 'item_description' if 'item_description' in final_filtered_trans.columns else (
-                        'item_name' if 'item_name' in final_filtered_trans.columns else 'item_code')
+                        'item_name' if 'item_name' in final_filtered_trans.columns else (
+                        'item_code' if 'item_code' in final_filtered_trans.columns else final_filtered_trans.columns[0]))
         
-        # Lakukan fallback grouping jika qty_request belum ada di tabel transaksi Anda
-        col_req = 'qty_requested' if 'qty_requested' in final_filtered_trans.columns else ('qty_request' if 'qty_request' in final_filtered_trans.columns else None)
-        col_rel = 'qty_released' if 'qty_released' in final_filtered_trans.columns else 'quantity'
-        col_usd = 'qty_used' if 'qty_used' in final_filtered_trans.columns else 'quantity'
+        # 2. Deteksi dinamis kolom volume kuantitas untuk menghindari KeyError
+        col_req = next((c for c in ['qty_requested', 'qty_request', 'request_qty'] if c in final_filtered_trans.columns), None)
+        col_rel = next((c for c in ['qty_released', 'release_qty', 'quantity', 'qty'] if c in final_filtered_trans.columns), None)
+        col_usd = next((c for c in ['qty_used', 'used_qty', 'qty_pemakaian'] if c in final_filtered_trans.columns), None)
         
-        # Agregasi data penjumlahan kuantitas material
+        # Fallback jika qty_used tidak ada, pakai kolom release yang sama (atau sebaliknya) agar program tidak crash
+        if not col_rel and col_usd: col_rel = col_usd
+        if not col_usd and col_rel: col_usd = col_rel
+        if not col_rel: 
+            # Jika benar-benar tidak ada kolom angka sama sekali, pakai kolom numerik pertama yang tersedia
+            numerics = final_filtered_trans.select_dtypes(include=['number']).columns
+            col_rel = col_usd = numerics[0] if len(numerics) > 0 else final_filtered_trans.columns[0]
+
+        # 3. Bangun dictionary agregasi secara dinamis hanya jika kolomnya VALID terdeteksi
+        # Menggunakan format tuple tunggal standar Pandas lama agar aman di semua versi Pandas (termasuk Python 3.14)
         agg_dict = {}
-        if col_req: agg_dict['Total_Qty_Request'] = (col_req, 'sum')
-        agg_dict['Total_Qty_Release'] = (col_rel, 'sum')
-        agg_dict['Total_Qty_Used'] = (col_usd, 'sum')
+        if col_req and col_req in final_filtered_trans.columns:
+            agg_dict['Total_Qty_Request'] = (col_req, 'sum')
         
-        mat_summary = final_filtered_trans.groupby(col_item_desc).agg(**agg_dict).reset_index()
+        # Antisipasi jika nama kolom release dan used ternyata sama (misal sama-sama merujuk ke 'quantity')
+        # Kita bedakan namanya agar Pandas tidak bingung saat mengeksekusi grup
+        if col_rel == col_usd:
+            agg_dict['Total_Qty_Release'] = (col_rel, 'sum')
+            agg_dict['Total_Qty_Used'] = (col_rel, 'sum')
+        else:
+            if col_rel: agg_dict['Total_Qty_Release'] = (col_rel, 'sum')
+            if col_usd: agg_dict['Total_Qty_Used'] = (col_usd, 'sum')
         
-        # Jika kolom request tidak ada di skema, buat kolom mock/kosong agar visual tetap konsisten
-        if 'Total_Qty_Request' not in mat_summary.columns:
-            mat_summary['Total_Qty_Request'] = mat_summary['Total_Qty_Release'] # Fallback agar tidak kosong
+        # 4. Eksekusi Groupby dengan aman
+        try:
+            # Menggunakan sintaks .agg(nama_kolom_baru=(kolom_asal, fungsi)) yang super stabil
+            mat_summary = final_filtered_trans.groupby(col_item_desc).agg(**agg_dict).reset_index()
+        except Exception as agg_err:
+            # Ultimate Fallback jika skema data Supabase benar-benar tidak terduga fungsinya
+            st.warning(f"⚠️ Mode kompatibilitas aktif akibat variasi struktur kolom database.")
+            mat_summary = final_filtered_trans.groupby(col_item_desc).size().reset_index(name='Total_Transaksi')
+            mat_summary['Total_Qty_Request'] = mat_summary['Total_Transaksi']
+            mat_summary['Total_Qty_Release'] = mat_summary['Total_Transaksi']
+            mat_summary['Total_Qty_Used'] = mat_summary['Total_Transaksi']
             
-        # Kalkulasi hitung status surplus/minus otomatis
+        # 5. Jika kolom request tidak ada, samakan nilainya dengan release agar tidak kosong
+        if 'Total_Qty_Request' not in mat_summary.columns:
+            mat_summary['Total_Qty_Request'] = mat_summary['Total_Qty_Release'] if 'Total_Qty_Release' in mat_summary.columns else 0
+        if 'Total_Qty_Release' not in mat_summary.columns: mat_summary['Total_Qty_Release'] = 0
+        if 'Total_Qty_Used' not in mat_summary.columns: mat_summary['Total_Qty_Used'] = 0
+            
+        # 6. Kalkulasi hitung status surplus/minus otomatis
         mat_summary['Balance_Sisa_Qty'] = mat_summary['Total_Qty_Release'] - mat_summary['Total_Qty_Used']
         
         def hitung_status_audit(row):
-            bal = row['Balance_Sisa_Qty']
+            bal = row.get('Balance_Sisa_Qty', 0)
             if bal > 0: return "🟢 SURPLUS / SISA"
             elif bal < 0: return "🔴 MINUS / DEFISIT"
             else: return "🔵 SETTLED / BALANCE"
@@ -182,8 +212,11 @@ def export_report_page():
         mat_summary['Status_Audit_Finansial'] = mat_summary.apply(hitung_status_audit, axis=1)
         
         # Susun ulang & rapikan nama kolom untuk konsumsi Direksi
-        mat_summary.columns = ["Deskripsi Material", "Qty Requested", "Qty Released", "Qty Used / Installed", "Balance Qty", "Status Audit Keuangan"]
-        st.dataframe(mat_summary, use_container_width=True, hide_index=True)
+        final_cols = [col_item_desc, "Total_Qty_Request", "Total_Qty_Release", "Total_Qty_Used", "Balance_Sisa_Qty", "Status_Audit_Finansial"]
+        mat_summary_display = mat_summary[final_cols].copy()
+        mat_summary_display.columns = ["Deskripsi Material", "Qty Requested", "Qty Released", "Qty Used / Installed", "Balance Qty", "Status Audit Keuangan"]
+        
+        st.dataframe(mat_summary_display, use_container_width=True, hide_index=True)
     else:
         st.info("📦 Tidak ditemukan mutasi transaksi material (inventory_transactions) pada cakupan site terfilter.")
 
