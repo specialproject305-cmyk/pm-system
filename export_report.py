@@ -200,8 +200,30 @@ def export_report_page():
         if 'Total_Qty_Release' not in mat_summary.columns: mat_summary['Total_Qty_Release'] = 0
         if 'Total_Qty_Used' not in mat_summary.columns: mat_summary['Total_Qty_Used'] = 0
             
-        # 6. Kalkulasi hitung status surplus/minus otomatis
+        # ─── 🛠️ FIX TYPEERROR: FORCE CONVERT KE FLOAT/INT (ANTI-ARROW TYPE ERROR) ───
+        mat_summary['Total_Qty_Request'] = pd.to_numeric(mat_summary['Total_Qty_Request'], errors='coerce').fillna(0)
+        mat_summary['Total_Qty_Release'] = pd.to_numeric(mat_summary['Total_Qty_Release'], errors='coerce').fillna(0)
+        mat_summary['Total_Qty_Used'] = pd.to_numeric(mat_summary['Total_Qty_Used'], errors='coerce').fillna(0)
+        
+        # Sekarang aman dikurangi karena tipe data dijamin numerik 100%
         mat_summary['Balance_Sisa_Qty'] = mat_summary['Total_Qty_Release'] - mat_summary['Total_Qty_Used']
+        
+        def hitung_status_audit(row):
+            bal = row.get('Balance_Sisa_Qty', 0)
+            if bal > 0: return "🟢 SURPLUS / SISA"
+            elif bal < 0: return "🔴 MINUS / DEFISIT"
+            else: return "🔵 SETTLED / BALANCE"
+            
+        mat_summary['Status_Audit_Finansial'] = mat_summary.apply(hitung_status_audit, axis=1)
+        
+        # Susun ulang & rapikan nama kolom untuk konsumsi Direksi
+        final_cols = [col_item_desc, "Total_Qty_Request", "Total_Qty_Release", "Total_Qty_Used", "Balance_Sisa_Qty", "Status_Audit_Finansial"]
+        mat_summary_display = mat_summary[final_cols].copy()
+        mat_summary_display.columns = ["Deskripsi Material", "Qty Requested", "Qty Released", "Qty Used / Installed", "Balance Qty", "Status Audit Keuangan"]
+        
+        st.dataframe(mat_summary_display, use_container_width=True, hide_index=True)
+    else:
+        st.info("📦 Tidak ditemukan mutasi transaksi material (inventory_transactions) pada cakupan site terfilter.")
         
         def hitung_status_audit(row):
             bal = row.get('Balance_Sisa_Qty', 0)
