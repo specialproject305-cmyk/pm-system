@@ -16,6 +16,34 @@ def sync_progress_from_milestones(site_id):
     status = 'CRITICAL' if delayed > 3 else ('DELAYED' if delayed > 0 else 'ON_TRACK')
     return progress, status
 
+# ══════════════════════ 🌟 POP-UP DIALOG WORKFLOWS ══════════════════════
+
+@st.dialog("🎉 Project Completed! (100%)")
+def show_done_popup(site_name, site_id):
+    st.markdown(f"### 🏆 Luar Biasa, Site Selesai!")
+    st.markdown(f"Site **{site_name}** (`{site_id}`) telah sukses di-update ke progress **100% (DONE)**.")
+    st.success("Seluruh target milestone di lapangan telah terpenuhi.")
+    if st.button("Tutup & Segarkan Halaman", use_container_width=True, key="btn_close_done"):
+        st.rerun()
+
+@st.dialog("🏢 Master Project Berhasil Dibuat!")
+def show_master_popup(p_name, p_code):
+    st.markdown(f"### 🏗️ Master Proyek Baru Aktif!")
+    st.markdown(f"Proyek **{p_name}** dengan kode resmi **{p_code}** berhasil didaftarkan ke sistem.")
+    st.info("Anda sekarang dapat mendaftarkan site-site baru di bawah naungan proyek master ini.")
+    if st.button("Selesai", use_container_width=True, key="btn_close_master"):
+        st.rerun()
+
+@st.dialog("📍 Site Baru Berhasil Terdaftar!")
+def show_new_site_popup(site_name, site_id):
+    st.markdown(f"### 🚀 Sukses Menambahkan Site Baru!")
+    st.markdown(f"Site **{site_name}** (`{site_id}`) telah masuk ke dalam portfolio database.")
+    st.info("Gunakan menu koordinat dan filter dashboard untuk mulai memantau pergerakan logistik lapangan.")
+    if st.button("Lihat di Daftar Site", use_container_width=True, key="btn_close_new_site"):
+        st.rerun()
+
+# ══════════════════════════════════════════════════════════════════════════
+
 def project_tracker_page():
     # Init session
     if 'project_filter' not in st.session_state:
@@ -97,7 +125,7 @@ def project_tracker_page():
             col3.metric("Terlambat", len(filtered_df[filtered_df['status'].isin(['DELAYED','CRITICAL'])]))
 
             # Sync button
-            if st.button("🔄 Sync Progress", use_container_width=True):
+            if st.button("🔄 Sync Progress", use_container_width=True, key="sync_prog_btn"):
                 for _, row in filtered_df.iterrows():
                     prog, sts = sync_progress_from_milestones(row['id'])
                     ridx = find_row_by_id("projects", row['id'])
@@ -128,23 +156,36 @@ def project_tracker_page():
                         n_spk_vendor = st.text_input("SPK Vendor", value=site.get('spk_vendor',''))
                     
                     if st.form_submit_button("💾 Simpan Site", type="primary", use_container_width=True):
-                        if s_name and s_id and m_pid != "Belum ada proyek":
-                            try:
-                                insert_row("projects", {...})
-                                st.toast("✅ Site berhasil ditambahkan!", icon="📍")
-                                st.balloons()
-                                time.sleep(0.5)
-                                st.rerun()
-                            except Exception as e: st.error(f"❌ Gagal simpan: {str(e)}")
-                        else: st.error("❌ Lengkapi Site ID, Name, dan pilih Master Project!")
+                        try:
+                            final_status = "ON_TRACK" if n_prog == 100 else n_stat
+                            update_data = {
+                                'status': final_status,
+                                'progress': str(n_prog),
+                                'pm': n_pm,
+                                'vendor': n_vend,
+                                'spk_vendor': n_spk_vendor
+                            }
+                            
+                            if ridx:
+                                update_row("projects", ridx, update_data)
+                                st.cache_data.clear()
+                                
+                                if n_prog == 100:
+                                    st.balloons()
+                                    show_done_popup(site['site_name'], site['site_id'])
+                                else:
+                                    st.toast("✅ Perubahan site berhasil disimpan!", icon="💾")
+                                    time.sleep(0.5)
+                                    st.rerun()
+                        except Exception as e: st.error(f"❌ Gagal simpan: {str(e)}")
 
                 # Delete section
                 st.markdown('<div class="delete-section">', unsafe_allow_html=True)
                 st.markdown("#### 🗑️ Hapus Site")
-                if st.button("🗑️ HAPUS PERMANEN", type="primary", use_container_width=True):
+                if st.button("🗑️ HAPUS PERMANEN", type="primary", use_container_width=True, key="del_site_core_btn"):
                     delete_row_by_id("projects", sel_edit_id)
                     st.cache_data.clear()
-                    st.warning("🗑️ Dihapus!"); st.rerun()
+                    st.warning("🗑 ...Dihapus!"); time.sleep(0.5); st.rerun()
                 st.markdown('</div>', unsafe_allow_html=True)
         else:
             st.info("📋 Belum ada site.")
@@ -159,16 +200,24 @@ def project_tracker_page():
                 p_name = st.text_input("Nama Proyek", placeholder="Rollout Phase 1")
             with c2:
                 p_cat = st.selectbox("Kategori", ["4G Rollout","5G Upgrade","Fiber Optic","General"])
-            if st.form_submit_button("💾 Simpan Site", type="primary", use_container_width=True):
-                if s_name and s_id and m_pid != "Belum ada proyek":
+            
+            # FIXED LOGIKA FORM TAB 2: Benar-benar memproses penyimpanan data Master Proyek
+            if st.form_submit_button("💾 Simpan Master Proyek Baru", type="primary", use_container_width=True):
+                if p_code and p_name:
                     try:
-                                insert_row("projects", {...})
-                                st.toast("✅ Site berhasil ditambahkan!", icon="📍")
-                                st.balloons()
-                                time.sleep(0.5)
-                                st.rerun()
-                            except Exception as e: st.error(f"❌ Gagal simpan: {str(e)}")
-                        else: st.error("❌ Lengkapi Site ID, Name, dan pilih Master Project!")        
+                        insert_row("master_projects", {
+                            'id': generate_id(),
+                            'project_code': p_code,
+                            'project_name': p_name,
+                            'category': p_cat
+                        })
+                        st.cache_data.clear()
+                        st.balloons()
+                        # TRIGGER POPUP MASTER PROJECT SUKSES
+                        show_master_popup(p_name, p_code)
+                    except Exception as e: st.error(f"❌ Gagal simpan: {str(e)}")
+                else: 
+                    st.error("❌ Kode Proyek & Nama Proyek wajib diisi!")        
         st.divider()
         if not master_df.empty:
             st.dataframe(master_df, use_container_width=True, hide_index=True)
@@ -189,31 +238,48 @@ def project_tracker_page():
                 vend = st.text_input("Vendor")
                 spk_vendor = st.text_input("SPK Vendor", placeholder="SPK-001/VII/2025")
                 pm_val = st.text_input("PM")
-            if st.form_submit_button("💾 Simpan Proyek", type="primary", use_container_width=True):
-                if p_code and p_name:
-                    insert_row("master_projects", {...})
-                    st.toast("✅ Master Project disimpan!", icon="🏢")
-                    st.balloons()
-                    time.sleep(0.5)
-                    st.rerun()
-                else: st.error("❌ Kode & Nama wajib diisi!")
+            
+            # FIXED LOGIKA FORM TAB 3: Benar-benar memproses pembuatan data Site Baru ke DB projects
+            if st.form_submit_button("💾 Simpan Proyek Site Baru", type="primary", use_container_width=True):
+                if s_name and s_id and m_pid != "-":
+                    try:
+                        insert_row("projects", {
+                            'id': generate_id(),
+                            'master_project_id': m_pid,
+                            'site_id': s_id,
+                            'site_name': s_name,
+                            'site_category': s_cat,
+                            'site_coordinate': s_coord,
+                            'vendor': vend,
+                            'spk_vendor': spk_vendor,
+                            'pm': pm_val,
+                            'status': 'ON_TRACK',
+                            'progress': '0'
+                        })
+                        st.cache_data.clear()
+                        # TRIGGER POPUP SITE BARU SUKSES
+                        show_new_site_popup(s_name, s_id)
+                    except Exception as e: st.error(f"❌ Gagal simpan: {str(e)}")
+                else: 
+                    st.error("❌ Lengkapi Site ID, Name, dan pilih Master Project!")
 
     # ═══════════════ TAB 4: IMPORT CSV ═══════════════
     with tab4:
         st.subheader("📥 Import CSV")
         template = pd.DataFrame({'master_project_id':['ID_PROYEK'],'site_id':['SITE-001'],'site_name':['Tower A'],'site_category':['New Site'],'vendor':['PT. X'], 'spk_vendor': ['SPK-001/VII/2025'], 'pm':['Budi'],'site_coordinate':['-6.17,106.82'],'start_date':[today_str()],'end_date':[today_str()]})
-        st.download_button("📥 Template", template.to_csv(index=False), "template.csv", "text/csv")
-        up = st.file_uploader("Upload CSV", type=['csv'])
+        st.download_button("📥 Template", template.to_csv(index=False), "template.csv", "text/csv", key="download_template_csv")
+        up = st.file_uploader("Upload CSV", type=['csv'], key="uploader_csv")
         if up:
             idf = pd.read_csv(up); st.dataframe(idf)
-            if st.button("🚀 Import", type="primary", use_container_width=True):
+            if st.button("🚀 Import", type="primary", use_container_width=True, key="execute_import_btn"):
                 count = 0
                 for _, r in idf.iterrows():
                     try:
                         insert_row("projects", {'id': generate_id(), 'master_project_id': str(r.get('master_project_id','')), 'site_id': str(r.get('site_id','')), 'site_name': str(r.get('site_name','')), 'site_category': str(r.get('site_category','New Site')), 'vendor': str(r.get('vendor','')),'spk_vendor': str(r.get('spk_vendor', '')), 'pm': str(r.get('pm','')), 'site_coordinate': str(r.get('site_coordinate','')), 'start_date': str(r.get('start_date',today_str())), 'end_date': str(r.get('end_date',today_str())), 'status': 'ON_TRACK', 'progress': '0'})
                         count += 1
                     except: pass
-                st.toast(f"✅ {count} site diimport!"); st.rerun()
+                st.cache_data.clear()
+                st.toast(f"✅ {count} site diimport!"); time.sleep(0.5); st.rerun()
 
 if __name__ == "__main__":
     project_tracker_page()
