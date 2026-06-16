@@ -18,21 +18,21 @@ def inject_premium_css():
             font-family: 'Segoe UI', -apple-system, sans-serif; 
         }
         
-        /* HEADER PREMIUM DENGAN GRADASI BIRU & ORANGE */
+        /* HEADER PREMIUM DENGAN GRADASI BIRU & ORANGE (CENTER ALIGNED) */
         .dashboard-header { 
             background: linear-gradient(135deg, #1E40AF 0%, #3B82F6 40%, #EA580C 100%); 
-            padding: 22px 25px; 
+            padding: 25px; 
             border-radius: 14px; 
             margin-bottom: 22px; 
             box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.2), 0 4px 6px -4px rgba(234, 88, 12, 0.2);
-            border-left: 6px solid #F97316;
+            text-align: center; /* ◄ Ganti ke center untuk memposisikan semua elemen di tengah */
         }
         .dashboard-header h1 { 
             font-size: 1.7rem; 
             margin: 0; 
             color: #FFFFFF; 
             font-weight: 800; 
-            text-align: left;
+            text-align: center; /* ◄ Judul di tengah */
             letter-spacing: 0.5px;
             text-shadow: 0 2px 4px rgba(0,0,0,0.15);
         }
@@ -40,9 +40,20 @@ def inject_premium_css():
             font-size: 0.85rem; 
             margin: 6px 0 0 0; 
             color: #E0F2FE; 
-            text-align: left; 
+            text-align: center; /* ◄ Sub-judul di tengah */
             font-weight: 500;
             text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        .dashboard-sync-text {
+            font-size: 0.75rem;
+            margin-top: 10px;
+            color: #FFEDD5; /* Warna orange pastel lembut agar kontras dan terbaca */
+            font-weight: 600;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.15);
+            display: inline-block;
+            background: rgba(0, 0, 0, 0.2); /* Memberikan efek highlight transparan di belakang teks sync */
+            padding: 4px 12px;
+            border-radius: 20px;
         }
         
         /* SECTION HEADERS */
@@ -154,10 +165,12 @@ def dashboard_page():
         df_projects['region'] = 'Jawa Barat'  # Default fallback regional Bandung/Jakarta
     
     # 🧱 2. ENGINE 6 FILTER BERANTAI (CASCADING FILTERS)
+    # 🧱 ENGINE 6 FILTER BERANTAI & HEADER BARU (3 BARIS CENTERED)
     st.markdown("""
     <div class="dashboard-header">
         <h1>📊 EXECUTIVE MASTER DASHBOARD</h1>
-        <p>Sistem Pengendali Terintegrasi Operasi Infrastruktur, Logistik Material & Kinerja Workforce</p>
+        <p>Sistem Pengendali Terintegrasi</p>
+        <div class="dashboard-sync-text">🔄 Last Sincronize Data:  {datetime.now().strftime('%d %b %Y | %H:%M')} WIB |</div>
     </div>
     """, unsafe_allow_html=True)
 
