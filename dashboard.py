@@ -334,13 +334,26 @@ def dashboard_page():
                     title='📈 Status Kapasitas per Eksekutor Vendor',
                     color_discrete_map={'DONE': '#059669', 'ONGOING': '#D97706', 'PENDING': '#2563EB', 'DELAYED': '#DC2626', 'CRITICAL': '#7F1D1D'}
                 )
+                # 🛠️ UPDATE LAYOUT: MEMINDAHKAN LEGEND KE BAWAH JUDUL & HORIZONTAL CENTER
                 fig_vendor.update_layout(
                     barmode='stack',
-                    height=230,
-                    margin=dict(l=120, r=10, t=40, b=10),
-                    legend=dict(orientation="h", x=0.1, y=1.1, font=dict(size=8)),
-                    yaxis=dict(tickfont=dict(size=9), title=None),
-                    xaxis=dict(title=None)
+                    height=260, # Sedikit dinaikkan agar ruang bar chart tetap luas
+                    margin=dict(l=140, r=10, t=60, b=10), # l=140 memberikan ruang aman bagi nama vendor di kiri
+                    
+                    # Pengaturan posisi Legend agar Horizontal, Center, dan di bawah judul
+                    showlegend=True,
+                    legend=dict(
+                        orientation="h",     # Mengubah orientasi menjadi horizontal
+                        yanchor="bottom",
+                        y=1.02,              # Menempatkan legend tepat di atas area grafik (di bawah judul)
+                        xanchor="center",
+                        x=0.5,               # Memposisikan legend tepat di tengah (Center)
+                        font=dict(size=9),
+                        title=None           # Menghapus teks judul 'status' yang bikin sempit
+                    ),
+                    
+                    yaxis=dict(tickfont=dict(size=10), title=None),
+                    xaxis=dict(title=None, dtick=1) # Menyisipkan garis skala per satuan bulat
                 )
                 st.plotly_chart(fig_vendor, use_container_width=True)
             st.markdown('</div>', unsafe_allow_html=True)
