@@ -337,7 +337,7 @@ def dashboard_page():
                 # 🛠️ UPDATE LAYOUT: MEMINDAHKAN LEGEND KE BAWAH JUDUL & HORIZONTAL CENTER
                 fig_vendor.update_layout(
                     barmode='stack',
-                    height=260, # Sedikit dinaikkan agar ruang bar chart tetap luas
+                    height=300, # Sedikit dinaikkan agar ruang bar chart tetap luas
                     margin=dict(l=140, r=10, t=60, b=10), # l=140 memberikan ruang aman bagi nama vendor di kiri
                     
                     # Pengaturan posisi Legend agar Horizontal, Center, dan di bawah judul
@@ -347,7 +347,7 @@ def dashboard_page():
                         yanchor="bottom",
                         y=1.02,              # Menempatkan legend tepat di atas area grafik (di bawah judul)
                         xanchor="center",
-                        x=0.5,               # Memposisikan legend tepat di tengah (Center)
+                        x=0,               # Memposisikan legend tepat di tengah (Center)
                         font=dict(size=9),
                         title=None           # Menghapus teks judul 'status' yang bikin sempit
                     ),
