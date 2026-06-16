@@ -331,14 +331,13 @@ def dashboard_page():
                     y='vendor',
                     color='status',
                     orientation='h',
-                    title='📈 Status Kapasitas per Eksekutor Vendor',
+                    title='',
                     color_discrete_map={'DONE': '#059669', 'ONGOING': '#D97706', 'PENDING': '#2563EB', 'DELAYED': '#DC2626', 'CRITICAL': '#7F1D1D'}
                 )
                 # 🛠️ UPDATE LAYOUT: MEMINDAHKAN LEGEND KE BAWAH JUDUL & HORIZONTAL CENTER
-                # 🛠️ UPDATE LAYOUT: MENGUNCI LEGEND HARUS 1 BARIS HORIZONTAL DI TENGAH
                 fig_vendor.update_layout(
                     barmode='stack',
-                    height=300, # Ditambah sedikit ruang vertikal agar tidak sesak
+                    height=280, # Ditambah sedikit ruang vertikal agar tidak sesak
                     margin=dict(l=140, r=20, t=70, b=20), # Space aman untuk nama vendor di kiri
                     
                     # Pengaturan Mutlak Legend 1 Baris Center
