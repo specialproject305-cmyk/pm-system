@@ -46,14 +46,15 @@ def inject_premium_css():
         }
         .dashboard-sync-text {
             font-size: 0.75rem;
-            margin-top: 10px;
-            color: #FFEDD5; /* Warna orange pastel lembut agar kontras dan terbaca */
+            margin-top: 12px;
+            color: #FFEDD5; /* Warna krem pastel yang kontras dengan biru/orange */
             font-weight: 600;
             text-shadow: 0 1px 2px rgba(0,0,0,0.15);
             display: inline-block;
-            background: rgba(0, 0, 0, 0.2); /* Memberikan efek highlight transparan di belakang teks sync */
-            padding: 4px 12px;
+            background: rgba(0, 0, 0, 0.25); /* Kapsul hitam transparan */
+            padding: 5px 16px;
             border-radius: 20px;
+            letter-spacing: 0.3px;
         }
         
         /* SECTION HEADERS */
@@ -165,15 +166,14 @@ def dashboard_page():
         df_projects['region'] = 'Jawa Barat'  # Default fallback regional Bandung/Jakarta
     
     # 🧱 2. ENGINE 6 FILTER BERANTAI (CASCADING FILTERS)
-    # 🧱 ENGINE 6 FILTER BERANTAI & HEADER BARU (3 BARIS CENTERED)
-    st.markdown("""
+    # 🧱 ENGINE 6 FILTER BERANTAI & HEADER BARU (DYNAMIC CENTERED)
+    st.markdown(f"""
     <div class="dashboard-header">
         <h1>📊 EXECUTIVE MASTER DASHBOARD</h1>
         <p>Sistem Pengendali Terintegrasi</p>
-        <div style='text-align: center; color: #94A3B8; font-size: 0.75rem; padding: 10px 0;'>
-            Sinkronisasi at: {datetime.now().strftime('%d %b %Y | %H:%M')} WIB | 🛠️ <b>System Enterprise Edition</b>
-        </div>
-        """, unsafe_allow_html=True)
+        <div class="dashboard-sync-text">Sinkronisasi at: {datetime.now().strftime('%d %b %Y | %H:%M')} WIB | 🛠️ System Enterprise Edition</div>
+    </div>
+    """, unsafe_allow_html=True)
 
     with st.expander("🔍 PANEL KONTROL & FILTER UTAMA (Cascading Active)", expanded=True):
         col_f1, col_f2, col_f3 = st.columns(3)
