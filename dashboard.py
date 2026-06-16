@@ -150,21 +150,31 @@ def dashboard_page():
         col_f1, col_f2, col_f3 = st.columns(3)
         col_f4, col_f5, col_f6 = st.columns(3)
         
-        # Filter 1: Master Project (DIPERBAIKI)
+        # Filter 1: Master Project (DIPERBAIKI DENGAN LOGIKA FALLBACK AUTOMATIC)
         with col_f1:
             opts_master = ['SEMUA MASTER PROJECT']
-            # Pastikan tabel master project tidak kosong dan memiliki data valid
+            
+            # Jalur Utama: Membaca dari tabel induk master_projects
             if not df_master.empty and 'project_name' in df_master.columns:
                 opts_master += sorted(df_master['project_name'].dropna().unique().tolist())
+                use_fallback = False
+            else:
+                # Jalur Fallback: Jika tabel master kosong, tarik ID unik langsung dari tabel projects (Site List)
+                if 'master_project_id' in df_projects.columns:
+                    opts_master += sorted(df_projects['master_project_id'].dropna().unique().tolist())
+                use_fallback = True
             
             sel_master = st.selectbox("🌐 Master Project", opts_master)
             
-            # Logika pemotongan data down-stream ke tabel projects (Site List)
-            if sel_master != 'SEMUA MASTER PROJECT' and not df_master.empty:
-                # Ambil ID utama dari master project yang dipilih user
-                m_ids = df_master[df_master['project_name'] == sel_master]['id'].tolist()
-                # Potong list site hanya yang berelasi dengan master_project_id tersebut
-                df_projects = df_projects[df_projects['master_project_id'].isin(m_ids)]
+            # Eksekusi Pemotongan Data Downstream
+            if sel_master != 'SEMUA MASTER PROJECT':
+                if not use_fallback:
+                    # Jika jalur utama sukses, potong berdasarkan mapping ID
+                    m_ids = df_master[df_master['project_name'] == sel_master]['id'].tolist()
+                    df_projects = df_projects[df_projects['master_project_id'].isin(m_ids)]
+                else:
+                    # Jika jalur fallback, langsung potong berdasarkan value string/ID yang terpilih
+                    df_projects = df_projects[df_projects['master_project_id'] == sel_master]
 
         # Filter 2: PM (Project Manager)
         with col_f2:
@@ -315,13 +325,13 @@ def dashboard_page():
             st.success("✅ Seluruh portofolio site dalam batas aman operasional target.")
 
     # ─────────────────────────────────────────────────────────────
-    # TAB 3: LOGISTICS & INVENTORY TRACKER (DIPERBAIKI)
+    # TAB 3: LOGISTICS & INVENTORY TRACKER (DIUBAH JADI HORIZONTAL CHART)
     # ─────────────────────────────────────────────────────────────
     with tab_logistics:
         st.markdown('<div class="section-header">Kendali Pergerakan Material & Status Gudang</div>', unsafe_allow_html=True)
         
         if not df_inventory.empty:
-            l_col1, l_col2 = st.columns([1, 1.5])
+            l_col1, l_col2 = st.columns([1, 1.4])
             with l_col1:
                 st.markdown('<div class="chart-box">', unsafe_allow_html=True)
                 # Rasio Penyelesaian Material (Settle Status)
@@ -334,24 +344,34 @@ def dashboard_page():
                 
             with l_col2:
                 st.markdown('<div class="chart-box">', unsafe_allow_html=True)
-                # MENGGANTI SUMBU CHART MENJADI ITEM DESCRIPTION
-                # Catatan: Jika nama kolom deskripsi di tabel transaksi Anda berbeda (misal: 'item_name'), silakan sesuaikan string di bawah
-                col_item_display = 'item_description' if 'item_description' in df_inventory.columns else ('item_name' if 'item_name' in df_inventory.columns else 'item_code')
+                
+                # Deteksi cerdas nama kolom deskripsi barang di tabel transaksi Anda
+                col_item_display = 'item_description' if 'item_description' in df_inventory.columns else (
+                                   'item_name' if 'item_name' in df_inventory.columns else 'item_code')
                 
                 label_chart = "Deskripsi Material" if col_item_display != 'item_code' else "Kode Item (Fallback)"
                 st.markdown(f"<p style='font-weight:700; font-size:13px; margin:0 0 10px 0;'>📊 Volume Transaksi Berdasarkan {label_chart}</p>", unsafe_allow_html=True)
                 
                 if col_item_display in df_inventory.columns:
+                    # Agregasi data volume berdasarkan item
                     item_counts = df_inventory[col_item_display].value_counts().reset_index(name='Volume')
-                    # Ubah nama kolom hasil agregasi agar sesuai sumbu
                     item_counts.columns = [col_item_display, 'Volume']
                     
-                    fig_items = px.bar(item_counts, x=col_item_display, y='Volume', color='Volume', color_continuous_scale='Blues')
+                    # 🛠️ PERBAIKAN: Diubah total menjadi Bar Chart Horizontal (orientation='h')
+                    fig_items = px.bar(
+                        item_counts.sort_values(by='Volume', ascending=True), # Urutkan dari volume terkecil ke terbesar agar chart rapi
+                        x='Volume', 
+                        y=col_item_display, 
+                        orientation='h',
+                        color='Volume', 
+                        color_continuous_scale='Blues'
+                    )
                     fig_items.update_layout(
-                        height=200, 
-                        margin=dict(l=10, r=10, t=10, b=10), 
+                        height=240, 
+                        margin=dict(l=150, r=10, t=10, b=10), # Beri margin kiri luas agar teks deskripsi tidak terpotong
                         coloraxis_showscale=False,
-                        xaxis=dict(title=None, tickfont=dict(size=10))
+                        yaxis=dict(title=None, tickfont=dict(size=10)),
+                        xaxis=dict(title="Volume Transaksi", tickfont=dict(size=10))
                     )
                     st.plotly_chart(fig_items, use_container_width=True)
                 st.markdown('</div>', unsafe_allow_html=True)
