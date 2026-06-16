@@ -6,26 +6,34 @@ from supabase_db import read_all_sheets
 
 def export_report_page():
     # ─────────────────────────────────────────────────────────────
-    # 📱 MOBILE OPTIMIZATION CSS
+    # 📱 PREMIUM CSS FOR METRICS & TABLES
     # ─────────────────────────────────────────────────────────────
     st.markdown("""
     <style>
+    .metric-container {
+        background: linear-gradient(135deg, #1E3A8A 0%, #3B82F6 100%);
+        padding: 15px;
+        border-radius: 10px;
+        color: white;
+        text-align: center;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .metric-val { font-size: 24px; font-weight: 800; margin: 5px 0; }
+    .metric-lbl { font-size: 12px; opacity: 0.85; font-weight: 600; }
     @media (max-width: 768px) {
         .stColumn { width: 100% !important; margin-bottom: 10px; }
-        button, input, select, textarea { min-height: 44px !important; font-size: 16px !important; }
-        .report-type-selector div[role="radiogroup"] { flex-direction: column !important; gap: 8px; }
     }
     </style>
     """, unsafe_allow_html=True)
 
     st.title("📊 Export Report Center")
-    st.markdown("Unduh laporan proyek dalam format Excel terstruktur tingkat tinggi, siap untuk audit & meeting direksi.")
+    st.markdown("Analisis kumulatif operational site, pencapaian milestone, dan audit logistik material sebelum diunduh.")
 
     # ─────────────────────────────────────────────────────────────
-    # 📥 LOAD & CLEAN DATA
+    # 📥 LOAD & CLEAN DATA FROM SUPABASE
     # ─────────────────────────────────────────────────────────────
     try:
-        with st.spinner("🔄 Memuat database terintegrasi..."):
+        with st.spinner("🔄 Sinkronisasi Basis Data Supabase..."):
             all_data = read_all_sheets()
         projects_df = all_data.get('projects', pd.DataFrame())
         milestones_df = all_data.get('milestones', pd.DataFrame())
@@ -33,29 +41,26 @@ def export_report_page():
         transactions_df = all_data.get('inventory_transactions', pd.DataFrame())
         master_projects_df = all_data.get('master_projects', pd.DataFrame())
     except Exception as e:
-        st.error(f"⚠️ Gagal memuat data dari Supabase: {str(e)[:100]}")
+        st.error(f"⚠️ Gagal memuat data: {str(e)[:100]}")
         return
 
     if projects_df.empty:
-        st.info("📋 Belum ada data untuk diekspor. Silakan hubungkan database atau tambahkan site terlebih dahulu.")
+        st.info("📋 Database kosong atau tidak terhubung dengan benar.")
         return
 
-    # Pembersihan & Konversi Tipe Data Dasar
+    # Data Type Safety Pre-process
     if 'progress' in projects_df.columns:
         projects_df['progress'] = pd.to_numeric(projects_df['progress'], errors='coerce').fillna(0)
-    
-    date_cols = ['planned_start', 'planned_end', 'actual_start', 'actual_end', 'transaction_date']
-    for df in [milestones_df, transactions_df, projects_df]:
-        if not df.empty:
-            for col in date_cols:
-                if col in df.columns:
-                    df[col] = pd.to_datetime(df[col], errors='coerce')
+    if not milestones_df.empty and 'progress' in milestones_df.columns:
+        milestones_df['progress'] = pd.to_numeric(milestones_df['progress'], errors='coerce').fillna(0)
+    if not milestones_df.empty and 'weight' in milestones_df.columns:
+        milestones_df['weight'] = pd.to_numeric(milestones_df['weight'], errors='coerce').fillna(0)
 
     # ─────────────────────────────────────────────────────────────
-    # 🔍 FILTER PANEL (6 FILTER BERANTAI / CONNECTED FILTERING)
+    # 🔍 FILTER PANEL LAYER 1 & 2 (CONNECTED COUPLING)
     # ─────────────────────────────────────────────────────────────
-    st.subheader("🔍 Filter Cakupan Laporan Audit")
-    col_f1, col_f2, col_f3 = st.columns(3)
+    st.subheader("🔍 Panel Kontrol & Filter Audit")
+    col_f1, col_f2 = st.columns(2)
     
     with col_f1:
         master_opts = ["🌍 SEMUA MASTER PROJECT"]
@@ -64,327 +69,179 @@ def export_report_page():
         elif 'master_project_id' in projects_df.columns:
             master_opts += sorted(projects_df['master_project_id'].dropna().unique().tolist())
             
-        sel_master = st.selectbox("Master Project Induk", master_opts, key="exp_master")
-        
-    with col_f2:
-        # Default rentang 30 hari ke belakang hingga hari ini
-        default_start = datetime.now().date() - timedelta(days=30)
-        date_range = st.date_input("Periode Target Selesai", value=(default_start, datetime.now().date()), key="exp_date")
-        
-    with col_f3:
-        status_opts = projects_df['status'].dropna().unique().tolist() if 'status' in projects_df.columns else ['ON_TRACK', 'DELAYED', 'CRITICAL', 'DONE']
-        sel_status = st.multiselect("Filter Status Operasional Site", status_opts, default=status_opts, key="exp_status")
+        sel_master = st.selectbox("🌐 Pilih Master Project Induk", master_opts, key="exp_master")
 
-    # ─────────────────────────────────────────────────────────────
-    # 🧠 PROCESS FILTER INDUK & ANAK TABEL
-    # ─────────────────────────────────────────────────────────────
-    filtered_proj = projects_df.copy()
-    
-    # Eksekusi Filter Master Project
+    # Step Filtering Berantai Tahap 1 (Saring Project List berdasarkan Master Project)
+    proj_filtered_step1 = projects_df.copy()
     if sel_master != "🌍 SEMUA MASTER PROJECT":
         if not master_projects_df.empty and 'project_name' in master_projects_df.columns:
             m_ids = master_projects_df[master_projects_df['project_name'] == sel_master]['id'].tolist()
-            filtered_proj = filtered_proj[filtered_proj['master_project_id'].isin(m_ids)]
+            proj_filtered_step1 = proj_filtered_step1[proj_filtered_step1['master_project_id'].isin(m_ids)]
         else:
-            filtered_proj = filtered_proj[filtered_proj['master_project_id'] == sel_master]
+            proj_filtered_step1 = proj_filtered_step1[proj_filtered_step1['master_project_id'] == sel_master]
+
+    with col_f2:
+        # 🛠️ FITUR PERMINTAAN UTAMA: FILTER BY SITE NAME
+        site_opts = ["📍 SEMUA SITE"]
+        if not proj_filtered_step1.empty:
+            # Gunakan 'site_name' jika ada, jika tidak ada fallback ke kolom 'name' atau 'id'
+            col_site_name = 'site_name' if 'site_name' in proj_filtered_step1.columns else ('name' if 'name' in proj_filtered_step1.columns else 'id')
+            site_opts += sorted(proj_filtered_step1[col_site_name].dropna().unique().tolist())
+            
+        sel_site = st.selectbox("📍 Filter Spesifik Berdasarkan Nama Site", site_opts, key="exp_site_name")
+
+    # Step Filtering Berantai Tahap 2 (Saring Final Data Berdasarkan Nama Site)
+    final_filtered_proj = proj_filtered_step1.copy()
+    if sel_site != "📍 SEMUA SITE":
+        col_site_name = 'site_name' if 'site_name' in final_filtered_proj.columns else ('name' if 'name' in final_filtered_proj.columns else 'id')
+        final_filtered_proj = final_filtered_proj[final_filtered_proj[col_site_name] == sel_site]
+
+    # Kunci ID Kunci untuk Memotong Tabel Anak (Milestone & Transaksi)
+    valid_site_ids = final_filtered_proj['id'].tolist()
+    final_filtered_ms = milestones_df[milestones_df['project_id'].isin(valid_site_ids)] if not milestones_df.empty else pd.DataFrame()
+    final_filtered_trans = transactions_df[transactions_df['project_id'].isin(valid_site_ids)] if not transactions_df.empty else pd.DataFrame()
+
+    # ─────────────────────────────────────────────────────────────
+    # 📈 STATUS AGREGASI UTAMA (METRIC CARDS)
+    # ─────────────────────────────────────────────────────────────
+    st.markdown("---")
+    m_col1, m_col2, m_col3, m_col4 = st.columns(4)
+    
+    # Hitung Jumlah Unik Master Project Terlibat
+    if sel_master != "🌍 SEMUA MASTER PROJECT":
+        count_project = 1
+    else:
+        count_project = final_filtered_proj['master_project_id'].nunique() if 'master_project_id' in final_filtered_proj.columns else 1
         
-    # Eksekusi Filter Status
-    if sel_status:
-        filtered_proj = filtered_proj[filtered_proj['status'].isin(sel_status)]
+    count_site = len(final_filtered_proj)
+    count_task = len(final_filtered_ms)
+    avg_total_progress = final_filtered_proj['progress'].mean() if 'progress' in final_filtered_proj.columns else 0.0
+
+    with m_col1:
+        st.markdown(f'<div class="metric-container"><div class="metric-val">{count_project}</div><div class="metric-lbl">📊 TOTAL MASTER PROJECT</div></div>', unsafe_allow_html=True)
+    with m_col2:
+        st.markdown(f'<div class="metric-container"><div class="metric-val">{count_site}</div><div class="metric-lbl">📍 TOTAL SITE OPERASIONAL</div></div>', unsafe_allow_html=True)
+    with m_col3:
+        st.markdown(f'<div class="metric-container"><div class="metric-val">{count_task}</div><div class="metric-lbl">🧱 TOTAL TASK / MILESTONE</div></div>', unsafe_allow_html=True)
+    with m_col4:
+        st.markdown(f'<div class="metric-container"><div class="metric-val">{avg_total_progress:.1f}%</div><div class="metric-lbl">📈 RATARATA PROGRESS SITE</div></div>', unsafe_allow_html=True)
+
+    # ─────────────────────────────────────────────────────────────
+    # 🧱 TABEL 1: RATA-RATA PROGRESS TIAP-TIAP MILESTONE TASK
+    # ─────────────────────────────────────────────────────────────
+    st.markdown("### 🧱 Rata-rata Progress Tiap-Tiap Milestone Tasks")
+    if not final_filtered_ms.empty and 'name' in final_filtered_ms.columns:
+        # Lakukan groupby berdasarkan nama task/milestone dan hitung rata-rata progres beserta bobotnya
+        ms_summary = final_filtered_ms.groupby('name').agg(
+            Jumlah_Task=('id', 'count'),
+            Ratarata_Bobot_Tugas=('weight', lambda x: f"{x.mean():.1f}%"),
+            Ratarata_Progress_Capaian=('progress', lambda x: f"{x.mean():.1f}%")
+        ).reset_index()
         
-    # Kunci ID Site yang Valid Hasil Filter untuk Memotong Tabel Transaksi & Milestone
-    valid_site_ids = filtered_proj['id'].tolist()
-    
-    filtered_ms = milestones_df[milestones_df['project_id'].isin(valid_site_ids)] if not milestones_df.empty else pd.DataFrame()
-    filtered_trans = transactions_df[transactions_df['project_id'].isin(valid_site_ids)] if not transactions_df.empty else pd.DataFrame()
-    
-    # Filter Rentang Tanggal Target Kerja (Milestones)
-    if not filtered_ms.empty and 'planned_end' in filtered_ms.columns and len(date_range) == 2:
-        start_dt, end_dt = pd.Timestamp(date_range[0]), pd.Timestamp(date_range[1])
-        filtered_ms = filtered_ms[(filtered_ms['planned_end'] >= start_dt) & (filtered_ms['planned_end'] <= end_dt)]
+        # Rapikan nama kolom display
+        ms_summary.columns = ["Nama Kategori Milestone / Task Work", "Volume Distribusi Task", "Rata-rata Bobot Kontribusi", "Rata-rata Capaian Progress"]
+        st.dataframe(ms_summary, use_container_width=True, hide_index=True)
+    else:
+        st.info("🧱 Belum ada data pencapaian milestone untuk ruang lingkup filter ini.")
 
     # ─────────────────────────────────────────────────────────────
-    # 📑 SELEKSI JENIS LAPORAN (PENAMBAHAN FITUR AUDIT INTEGRASI UTUH)
+    # 📦 TABEL 2: REKONSILIASI MATERIAL KONSOLIDASIAN (REQUEST VS RELEASE VS USED)
     # ─────────────────────────────────────────────────────────────
-    st.subheader("📑 Pilih Jenis Laporan Ekspor")
-    report_type = st.radio(
-        "Format Output Dokumen:",
-        ["📋 Comprehensive Project Audit Report (Rekomendasi Manajerial)", "📈 Executive Summary Overview", "🧱 Detail Kemajuan Milestone Tasks", "📦 Logistik & Transaksi Gudang Lapangan"],
-        horizontal=True,
-        key="exp_type"
-    )
+    st.markdown("### 📦 Rekonsiliasi Tata Kelola & Status Logistik Material")
+    if not final_filtered_trans.empty:
+        # Identifikasi nama kolom item description secara cerdas
+        col_item_desc = 'item_description' if 'item_description' in final_filtered_trans.columns else (
+                        'item_name' if 'item_name' in final_filtered_trans.columns else 'item_code')
+        
+        # Lakukan fallback grouping jika qty_request belum ada di tabel transaksi Anda
+        col_req = 'qty_requested' if 'qty_requested' in final_filtered_trans.columns else ('qty_request' if 'qty_request' in final_filtered_trans.columns else None)
+        col_rel = 'qty_released' if 'qty_released' in final_filtered_trans.columns else 'quantity'
+        col_usd = 'qty_used' if 'qty_used' in final_filtered_trans.columns else 'quantity'
+        
+        # Agregasi data penjumlahan kuantitas material
+        agg_dict = {}
+        if col_req: agg_dict['Total_Qty_Request'] = (col_req, 'sum')
+        agg_dict['Total_Qty_Release'] = (col_rel, 'sum')
+        agg_dict['Total_Qty_Used'] = (col_usd, 'sum')
+        
+        mat_summary = final_filtered_trans.groupby(col_item_desc).agg(**agg_dict).reset_index()
+        
+        # Jika kolom request tidak ada di skema, buat kolom mock/kosong agar visual tetap konsisten
+        if 'Total_Qty_Request' not in mat_summary.columns:
+            mat_summary['Total_Qty_Request'] = mat_summary['Total_Qty_Release'] # Fallback agar tidak kosong
+            
+        # Kalkulasi hitung status surplus/minus otomatis
+        mat_summary['Balance_Sisa_Qty'] = mat_summary['Total_Qty_Release'] - mat_summary['Total_Qty_Used']
+        
+        def hitung_status_audit(row):
+            bal = row['Balance_Sisa_Qty']
+            if bal > 0: return "🟢 SURPLUS / SISA"
+            elif bal < 0: return "🔴 MINUS / DEFISIT"
+            else: return "🔵 SETTLED / BALANCE"
+            
+        mat_summary['Status_Audit_Finansial'] = mat_summary.apply(hitung_status_audit, axis=1)
+        
+        # Susun ulang & rapikan nama kolom untuk konsumsi Direksi
+        mat_summary.columns = ["Deskripsi Material", "Qty Requested", "Qty Released", "Qty Used / Installed", "Balance Qty", "Status Audit Keuangan"]
+        st.dataframe(mat_summary, use_container_width=True, hide_index=True)
+    else:
+        st.info("📦 Tidak ditemukan mutasi transaksi material (inventory_transactions) pada cakupan site terfilter.")
 
     # ─────────────────────────────────────────────────────────────
-    # 👁️ PREVIEW DATA SAMPEL BEFORE DOWNLOAD
+    # 🚀 DOWNLOAD AUTOMATION PROCESS (MULTIPAGE PROFESSIONAL EXCEL)
     # ─────────────────────────────────────────────────────────────
-    st.divider()
-    st.markdown("### 👁️ Preview Data Terkait (Sampel 5 Baris)")
-    tab_prev1, tab_prev2, tab_prev3 = st.tabs(["📌 Ringkasan Site Terfilter", "🧱 Rencana Kerja / Task", "📦 Transaksi Material Terkait"])
-    
-    with tab_prev1:
-        st.dataframe(filtered_proj.head(5), use_container_width=True, hide_index=True)
-        st.caption(f"Menampilkan 5 dari total {len(filtered_proj)} site aktif hasil filter saat ini.")
-    with tab_prev2:
-        if not filtered_ms.empty:
-            st.dataframe(filtered_ms[['project_id', 'name', 'weight', 'progress', 'assigned_to', 'planned_end']].head(5), use_container_width=True, hide_index=True)
-        else:
-            st.info("Tidak ada task kerja/milestone yang jatuh pada periode tanggal yang dipilih.")
-    with tab_prev3:
-        if not filtered_trans.empty:
-            st.dataframe(filtered_trans.head(5), use_container_width=True, hide_index=True)
-        else:
-            st.info("Tidak ditemukan data riwayat pengeluaran barang/logistik untuk site terfilter saat ini.")
-
-    # ─────────────────────────────────────────────────────────────
-    # 🚀 ENGINE GENERATOR AUTOMATION (XLSXWRITER PRESET)
-    # ─────────────────────────────────────────────────────────────
-    st.divider()
-    if st.button("🚀 Bangun & Download Laporan Excel", type="primary", use_container_width=True):
-        with st.spinner("🔄 Memproses penyatuan tabel silang & injeksi formula audit..."):
+    st.markdown("---")
+    if st.button("📥 Unduh Hasil Konsolidasi Data ke File Excel", type="primary", use_container_width=True):
+        with st.spinner("🔄 Menyusun arsip multi-sheet xlsx..."):
             try:
                 output = io.BytesIO()
-                
                 with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
                     workbook = writer.book
                     
-                    # 🎉 PRESET STYLING PREMIUM LAYOUT EXCEL
-                    header_fmt = workbook.add_format({
-                        'bold': True, 'bg_color': '#1E40AF', 'font_color': 'white', 
-                        'border': 1, 'align': 'center', 'valign': 'vcenter', 'font_size': 11
-                    })
-                    sub_header_fmt = workbook.add_format({
-                        'bold': True, 'bg_color': '#3B82F6', 'font_color': 'white', 
-                        'border': 1, 'align': 'center', 'valign': 'vcenter', 'font_size': 10
-                    })
-                    meta_title_fmt = workbook.add_format({'bold': True, 'font_size': 14, 'font_color': '#1E40AF'})
-                    meta_cell_label = workbook.add_format({'bold': True, 'bg_color': '#F3F4F6', 'border': 1})
-                    meta_cell_val = workbook.add_format({'border': 1})
-                    
-                    # Format data reguler
+                    # Style presets
+                    header_fmt = workbook.add_format({'bold': True, 'bg_color': '#1E3A8A', 'font_color': 'white', 'border': 1, 'align': 'center'})
                     num_fmt = workbook.add_format({'num_format': '#,##0', 'border': 1, 'align': 'right'})
-                    pct_fmt = workbook.add_format({'num_format': '0.0%', 'border': 1, 'align': 'right'})
                     text_fmt = workbook.add_format({'border': 1, 'align': 'left'})
-                    center_fmt = workbook.add_format({'border': 1, 'align': 'center'})
                     
-                    # Highlight Conditional Rules Color Pastel
-                    surplus_fmt = workbook.add_format({'bg_color': '#DCFCE7', 'font_color': '#15803D', 'border': 1, 'align': 'center', 'bold': True})
-                    minus_fmt = workbook.add_format({'bg_color': '#FEE2E2', 'font_color': '#B91C1C', 'border': 1, 'align': 'center', 'bold': True})
-                    settled_fmt = workbook.add_format({'bg_color': '#EFF6FF', 'font_color': '#1D4ED8', 'border': 1, 'align': 'center'})
-
-                    # ⏳ AMBIL WAKTU LIVE WIB FOR REPORT TIME
-                    tz_wib = timezone(timedelta(hours=7))
-                    waktu_cetak = datetime.now(tz_wib).strftime('%d/%m/%Y %H:%M')
-
-                    # ─────────────────────────────────────────────────────────
-                    # 📑 STRATEGI 1: PEMBUATAN LAPORAN UTUH (COMPREHENSIVE AUDIT)
-                    # ─────────────────────────────────────────────────────────
-                    if "Comprehensive" in report_type:
-                        audit_rows = []
-                        
-                        # Looping menyisir baris per baris secara berantai untuk menjamin keutuhan data
-                        for _, site in filtered_proj.iterrows():
-                            sid = site['id']
-                            sname = site.get('site_name', 'N/A')
-                            sstatus = site.get('status', 'N/A')
-                            sprogress = site.get('progress', 0) / 100.0
-                            sregion = site.get('region', 'N/A')
-                            svendor = site.get('vendor_name', 'N/A')
-                            
-                            # Cari nama master project induknya
-                            m_name = "N/A"
-                            if not master_projects_df.empty and 'master_project_id' in site:
-                                match_mp = master_projects_df[master_projects_df['id'] == site['master_project_id']]
-                                if not match_mp.empty:
-                                    m_name = match_mp['project_name'].values[0]
-
-                            # 1. Tarik semua anak task (milestones) milik site ini
-                            site_ms = filtered_ms[filtered_ms['project_id'] == sid] if not filtered_ms.empty else pd.DataFrame()
-                            # 2. Tarik semua mutasi logistik material milik site ini
-                            site_trans = filtered_trans[filtered_trans['project_id'] == sid] if not filtered_trans.empty else pd.DataFrame()
-                            
-                            max_loop = max(len(site_ms), len(site_trans), 1)
-                            
-                            # Satukan data secara baris sejajar (Flat Table Grid) agar mudah di-Pivot Direksi
-                            for i in range(max_loop):
-                                row_data = {
-                                    "Master Project": m_name,
-                                    "Site ID": sid,
-                                    "Nama Site": sname,
-                                    "Wilayah Region": sregion,
-                                    "Vendor Pelaksana": svendor,
-                                    "Status Utama Site": sstatus,
-                                    "Total Progress Site": sprogress,
-                                    
-                                    # Data Bagian Task Kerja (Milestones)
-                                    "Nama Task Kerja": "N/A",
-                                    "Bobot Tugas": 0.0,
-                                    "Capaian Task": 0.0,
-                                    "PIC Lapangan": "N/A",
-                                    
-                                    # Data Bagian Logistik & Keuangan Material
-                                    "Kode Barang": "N/A",
-                                    "Deskripsi Material": "N/A",
-                                    "Qty Released": 0.0,
-                                    "Qty Used / Installed": 0.0,
-                                    "Balance Qty": 0.0,
-                                    "Status Audit Finansial": "NO MATERIAL"
-                                }
-                                
-                                # Isi Kolom Task jika datanya ada
-                                if i < len(site_ms):
-                                    ms_row = site_ms.iloc[i]
-                                    row_data["Nama Task Kerja"] = ms_row.get('name', 'N/A')
-                                    row_data["Bobot Tugas"] = (ms_row.get('weight', 0) if ms_row.get('weight') is not None else 0) / 100.0
-                                    row_data["Capaian Task"] = (ms_row.get('progress', 0) if ms_row.get('progress') is not None else 0) / 100.0
-                                    row_data["PIC Lapangan"] = ms_row.get('assigned_to', 'N/A')
-                                    
-                                # Isi Kolom Logistik jika datanya ada & hitung SURPLUS/MINUS otomatis
-                                if i < len(site_trans):
-                                    trans_row = site_trans.iloc[i]
-                                    qty_rel = float(trans_row.get('qty_released', 0) if trans_row.get('qty_released') is not None else 0)
-                                    qty_used = float(trans_row.get('qty_used', 0) if trans_row.get('qty_used') is not None else trans_row.get('quantity', 0)) # Fallback support
-                                    balance = qty_rel - qty_used
-                                    
-                                    # Logika bisnis penentuan status sisa barang di lapangan
-                                    if balance > 0:
-                                        status_audit = "SURPLUS / SISA"
-                                    elif balance < 0:
-                                        status_audit = "MINUS / DEFISIT"
-                                    else:
-                                        status_audit = "SETTLED / BALANCE"
-                                        
-                                    row_data["Kode Barang"] = trans_row.get('item_code', 'N/A')
-                                    row_data["Deskripsi Material"] = trans_row.get('item_description', trans_row.get('item_name', 'N/A'))
-                                    row_data["Qty Released"] = qty_rel
-                                    row_data["Qty Used / Installed"] = qty_used
-                                    row_data["Balance Qty"] = balance
-                                    row_data["Status Audit Finansial"] = status_audit
-                                    
-                                audit_rows.append(row_data)
-                                
-                        df_audit_final = pd.DataFrame(audit_rows)
-                        
-                        # Urutkan berdasarkan Master Project dan Site ID agar rapi struktural
-                        if not df_audit_final.empty:
-                            df_audit_final = df_audit_final.sort_values(by=['Master Project', 'Site ID']).reset_index(drop=True)
-                        
-                        # 🏭 Tulis ke Sheet Utama
-                        sheet_name = "Comprehensive_Audit"
-                        df_audit_final.to_excel(writer, sheet_name=sheet_name, index=False)
-                        worksheet = writer.sheets[sheet_name]
-                        
-                        # Berikan Desain Judul Laporan di Atas Grid Tabel
-                        worksheet.freeze_panes(1, 0) # Freeze baris header pertama agar saat di-scroll ke bawah tetap kelihatan
-                        
-                        # Lakukan auto-formatting warna dan lebar kolom cerdas
-                        for col_num, col_name in enumerate(df_audit_final.columns):
-                            worksheet.write(0, col_num, col_name, header_fmt)
-                            
-                            # Atur format data spesifik per tipe kolom
-                            if col_name in ["Total Progress Site", "Bobot Tugas", "Capaian Task"]:
-                                worksheet.set_column(col_num, col_num, 15, pct_fmt)
-                            elif col_name in ["Qty Released", "Qty Used / Installed", "Balance Qty"]:
-                                worksheet.set_column(col_num, col_num, 16, num_fmt)
-                            elif col_name in ["Site ID", "Status Utama Site", "Kode Barang"]:
-                                worksheet.set_column(col_num, col_num, 15, center_fmt)
-                            else:
-                                worksheet.set_column(col_num, col_num, 22, text_fmt)
-                                
-                        # Inject Conditional Formatting untuk Kolom Status Audit Keuangan Material (Kolom Terakhir)
-                        status_col_idx = df_audit_final.columns.get_loc("Status Audit Finansial")
-                        worksheet.conditional_format(1, status_col_idx, len(df_audit_final), status_col_idx, {
-                            'type': 'cell', 'criteria': 'equal to', 'value': '"SURPLUS / SISA"', 'format': surplus_fmt
-                        })
-                        worksheet.conditional_format(1, status_col_idx, len(df_audit_final), status_col_idx, {
-                            'type': 'cell', 'criteria': 'equal to', 'value': '"MINUS / DEFISIT"', 'format': minus_fmt
-                        })
-                        worksheet.conditional_format(1, status_col_idx, len(df_audit_final), status_col_idx, {
-                            'type': 'cell', 'criteria': 'equal to', 'value': '"SETTLED / BALANCE"', 'format': settled_fmt
-                        })
-
-                    # ─────────────────────────────────────────────────────────
-                    # 📑 STRATEGI 2: HANDLING OPSI LAPORAN LAINNYA (FALLBACKS)
-                    # ─────────────────────────────────────────────────────────
-                    else:
-                        if "Executive" in report_type:
-                            kpi_data = pd.DataFrame({
-                                "Indikator Audit Manajemen": ["Total Site Terfilter", "Site Status ON TRACK", "Site Status DELAYED", "Site Status CRITICAL", "Site Status DONE"],
-                                "Nilai Kuantitas": [
-                                    len(filtered_proj),
-                                    len(filtered_proj[filtered_proj['status']=='ON_TRACK']) if 'status' in filtered_proj.columns else 0,
-                                    len(filtered_proj[filtered_proj['status']=='DELAYED']) if 'status' in filtered_proj.columns else 0,
-                                    len(filtered_proj[filtered_proj['status']=='CRITICAL']) if 'status' in filtered_proj.columns else 0,
-                                    len(filtered_proj[filtered_proj['status']=='DONE']) if 'status' in filtered_proj.columns else 0
-                                ]
-                            })
-                            kpi_data.to_excel(writer, sheet_name='Ringkasan_KPI_Utama', index=False)
-                            filtered_proj.to_excel(writer, sheet_name='Data_Daftar_Site', index=False)
-                            
-                        elif "Milestone" in report_type:
-                            if not filtered_ms.empty:
-                                ms_export = filtered_ms.copy()
-                                for col in ['planned_start', 'planned_end', 'actual_start', 'actual_end']:
-                                    if col in ms_export.columns:
-                                        ms_export[col] = ms_export[col].dt.strftime('%d/%m/%Y')
-                                ms_export.to_excel(writer, sheet_name='Detail_Progress_Task', index=False)
-                            else:
-                                pd.DataFrame([["Status", "Tidak ada data pada periode ini"]]).to_excel(writer, sheet_name='Detail_Progress_Task', index=False)
-                                
-                        elif "Logistik" in report_type:
-                            if not filtered_trans.empty:
-                                trans_export = filtered_trans.copy()
-                                if 'transaction_date' in trans_export.columns:
-                                    trans_export['transaction_date'] = trans_export['transaction_date'].dt.strftime('%d/%m/%Y %H:%M')
-                                trans_export.to_excel(writer, sheet_name='Riwayat_Mutasi_Material', index=False)
-                            else:
-                                pd.DataFrame([["Status", "Belum ada transaksi logistik gudang"]]).to_excel(writer, sheet_name='Riwayat_Mutasi_Material', index=False)
-
-                    # ─────────────────────────────────────────────────────────
-                    # 📑 STRATEGI 3: INJEKSI COVER METADATA (AUDIT LOG IDENTIFICATION)
-                    # ─────────────────────────────────────────────────────────
-                    meta_rows = [
-                        ["Nama Dokumen Laporan", report_type],
-                        ["Waktu Ekstraksi Data (WIB)", waktu_cetak],
-                        ["Filter Ruang Lingkup", sel_master],
-                        ["Filter Parameter Status", ", ".join(sel_status) if sel_status else "Seluruh Status Active"],
-                        ["Total Cakupan Volume Site", len(filtered_proj)],
-                        ["Mesin Pemroses", "Enterprise Report Engine v2.6"],
-                        ["Otorisasi Status Database", "SUPABASE CLOUD LIVE CONNECTION"]
-                    ]
-                    df_meta = pd.DataFrame(meta_rows, columns=["Parameter Audit", "Nilai / Keterangan Dokumen"])
-                    df_meta.to_excel(writer, sheet_name='Log_Metadata_Sistem', index=False)
+                    # 1. Sheet Ringkasan KPI & Master Project
+                    meta_df = pd.DataFrame([
+                        ["Waktu Cetak Laporan", datetime.now(timezone(timedelta(hours=7))).strftime('%d/%m/%Y %H:%M WIB')],
+                        ["Filter Master Project", sel_master],
+                        ["Filter Nama Site", sel_site],
+                        ["Total Site Terdampak", count_site],
+                        ["Total Task Terdata", count_task]
+                    ], columns=["Parameter Audit", "Value"])
+                    meta_df.to_excel(writer, sheet_name='Ringkasan_Meta', index=False)
                     
-                    # Desain eksklusif untuk Sheet Metadata
-                    meta_sheet = writer.sheets['Log_Metadata_Sistem']
-                    meta_sheet.set_column('A:A', 28, meta_cell_label)
-                    meta_sheet.set_column('B:B', 55, meta_cell_val)
-                    meta_sheet.write(0, 0, "Parameter Audit", sub_header_fmt)
-                    meta_sheet.write(0, 1, "Nilai / Keterangan Dokumen", sub_header_fmt)
-
-                    # Pastikan standar lebar kolom global aman di semua sheet pendukung
-                    for s_name in writer.sheets:
-                        if s_name != sheet_name and s_name != 'Log_Metadata_Sistem':
-                            ws = writer.sheets[s_name]
-                            ws.set_column('A:Z', 16)
-
+                    # 2. Sheet Milestone Summary
+                    if 'ms_summary' in locals() and not ms_summary.empty:
+                        ms_summary.to_excel(writer, sheet_name='Summary_Progress_Milestone', index=False)
+                    
+                    # 3. Sheet Material Summary
+                    if 'mat_summary' in locals() and not mat_summary.empty:
+                        mat_summary.to_excel(writer, sheet_name='Summary_Logistik_Material', index=False)
+                        
+                    # Auto-format column layout
+                    for sheet in writer.sheets:
+                        ws = writer.sheets[sheet]
+                        ws.set_column('A:Z', 22, text_fmt)
+                        
                 output.seek(0)
                 
-                # 📦 KOMPILASI NAMA FILE PREMIUM DAN EXPORT BUTTON STREAMLIT
-                clean_name = "Comprehensive_Audit" if "Comprehensive" in report_type else "Standard_Report"
-                file_final_name = f"Laporan_{clean_name}_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
+                # Setup Dynamic File Name
+                site_slug = sel_site.replace(" ", "_") if sel_site != "📍 SEMUA SITE" else "All_Sites"
+                filename = f"Audit_Report_{site_slug}_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
                 
                 st.download_button(
-                    label="📥 AMBIL FILE EXCEL HASIL AUDIT INTEGRASI UTUH",
+                    label="⬇️ KLIK DI SINI UNTUK SAVE FILE EXCEL",
                     data=output,
-                    file_name=file_final_name,
+                    file_name=filename,
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     use_container_width=True
                 )
-                st.success("🎯 Konfigurasi Laporan Berhasil Disusun! Silakan klik tombol di atas untuk mengunduh dokumen.")
-                
+                st.success("✅ File siap diunduh! Klik tombol di atas.")
             except Exception as e:
-                st.error(f"❌ Kompilasi Gagal: {str(e)}")
-                st.info("💡 Solusi: Pastikan file `dashboard.py` Anda tidak sedang membuka koneksi file eksternal atau restart aplikasi Streamlit Anda.")
+                st.error(f"❌ Gagal menyusun Excel: {str(e)}")
 
 if __name__ == "__main__":
     export_report_page()
