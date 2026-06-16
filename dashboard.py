@@ -170,7 +170,9 @@ def dashboard_page():
     <div class="dashboard-header">
         <h1>📊 EXECUTIVE MASTER DASHBOARD</h1>
         <p>Sistem Pengendali Terintegrasi</p>
-        <div class="dashboard-sync-text">🔄 Last Sincronize Data:  {datetime.now().strftime('%d %b %Y | %H:%M')} WIB |</div>
+    st.markdown(f"""
+    <div style='text-align: center; color: #94A3B8; font-size: 0.75rem; padding: 10px 0;'>
+        Sinkronisasi at: {datetime.now().strftime('%d %b %Y | %H:%M')} WIB | 🛠️ <b>System Enterprise Edition</b>
     </div>
     """, unsafe_allow_html=True)
 
