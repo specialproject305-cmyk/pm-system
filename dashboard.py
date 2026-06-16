@@ -165,13 +165,22 @@ def dashboard_page():
     if 'region' not in df_projects.columns:
         df_projects['region'] = 'Jawa Barat'  # Default fallback regional Bandung/Jakarta
     
-    # 🧱 2. ENGINE 6 FILTER BERANTAI (CASCADING FILTERS)
-    # 🧱 ENGINE 6 FILTER BERANTAI & HEADER BARU (DYNAMIC CENTERED)
+    # ─── 🛠️ FORCE LIVE CLOCK & TIMEZONE WIB (TAMBAHKAN INI TEPAT DI ATAS HEADER) ───
+    # Memastikan jam selalu update real-time mengikuti WIB (+7 dari UTC server)
+    try:
+        from datetime import timezone, timedelta
+        tz_wib = timezone(timedelta(hours=7))
+        waktu_sekarang = datetime.now(tz_wib).strftime('%d %b %Y | %H:%M')
+    except Exception:
+        # Fallback jika terjadi error library datetime
+        waktu_sekarang = datetime.now().strftime('%d %b %Y | %H:%M')
+
+    # 🧱 ENGINE 6 FILTER BERANTAI & HEADER BARU (DILOCK DENGAN VARIABEL BARU)
     st.markdown(f"""
     <div class="dashboard-header">
         <h1>📊 EXECUTIVE MASTER DASHBOARD</h1>
         <p>Sistem Pengendali Terintegrasi</p>
-        <div class="dashboard-sync-text">Sinkronisasi at: {datetime.now().strftime('%d %b %Y | %H:%M')} WIB | 🛠️ System Enterprise Edition</div>
+        <div class="dashboard-sync-text">Sinkronisasi at: {waktu_sekarang} WIB | 🛠️ System Enterprise Edition</div>
     </div>
     """, unsafe_allow_html=True)
 
