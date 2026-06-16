@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from supabase_db import read_sheet, insert_row, update_row, find_row_by_id, generate_id, today_str, delete_row_by_id
+import time
 
 def sync_progress_from_milestones(site_id):
     ms_df = read_sheet("milestones")
@@ -158,11 +159,16 @@ def project_tracker_page():
                 p_name = st.text_input("Nama Proyek", placeholder="Rollout Phase 1")
             with c2:
                 p_cat = st.selectbox("Kategori", ["4G Rollout","5G Upgrade","Fiber Optic","General"])
-            if st.form_submit_button("💾 Simpan", type="primary", use_container_width=True):
-                if p_code and p_name:
-                    insert_row("master_projects", {'id': generate_id(), 'project_code': p_code, 'project_name': p_name, 'category': p_cat, 'status': 'ACTIVE', 'start_date': today_str(), 'end_date': today_str()})
-                    st.toast("✅ Disimpan!"); st.rerun()
-                else: st.error("❌ Lengkapi!")
+            if st.form_submit_button("💾 Simpan Site", type="primary", use_container_width=True):
+                if s_name and s_id and m_pid != "Belum ada proyek":
+                    try:
+                                insert_row("projects", {...})
+                                st.toast("✅ Site berhasil ditambahkan!", icon="📍")
+                                st.balloons()
+                                time.sleep(0.5)
+                                st.rerun()
+                            except Exception as e: st.error(f"❌ Gagal simpan: {str(e)}")
+                        else: st.error("❌ Lengkapi Site ID, Name, dan pilih Master Project!")        
         st.divider()
         if not master_df.empty:
             st.dataframe(master_df, use_container_width=True, hide_index=True)
@@ -183,11 +189,14 @@ def project_tracker_page():
                 vend = st.text_input("Vendor")
                 spk_vendor = st.text_input("SPK Vendor", placeholder="SPK-001/VII/2025")
                 pm_val = st.text_input("PM")
-            if st.form_submit_button("💾 Simpan", type="primary", use_container_width=True):
-                if s_id and s_name and m_pid != "-":
-                    insert_row("projects", {'id': generate_id(), 'master_project_id': m_pid, 'site_id': s_id, 'site_name': s_name, 'site_category': s_cat, 'site_coordinate': s_coord, 'vendor': vend, 'pm': pm_val, 'status': 'ON_TRACK', 'progress': '0', 'start_date': today_str(), 'end_date': today_str(),'spk_vendor': spk_vendor})
-                    st.toast("✅ Site ditambahkan!"); st.rerun()
-                else: st.error("❌ Lengkapi!")
+            if st.form_submit_button("💾 Simpan Proyek", type="primary", use_container_width=True):
+                if p_code and p_name:
+                    insert_row("master_projects", {...})
+                    st.toast("✅ Master Project disimpan!", icon="🏢")
+                    st.balloons()
+                    time.sleep(0.5)
+                    st.rerun()
+                else: st.error("❌ Kode & Nama wajib diisi!")
 
     # ═══════════════ TAB 4: IMPORT CSV ═══════════════
     with tab4:
