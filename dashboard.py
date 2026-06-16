@@ -170,11 +170,10 @@ def dashboard_page():
     <div class="dashboard-header">
         <h1>📊 EXECUTIVE MASTER DASHBOARD</h1>
         <p>Sistem Pengendali Terintegrasi</p>
-    st.markdown(f"""
-    <div style='text-align: center; color: #94A3B8; font-size: 0.75rem; padding: 10px 0;'>
-        Sinkronisasi at: {datetime.now().strftime('%d %b %Y | %H:%M')} WIB | 🛠️ <b>System Enterprise Edition</b>
-    </div>
-    """, unsafe_allow_html=True)
+        <div style='text-align: center; color: #94A3B8; font-size: 0.75rem; padding: 10px 0;'>
+            Sinkronisasi at: {datetime.now().strftime('%d %b %Y | %H:%M')} WIB | 🛠️ <b>System Enterprise Edition</b>
+        </div>
+        """, unsafe_allow_html=True)
 
     with st.expander("🔍 PANEL KONTROL & FILTER UTAMA (Cascading Active)", expanded=True):
         col_f1, col_f2, col_f3 = st.columns(3)
