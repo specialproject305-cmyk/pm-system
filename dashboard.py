@@ -150,15 +150,20 @@ def dashboard_page():
         col_f1, col_f2, col_f3 = st.columns(3)
         col_f4, col_f5, col_f6 = st.columns(3)
         
-        # Filter 1: Master Project
+        # Filter 1: Master Project (DIPERBAIKI)
         with col_f1:
             opts_master = ['SEMUA MASTER PROJECT']
-            if not df_master.empty:
+            # Pastikan tabel master project tidak kosong dan memiliki data valid
+            if not df_master.empty and 'project_name' in df_master.columns:
                 opts_master += sorted(df_master['project_name'].dropna().unique().tolist())
+            
             sel_master = st.selectbox("🌐 Master Project", opts_master)
             
+            # Logika pemotongan data down-stream ke tabel projects (Site List)
             if sel_master != 'SEMUA MASTER PROJECT' and not df_master.empty:
+                # Ambil ID utama dari master project yang dipilih user
                 m_ids = df_master[df_master['project_name'] == sel_master]['id'].tolist()
+                # Potong list site hanya yang berelasi dengan master_project_id tersebut
                 df_projects = df_projects[df_projects['master_project_id'].isin(m_ids)]
 
         # Filter 2: PM (Project Manager)
@@ -310,13 +315,13 @@ def dashboard_page():
             st.success("✅ Seluruh portofolio site dalam batas aman operasional target.")
 
     # ─────────────────────────────────────────────────────────────
-    # TAB 3: LOGISTICS & INVENTORY TRACKER
+    # TAB 3: LOGISTICS & INVENTORY TRACKER (DIPERBAIKI)
     # ─────────────────────────────────────────────────────────────
     with tab_logistics:
         st.markdown('<div class="section-header">Kendali Pergerakan Material & Status Gudang</div>', unsafe_allow_html=True)
         
         if not df_inventory.empty:
-            l_col1, l_col2 = st.columns([1.2, 2])
+            l_col1, l_col2 = st.columns([1, 1.5])
             with l_col1:
                 st.markdown('<div class="chart-box">', unsafe_allow_html=True)
                 # Rasio Penyelesaian Material (Settle Status)
@@ -329,11 +334,25 @@ def dashboard_page():
                 
             with l_col2:
                 st.markdown('<div class="chart-box">', unsafe_allow_html=True)
-                st.markdown("<p style='font-weight:700; font-size:13px; margin:0 0 10px 0;'>📊 Volume Transaksi Berdasarkan Kode Item</p>", unsafe_allow_html=True)
-                if 'item_code' in df_inventory.columns:
-                    item_counts = df_inventory['item_code'].value_counts().reset_index(name='Volume')
-                    fig_items = px.bar(item_counts, x='item_code', y='Volume', color='Volume', color_continuous_scale='Blues')
-                    fig_items.update_layout(height=200, margin=dict(l=10, r=10, t=10, b=10), coloraxis_showscale=False)
+                # MENGGANTI SUMBU CHART MENJADI ITEM DESCRIPTION
+                # Catatan: Jika nama kolom deskripsi di tabel transaksi Anda berbeda (misal: 'item_name'), silakan sesuaikan string di bawah
+                col_item_display = 'item_description' if 'item_description' in df_inventory.columns else ('item_name' if 'item_name' in df_inventory.columns else 'item_code')
+                
+                label_chart = "Deskripsi Material" if col_item_display != 'item_code' else "Kode Item (Fallback)"
+                st.markdown(f"<p style='font-weight:700; font-size:13px; margin:0 0 10px 0;'>📊 Volume Transaksi Berdasarkan {label_chart}</p>", unsafe_allow_html=True)
+                
+                if col_item_display in df_inventory.columns:
+                    item_counts = df_inventory[col_item_display].value_counts().reset_index(name='Volume')
+                    # Ubah nama kolom hasil agregasi agar sesuai sumbu
+                    item_counts.columns = [col_item_display, 'Volume']
+                    
+                    fig_items = px.bar(item_counts, x=col_item_display, y='Volume', color='Volume', color_continuous_scale='Blues')
+                    fig_items.update_layout(
+                        height=200, 
+                        margin=dict(l=10, r=10, t=10, b=10), 
+                        coloraxis_showscale=False,
+                        xaxis=dict(title=None, tickfont=dict(size=10))
+                    )
                     st.plotly_chart(fig_items, use_container_width=True)
                 st.markdown('</div>', unsafe_allow_html=True)
                 
