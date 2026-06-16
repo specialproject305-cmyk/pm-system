@@ -126,9 +126,16 @@ def project_tracker_page():
                         n_vend = st.text_input("Vendor", value=str(site.get('vendor','')))
                         n_spk_vendor = st.text_input("SPK Vendor", value=site.get('spk_vendor',''))
                     
-                    if st.form_submit_button("💾 Update", type="primary", use_container_width=True):
-                        update_row("projects", ridx, {'status': n_stat, 'progress': str(n_prog), 'pm': n_pm, 'vendor': n_vendc, 'spk_vendor': n_spk_vendor,})
-                        st.toast("✅ Diupdate!"); st.rerun()
+                    if st.form_submit_button("💾 Simpan Site", type="primary", use_container_width=True):
+                        if s_name and s_id and m_pid != "Belum ada proyek":
+                            try:
+                                insert_row("projects", {...})
+                                st.toast("✅ Site berhasil ditambahkan!", icon="📍")
+                                st.balloons()
+                                time.sleep(0.5)
+                                st.rerun()
+                            except Exception as e: st.error(f"❌ Gagal simpan: {str(e)}")
+                        else: st.error("❌ Lengkapi Site ID, Name, dan pilih Master Project!")
 
                 # Delete section
                 st.markdown('<div class="delete-section">', unsafe_allow_html=True)
