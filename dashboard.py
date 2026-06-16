@@ -18,17 +18,32 @@ def inject_premium_css():
             font-family: 'Segoe UI', -apple-system, sans-serif; 
         }
         
-        /* HEADER PREMIUM */
+        /* HEADER PREMIUM DENGAN GRADASI BIRU & ORANGE */
         .dashboard-header { 
-            background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%); 
-            padding: 20px; 
-            border-radius: 12px; 
-            margin-bottom: 20px; 
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
-            border-left: 6px solid #0284C7;
+            background: linear-gradient(135deg, #1E40AF 0%, #3B82F6 40%, #EA580C 100%); 
+            padding: 22px 25px; 
+            border-radius: 14px; 
+            margin-bottom: 22px; 
+            box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.2), 0 4px 6px -4px rgba(234, 88, 12, 0.2);
+            border-left: 6px solid #F97316;
         }
-        .dashboard-header h1 { font-size: 1.6rem; margin: 0; color: #FFFFFF; font-weight: 800; text-align: left; }
-        .dashboard-header p { font-size: 0.8rem; margin: 5px 0 0 0; color: #94A3B8; text-align: left; }
+        .dashboard-header h1 { 
+            font-size: 1.7rem; 
+            margin: 0; 
+            color: #FFFFFF; 
+            font-weight: 800; 
+            text-align: left;
+            letter-spacing: 0.5px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.15);
+        }
+        .dashboard-header p { 
+            font-size: 0.85rem; 
+            margin: 6px 0 0 0; 
+            color: #E0F2FE; 
+            text-align: left; 
+            font-weight: 500;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
         
         /* SECTION HEADERS */
         .section-header {
