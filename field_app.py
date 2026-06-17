@@ -260,6 +260,18 @@ def field_app_page():
                 delayed = len(site_ms[site_ms['status']=='DELAYED'])
                 pct = (done/total*100) if total>0 else 0
                 
+                # ─── 🛠️ AMBIL ALASAN DELAY DARI TASK YANG STATUSNYA DELAYED ───
+                # Kita kumpulkan semua alasan delay jika ada lebih dari 1 task yang delayed di site tersebut
+                delayed_tasks = site_ms[site_ms['status'] == 'DELAYED']
+                reasons_list = delayed_tasks['delay_reason'].dropna().unique().tolist() if 'delay_reason' in delayed_tasks.columns else []
+                # Bersihkan string kosong jika ada
+                reasons_list = [r for r in reasons_list if str(r).strip() != "" and str(r).strip() != "?"]
+                
+                if reasons_list:
+                    site_delay_reason = ", ".join(reasons_list)
+                else:
+                    site_delay_reason = "-" if delayed > 0 else "No Issue"
+
                 site_stats.append({
                     'Site ID': site.get('site_id','-'),
                     'Site Name': site.get('site_name','-'),
@@ -268,21 +280,24 @@ def field_app_page():
                     'Total Tasks': total,
                     'Done': done,
                     'Delayed': delayed,
+                    'Delay Reason': site_delay_reason,  # 👈 Kolom Baru Terdaftar di Sini
                     'Progress': f"{pct:.0f}%"
                 })
             
             if site_stats:
                 site_df = pd.DataFrame(site_stats)
                 
+                # Sesuaikan index pengembalian warna kolom menjadi *9 karena total kolom bertambah menjadi 9
                 def color_row(row):
                     try:
                         p = int(row['Progress'].replace('%',''))
-                        if p>=80: return ['background:#DCFCE7']*8
-                        elif p>=50: return ['background:#FEF3C7']*8
-                        elif row['Delayed']>0: return ['background:#FEE2E2']*8
+                        if p>=80: return ['background:#DCFCE7']*9
+                        elif p>=50: return ['background:#FEF3C7']*9
+                        elif row['Delayed']>0: return ['background:#FEE2E2']*9
                     except: pass
-                    return ['']*8
+                    return ['']*9
                 
+                # Tampilkan dataframe dengan kolom baru
                 st.dataframe(site_df.style.apply(color_row, axis=1), use_container_width=True, hide_index=True)
                 
                 fig = px.bar(site_df, x='Site ID', y=[1]*len(site_df), color='Progress', 
