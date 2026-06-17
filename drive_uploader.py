@@ -6,7 +6,7 @@ import streamlit as st
 
 # Konfigurasi
 SERVICE_ACCOUNT_FILE = "service_account.json"  # Ganti dengan file service account
-DRIVE_FOLDER_ID = "1ABC123XYZ"  # Ganti dengan Folder ID Google Drive
+DRIVE_FOLDER_ID = "1soOsPCQ3yYF_9P-Yc8EIbdQRFvb61KQd"  # Ganti dengan Folder ID Google Drive
 
 def upload_to_drive(file_path, file_name):
     """Upload file ke Google Drive"""
