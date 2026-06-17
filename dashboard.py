@@ -5,6 +5,144 @@ import plotly.graph_objects as go
 from datetime import datetime, timedelta, date
 import numpy as np
 from supabase_db import read_all_sheets
+import streamlit as st
+
+# ─────────────────────────────────────────────────────────────
+# 🎨 PREMIUM CSS FOR DYNAMIC LOGIC KPI CARDS
+# ─────────────────────────────────────────────────────────────
+st.markdown("""
+<style>
+/* Base Setup untuk Kartu Kontainer Grid */
+.kpi-card-custom {
+    padding: 20px 15px;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    margin-bottom: 15px;
+    transition: transform 0.2s ease;
+}
+.kpi-card-custom:hover {
+    transform: translateY(-2px);
+}
+
+/* 1. Biru Profesional - Global / Total Portofolio */
+.bg-total-site {
+    background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+    border-left: 5px solid #1E40AF;
+}
+/* 2. Hijau Segar - RFS / ON AIR (Sukses) */
+.bg-rfs {
+    background: linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%);
+    border-left: 5px solid #15803D;
+}
+/* 3. Amber/Orange Lembut - In Progress / Ongoing */
+.bg-inprogress {
+    background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%);
+    border-left: 5px solid #D97706;
+}
+/* 4. Biru Langit Muted - Pending (Menunggu Antrean) */
+.bg-pending {
+    background: linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 100%);
+    border-left: 5px solid #0369A1;
+}
+/* 5. Merah Pastel Tegas - Delayed / Overdue Critical */
+.bg-delayed {
+    background: linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%);
+    border-left: 5px solid #B91C1C;
+}
+/* 6. Ungu/Indigo Elegan - Average Progress */
+.bg-avg-progress {
+    background: linear-gradient(135deg, #FAFAF9 0%, #F5F5F4 100%);
+    border-left: 5px solid #44403C;
+}
+
+/* Pengaturan Teks Konten Dalam Kartu */
+.kpi-emoji { font-size: 26px; margin-bottom: 5px; }
+.kpi-title { font-size: 11px; font-weight: 700; color: #4B5563; letter-spacing: 0.5px; }
+.kpi-value { font-size: 28px; font-weight: 800; margin: 6px 0; }
+.kpi-sub { font-size: 11px; font-weight: 500; color: #6B7280; }
+</style>
+""", unsafe_allow_html=True)
+
+# ─────────────────────────────────────────────────────────────
+# 📈 DATA MOCK / AMBIL DARI VARIABLE DASHBOARD ANDA
+# ─────────────────────────────────────────────────────────────
+# Silakan sesuaikan variabel di bawah ini dengan query DataFrame asli Anda
+total_sites = 11
+rfs_on_air = 3
+in_progress = 1
+pending = 2
+delayed = 2
+avg_progress = 46.4
+
+# Hitung rasio persentase secara otomatis
+rfs_ratio = (rfs_on_air / total_sites * 100) if total_sites > 0 else 0
+
+# ─────────────────────────────────────────────────────────────
+# 📦 RENDERING LAYOUT GRID KPI CARDS (6 COLUMNS)
+# ─────────────────────────────────────────────────────────────
+# Kita pecah menjadi 6 kolom sejajar agar persis seperti contoh screenshot
+c1, c2, c3, c4, c5, c6 = st.columns(6)
+
+with c1:
+    st.markdown(f"""
+    <div class="kpi-card-custom bg-total-site">
+        <div class="kpi-emoji">📡</div>
+        <div class="kpi-title">TOTAL SITES</div>
+        <div class="kpi-value" style="color: #1E40AF;">{total_sites}</div>
+        <div class="kpi-sub">Portofolio Aktif</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with c2:
+    st.markdown(f"""
+    <div class="kpi-card-custom bg-rfs">
+        <div class="kpi-emoji">✅</div>
+        <div class="kpi-title">RFS / ON AIR</div>
+        <div class="kpi-value" style="color: #15803D;">{rfs_on_air}</div>
+        <div class="kpi-sub">{rfs_ratio:.1f}% Terbuka</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with c3:
+    st.markdown(f"""
+    <div class="kpi-card-custom bg-inprogress">
+        <div class="kpi-emoji">⚙️</div>
+        <div class="kpi-title">IN PROGRESS</div>
+        <div class="kpi-value" style="color: #D97706;">{in_progress}</div>
+        <div class="kpi-sub">Sedang Eksekusi</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with c4:
+    st.markdown(f"""
+    <div class="kpi-card-custom bg-pending">
+        <div class="kpi-emoji">⏳</div>
+        <div class="kpi-title">PENDING</div>
+        <div class="kpi-value" style="color: #0369A1;">{pending}</div>
+        <div class="kpi-sub">Menunggu Antrean</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with c5:
+    st.markdown(f"""
+    <div class="kpi-card-custom bg-delayed">
+        <div class="kpi-emoji">🔴</div>
+        <div class="kpi-title">DELAYED</div>
+        <div class="kpi-value" style="color: #B91C1C;">{delayed}</div>
+        <div class="kpi-sub">Butuh Eskalasi</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with c6:
+    st.markdown(f"""
+    <div class="kpi-card-custom bg-avg-progress">
+        <div class="kpi-emoji">📊</div>
+        <div class="kpi-title">AVG PROGRESS</div>
+        <div class="kpi-value" style="color: #1F2937;">{avg_progress:.1f}%</div>
+        <div class="kpi-sub">Capaian Kumulatif</div>
+    </div>
+    """, unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────────────────────
 # 🎨 PREMIUM EXECUTIVE MODERN CSS (Light Theme)
