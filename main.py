@@ -192,8 +192,7 @@ with st.sidebar:
         menu_options.extend(["👥 User Management", "⚙️ Settings"])
         menu_options = list(dict.fromkeys(menu_options))
         menu_options.append("📥 Bulk Import")
-        menu_options.append("📖 User Manual")
-
+       
     menu = st.sidebar.radio("📂 Navigasi:", menu_options)
     st.markdown("---")
     
