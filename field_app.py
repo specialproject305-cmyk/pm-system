@@ -33,7 +33,7 @@ def get_safe_numeric(val):
     try: return int(float(val)) if val else 0
     except: return 0
 
-# 🔥 MODAL POP-UP DIALOG UNTUK UPDATE TASK
+# 🔥 MODAL POP-UP DIALOG UNTUK UPDATE TASK (DENGAN REASON DELAY HIBRIDA)
 @st.dialog("✏️ Update Milestone Task")
 def render_update_modal(task, site_code, assigned_to):
     task_id = task['id']
@@ -46,6 +46,50 @@ def render_update_modal(task, site_code, assigned_to):
         key=f"st_{task_id}"
     )
     
+    # ─── 🛠️ INTEGRASI FITUR BARU: HIBRIDA DELAY REASON ───
+    final_delay_reason = task.get('delay_reason', '') # Ambil value lama dari database jika ada
+    
+    if new_status == 'DELAYED':
+        st.markdown("⚠️ **Informasi Keterlambatan Site**")
+        alasan_populer = [
+            "Keterlambatan Pengiriman Material / Logistik Gudang",
+            "Kendala Perizinan Warga / SITAC / Aparat Setempat",
+            "Faktor Alam / Cuaca Buruk / Force Majeure",
+            "Pekerjaan CME / Drop Alat Vendor Terhambat",
+            "Lainnya (Ketik Manual Alasan Kustom)"
+        ]
+        
+        # Tentukan default index selectbox jika data lama sudah ada di list opsi populer
+        default_sel_idx = 0
+        if final_delay_reason in alasan_populer:
+            default_sel_idx = alasan_populer.index(final_delay_reason)
+        elif final_delay_reason != '':
+            default_sel_idx = 4 # Jika berisi teks kustom, arahkan ke opsi "Lainnya"
+            
+        pilihan_user = st.selectbox(
+            "Pilih Alasan Utama Keterlambatan:",
+            alasan_populer,
+            index=default_sel_idx,
+            key=f"sel_reason_{task_id}"
+        )
+        
+        # Jika memilih opsi "Lainnya", munculkan text_input kustom
+        if pilihan_user == "Lainnya (Ketik Manual Alasan Kustom)":
+            # Jika alasan lama bukan salah satu opsi populer, tampilkan teks lama tersebut di kolom text_input
+            val_txt = final_delay_reason if final_delay_reason not in alasan_populer else ""
+            input_kustom = st.text_input(
+                "Tuliskan Alasan Kustom Lapangan secara Detail:",
+                value=val_txt,
+                placeholder="Misal: Akses jalan terputus akibat longsor...",
+                key=f"txt_reason_{task_id}"
+            )
+            final_delay_reason = input_kustom
+        else:
+            final_delay_reason = pilihan_user
+    else:
+        # Jika status diganti dari DELAYED ke status lain (misal DONE), kosongkan string penjelasannya
+        final_delay_reason = ""
+
     col1, col2 = st.columns(2)
     with col1:
         new_progress = st.slider("Progress %", 0, 100, int(task.get('progress', 0)), key=f"pr_{task_id}")
@@ -58,7 +102,12 @@ def render_update_modal(task, site_code, assigned_to):
     col_btn1, col_btn2 = st.columns(2)
     with col_btn1:
         if st.button("💾 Save Change", type="primary", use_container_width=True, key=f"save_{task_id}"):
-            update_data = {'status': new_status, 'progress': str(new_progress)}
+            # Tambahkan kolom delay_reason ke dalam payload data update ke Supabase
+            update_data = {
+                'status': new_status, 
+                'progress': str(new_progress),
+                'delay_reason': final_delay_reason
+            }
             if new_as: update_data['actual_start'] = new_as.strftime('%Y-%m-%d')
             if new_ae: update_data['actual_end'] = new_ae.strftime('%Y-%m-%d')
             if new_status == 'DONE' and not new_ae: update_data['actual_end'] = date.today().strftime('%Y-%m-%d')
@@ -85,7 +134,6 @@ def field_app_page():
     user = st.session_state.get('user', {})
     role = user.get('role', 'engineer')
     
-    # 🛠️ FIXED INDENTATION DI SINI
     role_map = {
         'sitac': 'Sitac', 'legal': 'Legal', 'engineering': 'Engineering',
         'procurement': 'Procurement', 'project': 'Project',
@@ -136,10 +184,8 @@ def field_app_page():
     st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
     
     # SIDEBAR
-    
     with st.sidebar:
         st.markdown(f"### 👷 {assigned_to}")
-        # Menambahkan parameter key agar ID tombol tidak duplikat
         if st.button("🚪 Logout", use_container_width=True, key="field_app_logout_btn"): 
             st.session_state.clear()
             st.session_state['logged_in']=False
@@ -193,7 +239,6 @@ def field_app_page():
                         st.session_state.selected_task = task['id']
                         st.rerun()
         
-        # 🔔 LOGIKA POP-UP DI MASUKKAN KE DALAM TAB 1 AGAR TEREGISTER SAAT RERUN
         if st.session_state.selected_task:
             task_id = st.session_state.selected_task
             task_row = ms_df[ms_df['id'] == task_id]
