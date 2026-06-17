@@ -8,6 +8,7 @@ from bulk_import import bulk_import_page
 from workforce_page import workforce_page
 from user_manual import user_manual_page
 from inventory_dashboard import inventory_dashboard_page
+from photo_module import photo_page
 
 
 # ==========================================================
@@ -181,6 +182,7 @@ with st.sidebar:
             "🔍 RCA Analysis",
             "💬 Chat & Notif",
             "📱 Field App",
+            "📸 Photo Evidence",
             "📽️ Presentation",
             "📊 Export Report",
             "📢 Marketing Sites",
@@ -205,6 +207,7 @@ with st.sidebar:
             "🔍 RCA Analysis",
             "💬 Chat & Notif",
             "📱 Field App",
+            "📸 Photo Evidence",
             "📽️ Presentation",
             "📊 Export Report",
             "📢 Marketing Sites",
@@ -226,6 +229,7 @@ with st.sidebar:
             "🔍 RCA Analysis",
             "💬 Chat & Notif",
             "📱 Field App",
+            "📸 Photo Evidence",
             "📽️ Presentation",
             "📊 Export Report",
             "📢 Marketing Sites",
@@ -384,6 +388,9 @@ elif menu == "📖 User Manual":
 
 elif menu == "📦 Inventory Dashboard":
     inventory_dashboard_page()
+
+elif menu == "📸 Photo Evidence": 
+    photo_page()
 
 else:
 
