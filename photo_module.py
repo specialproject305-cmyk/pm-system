@@ -86,23 +86,43 @@ def photo_page():
             if st.button("💾 Simpan Foto", type="primary", use_container_width=True):
                 with st.spinner("📤 Upload ke Google Drive..."):
                     try:
-                        # Upload ke Google Drive
                         from google.oauth2 import service_account
                         from googleapiclient.discovery import build
                         from googleapiclient.http import MediaIoBaseUpload
+                        import tempfile, os, io
                         
                         # Simpan file sementara
-                        import tempfile
-                        import os
+                        file_bytes = file_to_upload.read()
                         
-                        with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as tmp:
-                            tmp.write(file_to_upload.read())
-                            tmp_path = tmp.name
+                        # Upload ke Google Drive
+                        SCOPES = ['https://www.googleapis.com/auth/drive.file']
+                        SERVICE_ACCOUNT_FILE = 'service_account_drive.json'
                         
-                        # Upload ke Google Drive (simulasi - perlu OAuth flow)
-                        # Untuk production, gunakan Service Account
-                        drive_file_id = f"DRIVE_{generate_id()}"
-                        photo_url = f"https://drive.google.com/file/d/{drive_file_id}/view"
+                        credentials = service_account.Credentials.from_service_account_file(
+                            SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+                        
+                        service = build('drive', 'v3', credentials=credentials)
+                        
+                        # Upload file
+                        file_metadata = {
+                            'name': f"photo_{timestamp_now}_{site_name}.jpg",
+                            'parents': ['1soOsPCQ3yYF_9P-Yc8EIbdQRFvb61KQd']  # Ganti dengan Folder ID Google Drive
+                        }
+                        
+                        media = MediaIoBaseUpload(
+                            io.BytesIO(file_bytes),
+                            mimetype='image/jpeg',
+                            resumable=True
+                        )
+                        
+                        file = service.files().create(
+                            body=file_metadata,
+                            media_body=media,
+                            fields='id, webViewLink'
+                        ).execute()
+                        
+                        drive_file_id = file.get('id')
+                        photo_url = file.get('webViewLink')
                         
                         # Simpan metadata ke Supabase
                         photo_id = generate_id()
@@ -122,11 +142,8 @@ def photo_page():
                             'notes': notes
                         })
                         
-                        # Cleanup
-                        os.unlink(tmp_path)
-                        
-                        st.success("✅ Foto berhasil disimpan ke Google Drive!")
-                        st.toast("📸 Foto tersimpan!", icon="📸")
+                        st.success(f"✅ Foto berhasil diupload!\n📎 {photo_url}")
+                        st.toast("📸 Foto tersimpan di Google Drive!", icon="📸")
                         st.balloons()
                         st.rerun()
                         
