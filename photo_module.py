@@ -98,8 +98,12 @@ def photo_page():
                         SCOPES = ['https://www.googleapis.com/auth/drive.file']
                         SERVICE_ACCOUNT_FILE = 'service_account_drive.json'
                         
-                        credentials = service_account.Credentials.from_service_account_file(
-                            SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+                        import json
+                        import streamlit as st
+                        
+                        # Baca dari Streamlit Secrets
+                        creds_dict = st.secrets["drive_service_account"]
+                        credentials = service_account.Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
                         
                         service = build('drive', 'v3', credentials=credentials)
                         
