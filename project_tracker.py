@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from supabase_db import read_sheet, insert_row, update_row, find_row_by_id, generate_id, today_str, delete_row_by_id
-import time
+from datetime import datetime
 from supabase_db import supabase
 
 def sync_progress_from_milestones(site_id):
@@ -285,7 +285,7 @@ def project_tracker_page():
     # ===== TAB 5: SPK DASHBOARD =====
     with tab5:
         st.subheader("🔗 SPK Dashboard")
-        st.caption("Lacak seluruh data dari 1 nomor SPK Marketing")
+        st.caption("Lacak seluruh data dari Marketing SPK → Project → Inventory")
         
         try:
             from supabase_db import supabase
@@ -293,36 +293,68 @@ def project_tracker_page():
             df_spk = pd.DataFrame(res.data) if res.data else pd.DataFrame()
         except:
             df_spk = pd.DataFrame()
-            st.warning("⚠️ View 'v_spk_dashboard' belum dibuat di Supabase. Jalankan SQL CREATE VIEW terlebih dahulu.")
+            st.warning("⚠️ View 'v_spk_dashboard' belum dibuat di Supabase.")
             return
         
         if df_spk.empty:
             st.info("📋 Belum ada data SPK.")
             return
         
-        # Filter SPK
-        spk_list = ['ALL'] + sorted(df_spk['spk_number'].dropna().unique().tolist()) if 'spk_number' in df_spk.columns else ['ALL']
-        sel_spk = st.selectbox("📄 Pilih SPK Number:", spk_list)
+        # ===== FILTER BAR =====
+        col_f1, col_f2, col_f3, col_f4 = st.columns(4)
         
+        with col_f1:
+            spk_list = ['ALL'] + sorted(df_spk['spk_number'].dropna().unique().tolist()) if 'spk_number' in df_spk.columns else ['ALL']
+            sel_spk = st.selectbox("📄 SPK Marketing:", spk_list)
+        
+        with col_f2:
+            spk_ven_list = ['ALL'] + sorted(df_spk['spk_vendor'].dropna().unique().tolist()) if 'spk_vendor' in df_spk.columns else ['ALL']
+            sel_spk_ven = st.selectbox("📄 SPK Vendor:", spk_ven_list)
+        
+        with col_f3:
+            pm_list = ['ALL'] + sorted(df_spk['pm'].dropna().unique().tolist()) if 'pm' in df_spk.columns else ['ALL']
+            sel_pm = st.selectbox("👤 PM:", pm_list)
+        
+        with col_f4:
+            vendor_list = ['ALL'] + sorted(df_spk['vendor'].dropna().unique().tolist()) if 'vendor' in df_spk.columns else ['ALL']
+            sel_vendor = st.selectbox("🏢 Vendor:", vendor_list)
+        
+        # Apply filter
         filtered = df_spk.copy()
-        if sel_spk != 'ALL':
-            filtered = filtered[filtered['spk_number'] == sel_spk]
+        if sel_spk != 'ALL': filtered = filtered[filtered['spk_number'] == sel_spk]
+        if sel_spk_ven != 'ALL': filtered = filtered[filtered['spk_vendor'] == sel_spk_ven]
+        if sel_pm != 'ALL': filtered = filtered[filtered['pm'] == sel_pm]
+        if sel_vendor != 'ALL': filtered = filtered[filtered['vendor'] == sel_vendor]
         
-        # KPI Cards
-        col1, col2, col3, col4, col5 = st.columns(5)
-        col1.metric("📢 Total Site", len(filtered))
-        col2.metric("✅ Done MS", filtered['done_milestones'].sum() if 'done_milestones' in filtered.columns else 0)
-        col3.metric("🔴 Delayed MS", filtered['delayed_milestones'].sum() if 'delayed_milestones' in filtered.columns else 0)
-        col4.metric("📦 Inventory", filtered['total_inventory_items'].sum() if 'total_inventory_items' in filtered.columns else 0)
-        col5.metric("📸 Photos", filtered['total_photos'].sum() if 'total_photos' in filtered.columns else 0)
+        # ===== KPI CARDS =====
+        total_spk = filtered['spk_number'].nunique() if 'spk_number' in filtered.columns else 0
+        total_site_marketing = len(filtered)
+        total_spk_vendor = filtered['spk_vendor'].nunique() if 'spk_vendor' in filtered.columns else 0
+        total_site_project = filtered['project_site_name'].nunique() if 'project_site_name' in filtered.columns else 0
+        
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric("📄 Total SPK Marketing", total_spk)
+        col2.metric("📢 Total Site Marketing", total_site_marketing)
+        col3.metric("📋 Total SPK Vendor", total_spk_vendor)
+        col4.metric("📍 Total Site Project", total_site_project)
         
         st.divider()
         
-        # Tabel detail
-        st.subheader("📋 Detail per Site")
+        # KPI tambahan
+        col_a, col_b, col_c, col_d = st.columns(4)
+        col_a.metric("✅ Done MS", filtered['done_milestones'].sum() if 'done_milestones' in filtered.columns else 0)
+        col_b.metric("🔴 Delayed MS", filtered['delayed_milestones'].sum() if 'delayed_milestones' in filtered.columns else 0)
+        col_c.metric("📦 Inventory", filtered['total_inventory_items'].sum() if 'total_inventory_items' in filtered.columns else 0)
+        col_d.metric("📸 Photos", filtered['total_photos'].sum() if 'total_photos' in filtered.columns else 0)
+        
+        st.divider()
+        
+        # ===== TABEL DETAIL =====
+        st.subheader("📋 Detail SPK → Site → Project")
         display_cols = [
-            'tenant_index', 'site_id_tenant', 'marketing_site_name', 
-            'project_site_name', 'vendor', 'pm', 'project_status', 'progress',
+            'spk_number', 'tenant_index', 'site_id_tenant', 'marketing_site_name',
+            'spk_vendor', 'vendor', 'pm',
+            'project_site_name', 'project_status', 'progress',
             'total_milestones', 'done_milestones', 'delayed_milestones',
             'total_inventory_items', 'total_mr_qty', 'total_issue_qty', 'total_photos'
         ]
@@ -331,7 +363,7 @@ def project_tracker_page():
         
         # Export
         st.download_button("📥 Download SPK Report CSV", filtered.to_csv(index=False), 
-                          f"spk_report_{sel_spk}.csv", "text/csv")
+                          f"spk_report_{datetime.now().strftime('%Y%m%d')}.csv", "text/csv")
 
 if __name__ == "__main__":
     project_tracker_page()
