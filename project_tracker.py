@@ -68,7 +68,8 @@ def project_tracker_page():
         master_df = pd.DataFrame()
         master_options = ["ALL"]
 
-    tab1, tab2, tab3, tab4 = st.tabs(["📋 Daftar Site", "🏢 Master Project", "➕ Tambah Site", "📥 Import CSV"])
+        tab1, tab2, tab3, tab4, tab5 = st.tabs([
+        "📋 Daftar Site", "🏢 Master Project", "➕ Tambah Site", "📥 Import CSV", "🔗 SPK Dashboard"])
 
     # ═══════════════ TAB 1: DAFTAR SITE ═══════════════
     with tab1:
@@ -280,6 +281,57 @@ def project_tracker_page():
                     except: pass
                 st.cache_data.clear()
                 st.toast(f"✅ {count} site diimport!"); time.sleep(0.5); st.rerun()
+
+    # ===== TAB 5: SPK DASHBOARD =====
+    with tab5:
+        st.subheader("🔗 SPK Dashboard")
+        st.caption("Lacak seluruh data dari 1 nomor SPK Marketing")
+        
+        try:
+            from supabase_db import supabase
+            res = supabase.table('v_spk_dashboard').select('*').execute()
+            df_spk = pd.DataFrame(res.data) if res.data else pd.DataFrame()
+        except:
+            df_spk = pd.DataFrame()
+            st.warning("⚠️ View 'v_spk_dashboard' belum dibuat di Supabase. Jalankan SQL CREATE VIEW terlebih dahulu.")
+            return
+        
+        if df_spk.empty:
+            st.info("📋 Belum ada data SPK.")
+            return
+        
+        # Filter SPK
+        spk_list = ['ALL'] + sorted(df_spk['spk_number'].dropna().unique().tolist()) if 'spk_number' in df_spk.columns else ['ALL']
+        sel_spk = st.selectbox("📄 Pilih SPK Number:", spk_list)
+        
+        filtered = df_spk.copy()
+        if sel_spk != 'ALL':
+            filtered = filtered[filtered['spk_number'] == sel_spk]
+        
+        # KPI Cards
+        col1, col2, col3, col4, col5 = st.columns(5)
+        col1.metric("📢 Total Site", len(filtered))
+        col2.metric("✅ Done MS", filtered['done_milestones'].sum() if 'done_milestones' in filtered.columns else 0)
+        col3.metric("🔴 Delayed MS", filtered['delayed_milestones'].sum() if 'delayed_milestones' in filtered.columns else 0)
+        col4.metric("📦 Inventory", filtered['total_inventory_items'].sum() if 'total_inventory_items' in filtered.columns else 0)
+        col5.metric("📸 Photos", filtered['total_photos'].sum() if 'total_photos' in filtered.columns else 0)
+        
+        st.divider()
+        
+        # Tabel detail
+        st.subheader("📋 Detail per Site")
+        display_cols = [
+            'tenant_index', 'site_id_tenant', 'marketing_site_name', 
+            'project_site_name', 'vendor', 'pm', 'project_status', 'progress',
+            'total_milestones', 'done_milestones', 'delayed_milestones',
+            'total_inventory_items', 'total_mr_qty', 'total_issue_qty', 'total_photos'
+        ]
+        st.dataframe(filtered[[c for c in display_cols if c in filtered.columns]], 
+                    use_container_width=True, hide_index=True)
+        
+        # Export
+        st.download_button("📥 Download SPK Report CSV", filtered.to_csv(index=False), 
+                          f"spk_report_{sel_spk}.csv", "text/csv")
 
 if __name__ == "__main__":
     project_tracker_page()
