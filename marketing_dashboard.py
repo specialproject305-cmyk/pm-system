@@ -140,39 +140,35 @@ def marketing_dashboard_page():
     """, unsafe_allow_html=True)
         
     # ═══════════════════════════════════════
-    # PANEL KONTROL EXPANDER (PINDAHAN DARI SIDEBAR)
+    # PANEL KONTROL EXPANDER
     # ═══════════════════════════════════════
     with st.expander("🛠️ Panel Kontrol & Filter Data Dashboard", expanded=False):
         col_f1, col_f2 = st.columns(2)
         
         with col_f1:
-            # 1. Filter Kontrol: Year
             years_list = sorted(df['spk_year'].unique().tolist())
             if 'No Year' in years_list:
                 years_list.remove('No Year')
                 years_list.append('No Year')
             sel_year = st.selectbox("📅 Pilih Tahun SPK:", ['ALL'] + years_list)
             
-            # 2. Filter Kontrol: Tenant
             sel_tenant = st.selectbox(
                 "🏢 Pilih Tenant:", 
                 ['ALL'] + sorted(df['tenant_index'].dropna().unique().tolist()) if 'tenant_index' in df.columns else ['ALL']
             )
             
         with col_f2:
-            # 3. Filter Kontrol: SPK Status
             sel_status = st.selectbox(
                 "📋 Pilih SPK Status:", 
                 ['ALL'] + sorted(df['spk_status'].dropna().unique().tolist()) if 'spk_status' in df.columns else ['ALL']
             )
             
-            # 4. Filter Kontrol: SPK Number (Enum/Selectbox Referensi Kolom Data Marketing)
             spk_options = sorted(df['spk_number'].dropna().unique().tolist()) if 'spk_number' in df.columns else []
             sel_spk_num = st.selectbox("🔍 Pilih Nomor SPK:", ['ALL'] + spk_options)
         
         st.markdown("---")
         
-        # Penanganan Filter Data Global
+        # Eksekusi Filter
         filtered = df.copy()
         if sel_year != 'ALL': 
             filtered = filtered[filtered['spk_year'] == sel_year]
@@ -192,14 +188,19 @@ def marketing_dashboard_page():
         )
 
     # ═══════════════════════════════════════
-    # METRICS ROW (TOTAL SPK SUDAH PALING KIRI)
+    # METRICS ROW (DENGAN RE-CALCULATED TOTAL SPK BERGERAK)
     # ═══════════════════════════════════════
     total_sites_filtered = len(filtered)
+    
+    # 🔥 SEKARANG AKURAT MENGIKUTI FILTER ACTIVE BOSKU!
+    absolute_total_spk = filtered['spk_number'].nunique() if 'spk_number' in filtered.columns else 0
+    absolute_total_tenant = filtered['tenant_index'].nunique() if 'tenant_index' in filtered.columns else 0
+    
     rfs_count = len(filtered[filtered['milestone'] == 'RFS']) if 'milestone' in filtered.columns else 0
     erected_count = len(filtered[filtered['milestone'] == 'Erected']) if 'milestone' in filtered.columns else 0
     on_progress = len(filtered[filtered['milestone'].isin(['On Progress', 'Pending', 'Negosiasi Lahan', 'RFI'])]) if 'milestone' in filtered.columns else 0
     
-    # Render KPI Total SPK berada di susunan grid pertama (paling kiri)
+    # Render KPI
     st.markdown(f"""
     <div class="kpi-container">
         <div class="kpi-box kpi-spk"><div class="kpi-val">{absolute_total_spk}</div><div class="kpi-lbl">📄 Total SPK</div></div>
