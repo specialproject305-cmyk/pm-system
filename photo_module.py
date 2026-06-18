@@ -4,7 +4,6 @@ from datetime import datetime
 from supabase_db import read_sheet, insert_row, generate_id
 from PIL import Image
 import io
-import json
 
 def photo_page():
     st.title("📸 Project Photo Evidence")
