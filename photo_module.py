@@ -394,75 +394,97 @@ def photo_page():
                         st.error(f"❌ Gagal sinkronisasi data ke Supabase: {str(db_err)}")
     
     # ─────────────────────────────────────────────────────────────
-    # TAB 2: GALERI FOTO (INTEGRASI GOOGLE DRIVE LINK)
+    # TAB 2: GALERI FOTO EVIDENCE (FIX CODE LEAK & TEXT DISPLAY)
     # ─────────────────────────────────────────────────────────────
     with tab2:
         st.subheader("🖼️ Galeri Foto Evidence Lapangan")
-        photos_df = read_sheet("project_photos")
+        
+        try:
+            photos_df = read_sheet("project_photos")
+        except Exception as e:
+            st.error(f"❌ Gagal memuat data galeri dari Supabase: {e}")
+            photos_df = pd.DataFrame()
         
         if not photos_df.empty:
             st.metric("Total Foto Evidence", len(photos_df))
             
-            # Filter Site
+            # Filter Berdasarkan Site
             opts_site_filter = ['Tampilkan Semua Site'] + sorted(sites_df['id'].tolist())
-            site_filter = st.selectbox("Filter Galeri Berdasarkan Site:", opts_site_filter, key="galeri_filter_unique",
-                format_func=lambda x: 'Tampilkan Semua Site' if x=='Tampilkan Semua Site' else f"{sites_df[sites_df['id']==x]['site_id'].values[0]} - {sites_df[sites_df['id']==x]['site_name'].values[0]}")
+            site_filter = st.selectbox(
+                "Filter Galeri Berdasarkan Site:", 
+                opts_site_filter, 
+                key="galeri_filter_unique",
+                format_func=lambda x: 'Tampilkan Semua Site' if x=='Tampilkan Semua Site' else f"{sites_df[sites_df['id']==x]['site_id'].values[0]} - {sites_df[sites_df['id']==x]['site_name'].values[0]}"
+            )
             
             filtered = photos_df.copy()
             if site_filter != 'Tampilkan Semua Site': 
                 filtered = filtered[filtered['project_id'] == site_filter]
             
-            # Rendering Gallery Cards profesional (Side-by-Side)
             if not filtered.empty:
-                # Ambil 20 foto terbaru
+                # Urutkan berdasarkan tanggal terbaru (Limit 20 foto)
                 filtered = filtered.sort_values(by='timestamp_taken', ascending=False).head(20)
                 
+                # Render Grid Kolom (Kiri & Kanan)
                 cols = st.columns(2)
                 for i, (_, row) in enumerate(filtered.iterrows()):
                     with cols[i % 2]:
-                        # Data Cleaning & Fallbacks
-                        ms_n = row.get('milestone_name', 'General Photo') or 'General Photo'
-                        s_n = row.get('site_name', '-')
-                        up_b = row.get('uploaded_by', 'PIC')
-                        ts_t = row.get('timestamp_taken', '-') or '-'
-                        lat_v = row.get('latitude', '-') or '-'
-                        lng_v = row.get('longitude', '-') or '-'
-                        addr_v = row.get('address', '-') or '-'
-                        notes_v = row.get('notes', '')
-                        photo_url = row.get('photo_url', '')
+                        # Bersihkan & Ambil Data Lapangan
+                        ms_n = str(row.get('milestone_name', 'General Photo') or 'General Photo')
+                        s_n = str(row.get('site_name', '-'))
+                        up_b = str(row.get('uploaded_by', 'PIC'))
+                        ts_t = str(row.get('timestamp_taken', '-'))
+                        lat_v = str(row.get('latitude', '-'))
+                        lng_v = str(row.get('longitude', '-'))
+                        addr_v = str(row.get('address', '-'))
+                        notes_v = str(row.get('notes', ''))
+                        photo_url = str(row.get('photo_url', ''))
                         
-                        # Premium Card CSS/HTML
+                        # ─── 📦 STRUKTUR HTML AMAN DAN RAPI (FIXED) ───
                         card_html = f"""
-                        <div style="background:white;border-radius:12px;padding:12px;margin:8px 0;box-shadow:0 3px 10px rgba(0,0,0,0.06);border-left:4px solid #3B82F6;transition:transform 0.2s;">
-                            <div style="font-weight:700;color:#1E293B;font-size:0.95rem;display:flex;justify-content:space-between;">
-                                <span>🏗️ {ms_n[:35]}</span>
-                                <span style="font-size:0.75rem;color:#94A3B8;">WIB</span>
+                        <div style="background-color: #ffffff; border-radius: 12px; padding: 16px; margin: 10px 0; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-left: 5px solid #3B82F6;">
+                            <div style="font-weight: 700; color: #1E293B; font-size: 1rem; display: flex; justify-content: space-between;">
+                                <span>🏗️ {ms_n[:40]}</span>
+                                <span style="font-size: 0.75rem; color: #94A3B8; font-weight: 400;">WIB</span>
                             </div>
-                            <div style="font-size:0.85rem;color:#64748B;margin:3px 0 6px 0;font-weight:600;">📍 {s_n}</div>
+                            <div style="font-size: 0.85rem; color: #4B5563; margin: 4px 0 10px 0; font-weight: 600;">
+                                📍 {s_n}
+                            </div>
                             
-                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;font-size:0.75rem;color:#64748B;margin-top:8px;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 0.75rem; color: #6B7280; background-color: #F9FAFB; padding: 8px; border-radius: 6px;">
                                 <div>🕐 {ts_t[:16]}</div>
                                 <div>👷 PIC: {up_b}</div>
-                                <div>🌐 {lat_v}, {lng_v}</div>
+                                <div style="grid-column: span 2; color: #374151; font-family: monospace;">🌐 {lat_v}, {lng_v}</div>
                             </div>
-                            <div style="font-size:0.7rem;color:#94A3B8;margin-top:6px;border-top:1px solid #EFF6FF;padding-top:4px;">📫 {addr_v[:60]}...</div>
+                            
+                            <div style="font-size: 0.75rem; color: #6B7280; margin-top: 8px; padding-top: 6px; border-top: 1px solid #E5E7EB;">
+                                <strong>📫 Alamat:</strong> {addr_v[:120]}...
+                            </div>
                         """
                         
-                        # Injeksi Link Drive jika tersedia
-                        if photo_url:
-                            card_html += f'<div style="margin-top:8px;border-top:1px solid #EFF6FF;padding-top:4px;"><a href="{photo_url}" target="_blank" style="color:#3B82F6;text-decoration:none;font-weight:700;font-size:0.8rem;">📎 Buka Foto di Google Drive 🚀</a></div>'
+                        # Injeksi Link Drive Jika Ada Data Terupload
+                        if photo_url and photo_url.strip() != "":
+                            card_html += f"""
+                            <div style="margin-top: 10px; padding-top: 6px; border-top: 1px solid #E5E7EB;">
+                                <a href="{photo_url}" target="_blank" style="color: #2563EB; text-decoration: none; font-weight: 700; font-size: 0.8rem;">
+                                    📎 Buka Foto Asli di Google Drive 🚀
+                                </a>
+                            </div>
+                            """
                         
-                        # Injeksi Catatan jika tersedia
-                        if notes_v:
-                            card_html += f'<div style="font-size:0.75rem;color:#475569;background:#F8FAFC;border-radius:6px;padding:6px;margin-top:8px;">📝 {notes_v[:100]}</div>'
+                        # Injeksi Catatan Lapangan / Isu Proyek Jika Ada
+                        if notes_v and notes_v.strip() != "":
+                            card_html += f"""
+                            <div style="font-size: 0.75rem; color: #1F2937; background-color: #FEF3C7; border-left: 3px solid #D97706; border-radius: 4px; padding: 6px; margin-top: 8px;">
+                                <strong>Catatan:</strong> {notes_v[:150]}
+                            </div>
+                            """
                             
-                        card_html += '</div>'
+                        card_html += "</div>"
+                        
+                        # Eksekusi Render dengan Izin HTML Aktif
                         st.markdown(card_html, unsafe_allow_html=True)
             else:
-                st.info("ℹ️ Tidak ditemukan foto pada site hasil filter galeri saat ini.")
+                st.info("ℹ️ Tidak ditemukan rekaman foto pada hasil filter site ini.")
         else:
-            st.info("📭 Belum ada foto evidence yang tersimpan di database (project_photos).")
-
-if __name__ == "__main__":
-    st.set_page_config(page_title="Project Photo Evidence Center", layout="wide")
-    photo_page()
+            st.info("📭 Belum ada data foto evidence terdaftar di dalam database.")
