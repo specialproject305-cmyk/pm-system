@@ -17,30 +17,101 @@ GOOGLE_DRIVE_FOLDER_ID = "1soOsPCQ3yYF_9P-Yc8EIbdQRFvb61KQd"   # ✅ Folder ID G
 # PRE-PROCESS UTILITIES
 # ═══════════════════════════════════════
 def get_gps_location():
-    """Dapatkan lokasi GPS dari browser HP - Perbaikan Izin & Sinkronisasi Streamlit"""
+    """Dapatkan lokasi GPS & Alamat langsung dari Browser HP (100% Sinkron)"""
     
-    location_html = """
+    location_html = f"""
     <style>
-        #location_btn {
+        #location_btn {{
             background: linear-gradient(135deg, #3B82F6 0%, #1E40AF 100%);
             color: white;
             border: none;
-            padding: 12px 24px;
+            padding: 14px 24px;
             border-radius: 10px;
             font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
+            width: 100%;
             box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3);
             transition: all 0.2s ease;
-        }
-        #location_btn:hover {
+        }}
+        #location_btn:hover {{
             transform: translateY(-2px);
             box-shadow: 0 6px 12px rgba(59, 130, 246, 0.4);
-        }
-        #location_btn:disabled {
+        }}
+        #location_btn:disabled {{
             background: #94A3B8;
             cursor: not-allowed;
-        }
+        }}
+    </style>
+    
+    <script>
+    async function findMeAndAddress() {{
+        const status = document.getElementById('status');
+        const btn = document.getElementById('location_btn');
+        
+        status.innerText = '⌛ 1. Mencari Satelit GPS HP...';
+        btn.disabled = true;
+
+        if (navigator.geolocation) {{
+            navigator.geolocation.getCurrentPosition(async function(position) {{
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                
+                status.innerText = '⌛ 2. Menghubungkan ke Satelit & LocationIQ...';
+                
+                // Suntik Koordinat ke Elemen HTML Streamlit
+                const latInput = parent.document.querySelector('input[aria-label="Latitude"]');
+                const lngInput = parent.document.querySelector('input[aria-label="Longitude"]');
+                const addrInput = parent.document.querySelector('input[aria-label="📫 Address Detail (Auto-Address)"]');
+                
+                if(latInput) latInput.value = lat;
+                if(lngInput) lngInput.value = lng;
+                
+                // Panggil Reverse Geocoding langsung di sisi Client (Browser) agar super cepat
+                try {{
+                    const url = `https://us1.locationiq.com/v1/reverse.php?key={LOCATIONIQ_KEY}&lat=${{lat}}&lon=${{lng}}&format=json`;
+                    const response = await fetch(url);
+                    const data = await response.json();
+                    const address = data.display_name || '';
+                    
+                    if(addrInput) addrInput.value = address;
+                    
+                    // Trigger Event Input secara berurutan agar Streamlit Python Terpaksa Membaca Nilainya
+                    if(latInput) latInput.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                    if(lngInput) lngInput.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                    if(addrInput) addrInput.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                    
+                    status.innerText = '✅ GPS & Alamat Berhasil Disinkronisasi! Silakan isi Catatan & Simpan.';
+                    status.style.color = '#059669';
+                }} catch (err) {{
+                    // Jika API LocationIQ gagal, koordinat tetap masuk
+                    if(latInput) latInput.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                    if(lngInput) lngInput.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                    status.innerText = '✅ GPS Dapat, tapi Alamat Gagal Dimuat. Koordinat Tetap Aman!';
+                    status.style.color = '#D97706';
+                }}
+                
+                btn.disabled = false;
+            }}, function(error) {{
+                status.innerText = '⚠️ Akses GPS ditolak browser HP. Pastikan HTTPS aktif & Izinkan Lokasi.';
+                status.style.color = '#DC2626';
+                btn.disabled = false;
+            }}, {{enableHighAccuracy: true, timeout: 15000}});
+        }} else {{
+            status.innerText = '⚠️ Browser HP Anda tidak mendukung Geolocation.';
+            btn.disabled = false;
+        }}
+    }}
+    </script>
+    
+    <div style="text-align:center; padding: 5px;">
+        <button id="location_btn" onclick="findMeAndAddress()">
+            📍 AMBIL GPS & AUTO-ALAMAT (KLIK DI SINI)
+        </button>
+        <p id="status" style="margin-top:10px; color:#64748B; font-size:0.9rem; font-weight:600;"></p>
+    </div>
+    """
+    components.html(location_html, height=140, scrolling=False)
     </style>
     
     <script>
@@ -182,12 +253,16 @@ def photo_page():
     with tab1:
         st.subheader("📸 Form Pengisian Foto Evidence")
         
-        # Kontrol Site & Milestone
+        # ─── 🏗️ SELEKSI SITE & MILESTONE ───
         col1, col2 = st.columns(2)
         with col1:
             site_list = sites_df['id'].tolist()
-            sel_site = st.selectbox("📍 Pilih Site Tower:", site_list, key="sel_site_unique",
-                format_func=lambda x: f"{sites_df[sites_df['id']==x]['site_id'].values[0]} - {sites_df[sites_df['id']==x]['site_name'].values[0]}")
+            sel_site = st.selectbox(
+                "📍 Pilih Site Tower:", 
+                site_list, 
+                key="sel_site_unique",
+                format_func=lambda x: f"{sites_df[sites_df['id']==x]['site_id'].values[0]} - {sites_df[sites_df['id']==x]['site_name'].values[0]}"
+            )
             site_name = sites_df[sites_df['id']==sel_site]['site_name'].values[0]
             
         with col2:
@@ -195,8 +270,12 @@ def photo_page():
                 site_ms = ms_df[ms_df['project_id'] == sel_site]
                 if not site_ms.empty:
                     ms_list = site_ms['id'].tolist()
-                    sel_ms = st.selectbox("📋 Pilih Milestone/Task:", ms_list, key="sel_ms_unique",
-                        format_func=lambda x: site_ms[site_ms['id']==x]['name'].values[0][:50])
+                    sel_ms = st.selectbox(
+                        "📋 Pilih Milestone/Task:", 
+                        ms_list, 
+                        key="sel_ms_unique",
+                        format_func=lambda x: site_ms[site_ms['id']==x]['name'].values[0][:50]
+                    )
                     ms_name = site_ms[site_ms['id']==sel_ms]['name'].values[0]
                 else:
                     st.info("ℹ️ Tidak ada milestone di site ini.")
@@ -206,67 +285,76 @@ def photo_page():
         
         st.markdown('<div class="upload-divider"></div>', unsafe_allow_html=True)
 
-        # ─── 📍 PRE-PROCESS GPS LOCATION ENGINE ───
+        # ─── 📍 ENGINE GPS & GEOCODING TERPADU (JAVASCRIPT) ───
         st.markdown("### 📍 Lokasi Pengambilan Foto")
-        get_gps_location() # Suntik nilai langsung ke input Streamlit
+        
+        # Memanggil fungsi HTML/JS terpadu yang langsung mencari lokasi & alamat di sisi browser
+        get_gps_location() 
 
-        # Koordinat Text Inputs (Menangkap nilai dari GPS JS)
+        # Field Koordinat (Menerima suntikan data aman dari dispatch event JS)
         col_lat, col_lng = st.columns(2)
         with col_lat:
-            # ⚠️ JANGAN HAPUS: aria-label="Latitude" dipakai selector JavaScript
-            lat = st.text_input("Latitude", key="lat_input", placeholder="Mencari GPS HP...", help="Akan terisi otomatis saat tombol GPS ditekan.")
+            lat = st.text_input(
+                "Latitude", 
+                key="lat_input", 
+                placeholder="Klik tombol di atas...",
+                help="Akan terisi otomatis secara sinkron setelah menekan tombol GPS."
+            )
         with col_lng:
-            # ⚠️ JANGAN HAPUS: aria-label="Longitude" dipakai selector JavaScript
-            lng = st.text_input("Longitude", key="lng_input", placeholder="Mencari GPS HP...", help="Akan terisi otomatis saat tombol GPS ditekan.")
+            lng = st.text_input(
+                "Longitude", 
+                key="lng_input", 
+                placeholder="Klik tombol di atas...",
+                help="Akan terisi otomatis secara sinkron setelah menekan tombol GPS."
+            )
         
-        # ─── 📫 ENGINE REVERSE GEOCODING (ALAMAT) ───
-        if st.button("📫 Sinkronisasi Alamat (Location IQ)", type="secondary", use_container_width=True, key="sync_address_btn"):
-            if lat and lng:
-                with st.spinner("🔍 Mencari alamat detail dari koordinat satelit..."):
-                    addr = get_address_from_locationiq(lat, lng)
-                    if addr:
-                        st.session_state['auto_address'] = addr
-                        st.toast("✅ Alamat terdeteksi!", icon="📫")
-                    else:
-                        st.error("⚠️ Koordinat tidak valid atau API Key bermasalah.")
-            else:
-                st.warning("⚠️ Koordinat masih kosong. Tekan tombol GPS di atas dulu bosku!")
+        # Field Alamat Detail (Satu alur sinkronisasi dengan event trigger JS)
+        address = st.text_input(
+            "📫 Address Detail (Auto-Address)", 
+            key="addr_input", 
+            placeholder="Klik tombol di atas...",
+            help="Alamat otomatis dari satelit LocationIQ. Anda juga dapat mengedit teks ini manual jika diperlukan."
+        )
         
-        # Field Alamat Detail
-        address = st.text_input("📫 Address Detail (Auto-Address)", value=st.session_state.get('auto_address', ''), placeholder="Terisi saat Sinkronisasi Alamat...", help="Anda bisa mengedit alamat ini manual.")
+        # ─── 👷 INFORMASI PIC & TIMESTAMPS ───
+        uploaded_by = st.text_input(
+            "👷 Uploaded By PIC Lapangan", 
+            value=st.session_state.get('user', {}).get('full_name', 'PIC Vendor')
+        )
         
-        uploaded_by = st.text_input("👷 Uploaded By PIC Lapangan", value=st.session_state.get('user', {}).get('full_name', 'PIC Vendor'))
-        
-        # Timezone Safety WIB (+7)
+        # Sinkronisasi Waktu Indonesia Barat (WIB)
         tz_wib = timezone(timedelta(hours=7))
         timestamp_now = datetime.now(tz_wib).strftime('%Y-%m-%d %H:%M:%S')
         st.info(f"🕐 Timestamp Laporan: **{timestamp_now} WIB**")
         
         st.markdown('<div class="upload-divider"></div>', unsafe_allow_html=True)
 
-        # ─── 📸 ENGINE UPLOAD FOTOevidence ───
+        # ─── 📸 CAMERA INPUT & MEDIA UPLOADER ───
         st.markdown("### 📸 Ambil Foto Evidence Lapangan")
-        upload_method = st.radio("Metode Pengambilan:", ["📷 Kamera HP (Live)", "🖼️ Galeri File"], horizontal=True, key="upload_method_unique")
+        upload_method = st.radio("Metode Pengambilan:", ["📷 Kamera HP (Live)", "🖼️ Galeri File"], horizontal=True, key="method_upload_tab1")
         
         photo_file = st.camera_input("Ambil Foto Progres") if upload_method == "📷 Kamera HP (Live)" else st.file_uploader("Pilih File Foto", type=['jpg','jpeg','png'])
         
         if photo_file:
             st.image(photo_file, caption="Preview Foto Evidence", width=350)
-            notes = st.text_area("📝 Catatan Progres & Isu Kritis", placeholder="Deskripsi progres nyata, kendala material, atau isu perizinan...")
+            notes = st.text_area("📝 Catatan Progres & Isu Kritis", placeholder="Tulis deskripsi progres nyata atau kendala material di lapangan...")
             
-            # ─── 💾 TOMBOL SAVE & UPLOAD TOTAL ───
-            if st.button("💾 SIMPAN METADATA & UPLOAD FOTO KE G-DRIVE", type="primary", use_container_width=True, key="save_and_upload_btn"):
-                # Validasi Koordinat Wajib
-                if not lat or not lng:
-                    st.error("❌ GAGAL SIMPAN: Koordinat GPS HP wajib terisi sebagai bukti validitas lapangan! Tekan tombol GPS di atas."); st.stop()
+            # ─── 💾 PROSES SIMPAN SINKRON TOTAL ───
+            if st.button("💾 SIMPAN METADATA & UPLOAD FOTO KE G-DRIVE", type="primary", use_container_width=True, key="btn_submit_tab1"):
                 
-                with st.spinner("📤 Sedang mengupload foto evidence ke Google Drive & Sinkron Database..."):
+                # 🛠️ VALIDASI CRITICAL CRASH PREVENT: Pastikan data text input tidak kosong di sisi Python
+                if not lat or not lng or lat.strip() == "" or lng.strip() == "":
+                    st.error("❌ GAGAL SIMPAN: Sistem mendeteksi koordinat masih kosong! Silakan klik ulang tombol 'AMBIL GPS & AUTO-ALAMAT' di atas sampai angka muncul stabil di kotak input.")
+                    st.stop()
+                
+                with st.spinner("📤 Sedang memproses file ke Google Drive & Sinkronisasi database Supabase..."):
                     file_bytes = photo_file.read()
                     
-                    # 🏭 Proses 1: Upload ke Google Drive
-                    drive_id, drive_url = upload_to_google_drive(file_bytes, f"photo_{timestamp_now.replace(':','-')}_{site_name}_{uploaded_by}.jpg")
+                    # 🏭 Langkah 1: Push Binary File ke Google Drive Target Folder
+                    filename_formatted = f"photo_{timestamp_now.replace(':', '-')}_{site_name}_{uploaded_by}.jpg"
+                    drive_id, drive_url = upload_to_google_drive(file_bytes, filename_formatted)
                     
-                    # 🏭 Proses 2: Simpan Metadata ke Supabase (Data Integration)
+                    # 🏭 Langkah 2: Build Payload JSON untuk Skema Database `project_photos`
                     photo_id = generate_id()
                     supabase_payload = {
                         'id': photo_id,
@@ -274,9 +362,8 @@ def photo_page():
                         'site_name': site_name,
                         'milestone_id': sel_ms if sel_ms else '',
                         'milestone_name': ms_name,
-                        # Link Drive sebagai primary photo URL
-                        'photo_url': drive_url if drive_url else '',
-                        'drive_file_id': drive_id if drive_id else photo_id, # Fallback ID
+                        'photo_url': drive_url if drive_url else '', # Menyimpan URL WebView Google Drive asli
+                        'drive_file_id': drive_id if drive_id else photo_id,
                         'latitude': str(lat),
                         'longitude': str(lng),
                         'address': address if address else '',
@@ -285,23 +372,26 @@ def photo_page():
                         'notes': notes
                     }
                     
-                    # Execute Supabase Insert
-                    insert_row("project_photos", supabase_payload)
-                    
-                    # ─── 📦 RESULT HANDLING ───
-                    if drive_url:
-                        st.success(f"✅ Foto Evidence Berhasil Tersimpan Aman di Google Drive!")
-                        st.markdown(f"[📎 Buka Foto di Drive]({drive_url})")
-                    else:
-                        # Fallback jika upload Drive gagal namun metadata aman
-                        st.warning("⚠️ Metadata tersimpan di Supabase, namun file foto gagal diupload ke Google Drive. Cek izin Service Account & Folder ID Anda di Secrets.")
-                    
-                    st.toast("📸 Foto Evidence berhasil disimpan!", icon="📸")
-                    st.balloons()
-                    
-                    # Reset state & rerun
-                    if 'auto_address' in st.session_state: del st.session_state['auto_address']
-                    st.rerun()
+                    # 🏭 Langkah 3: Eksekusi Injeksi Row ke Supabase DB
+                    try:
+                        insert_row("project_photos", supabase_payload)
+                        
+                        # ─── 📦 INTERACTION RESPONSES ───
+                        if drive_url:
+                            st.success("✅ Foto Evidence & Koordinat Lapangan Berhasil Tersimpan!")
+                            st.toast("📸 Berhasil disinkronisasi ke Cloud!", icon="📸")
+                            st.balloons()
+                            
+                            # Bersihkan sisa state cache alamat lama sebelum auto-reload
+                            if 'auto_address' in st.session_state: 
+                                del st.session_state['auto_address']
+                                
+                            st.rerun()
+                        else:
+                            st.warning("⚠️ Metadata tersimpan di database, tetapi file fisik gagal diupload ke Google Drive. Periksa kembali struktur Service Account Anda.")
+                            
+                    except Exception as db_err:
+                        st.error(f"❌ Gagal sinkronisasi data ke Supabase: {str(db_err)}")
     
     # ─────────────────────────────────────────────────────────────
     # TAB 2: GALERI FOTO (INTEGRASI GOOGLE DRIVE LINK)
