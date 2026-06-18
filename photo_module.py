@@ -102,7 +102,16 @@ def photo_page():
                         
                         
                         # Baca dari Streamlit Secrets
-                        creds_dict = st.secrets["drive_service_account"]
+                        import json
+                        import streamlit as st
+                        
+                        # Baca dari Secrets (format JSON string)
+                        creds_json = st.secrets["drive_service_account"]
+                        if isinstance(creds_json, dict):
+                            creds_dict = creds_json
+                        else:
+                            creds_dict = json.loads(creds_json)
+                        
                         credentials = service_account.Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
                         
                         service = build('drive', 'v3', credentials=credentials)
