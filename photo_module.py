@@ -17,8 +17,9 @@ GOOGLE_DRIVE_FOLDER_ID = "1soOsPCQ3yYF_9P-Yc8EIbdQRFvb61KQd"   # ✅ Folder ID G
 # PRE-PROCESS UTILITIES
 # ═══════════════════════════════════════
 def get_gps_location():
-    """Dapatkan lokasi GPS & Alamat langsung dari Browser HP (100% Sinkron)"""
+    """Dapatkan lokasi GPS & Alamat langsung dari Browser HP (Fix Syntax Error)"""
     
+    # ─── 🚀 PERBAIKAN UTAMA: Menggunakan double {{ }} untuk escaped f-string agar tidak crash di Python ───
     location_html = f"""
     <style>
         #location_btn {{
@@ -42,6 +43,74 @@ def get_gps_location():
             background: #94A3B8;
             cursor: not-allowed;
         }}
+    </style>
+    
+    <script>
+    async function findMeAndAddress() {{
+        const status = document.getElementById('status');
+        const btn = document.getElementById('location_btn');
+        
+        status.innerText = '⌛ 1. Mencari Satelit GPS HP...';
+        btn.disabled = true;
+
+        if (navigator.geolocation) {{
+            navigator.geolocation.getCurrentPosition(async function(position) {{
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                
+                status.innerText = '⌛ 2. Menghubungkan ke Satelit & LocationIQ...';
+                
+                // Suntik Koordinat ke Elemen HTML Streamlit
+                const latInput = parent.document.querySelector('input[aria-label="Latitude"]');
+                const lngInput = parent.document.querySelector('input[aria-label="Longitude"]');
+                const addrInput = parent.document.querySelector('input[aria-label="📫 Address Detail (Auto-Address)"]');
+                
+                if(latInput) latInput.value = lat;
+                if(lngInput) lngInput.value = lng;
+                
+                try {{
+                    const url = `https://us1.locationiq.com/v1/reverse.php?key={LOCATIONIQ_KEY}&lat=${{lat}}&lon=${{lng}}&format=json`;
+                    const response = await fetch(url);
+                    const data = await response.json();
+                    const address = data.display_name || '';
+                    
+                    if(addrInput) addrInput.value = address;
+                    
+                    // ⚠️ FIX: Menggunakan boolean huruf kecil murni bawaan JavaScript (true)
+                    if(latInput) latInput.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                    if(lngInput) lngInput.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                    if(addrInput) addrInput.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                    
+                    status.innerText = '✅ GPS & Alamat Berhasil Disinkronisasi! Silakan isi Catatan & Simpan.';
+                    status.style.color = '#059669';
+                }} catch (err) {{
+                    if(latInput) latInput.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                    if(lngInput) lngInput.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                    status.innerText = '✅ GPS Dapat, tapi Alamat Gagal Dimuat. Koordinat Tetap Aman!';
+                    status.style.color = '#D97706';
+                }}
+                
+                btn.disabled = false;
+            }}, function(error) {{
+                status.innerText = '⚠️ Akses GPS ditolak browser HP. Pastikan HTTPS aktif & Izinkan Lokasi.';
+                status.style.color = '#DC2626';
+                btn.disabled = false;
+            }}, {{enableHighAccuracy: true, timeout: 15000}});
+        }} else {{
+            status.innerText = '⚠️ Browser HP Anda tidak mendukung Geolocation.';
+            btn.disabled = false;
+        }}
+    }}
+    </script>
+    
+    <div style="text-align:center; padding: 5px;">
+        <button id="location_btn" onclick="findMeAndAddress()">
+            📍 AMBIL GPS & AUTO-ALAMAT (KLIK DI SINI)
+        </button>
+        <p id="status" style="margin-top:10px; color:#64748B; font-size:0.9rem; font-weight:600;"></p>
+    </div>
+    """
+    components.html(location_html, height=140, scrolling=False)
     </style>
     
     <script>
