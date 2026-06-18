@@ -233,8 +233,15 @@ def photo_page():
             notes = st.text_area("📝 Catatan Progres & Isu Kritis", placeholder="Tulis deskripsi progres nyata...")
             
             if st.button("💾 SIMPAN METADATA & UPLOAD FOTO KE G-DRIVE", type="primary", use_container_width=True, key="btn_submit_tab1"):
-                if not lat or not lng or str(lat).strip() == "" or str(lng).strip() == "":
-                    st.error("❌ GAGAL SIMPAN: Sistem mendeteksi koordinat masih kosong! Silakan klik ulang tombol di atas.")
+                
+                # ─── 🛡️ PENGAMAN ULANG SINKRONISASI (FORCE GRAB ST.SESSION_STATE) ───
+                # Terkadang variabel lokal 'lat' belum update, tapi di st.session_state sudah masuk.
+                final_lat = st.session_state.get('lat_input', lat)
+                final_lng = st.session_state.get('lng_input', lng)
+                final_address = st.session_state.get('addr_input', address)
+
+                if not final_lat or not final_lng or str(final_lat).strip() == "" or str(final_lng).strip() == "":
+                    st.error("❌ GAGAL SIMPAN: Sistem Python mendeteksi sinkronisasi koordinat tertunda. Silakan tunggu 1-2 detik setelah klik tombol GPS sebelum menekan tombol simpan, atau ketik spasi sedikit di kolom Latitude agar sistem terpaksa membaca.")
                     st.stop()
                 
                 with st.spinner("📤 Sedang memproses file ke Google Drive & Supabase..."):
@@ -251,9 +258,9 @@ def photo_page():
                         'milestone_name': ms_name,
                         'photo_url': drive_url if drive_url else '',
                         'drive_file_id': drive_id if drive_id else photo_id,
-                        'latitude': str(lat),
-                        'longitude': str(lng),
-                        'address': address if address else '',
+                        'latitude': str(final_lat),   # Menggunakan data yang sudah aman
+                        'longitude': str(final_lng), # Menggunakan data yang sudah aman
+                        'address': final_address if final_address else '',
                         'timestamp_taken': timestamp_now,
                         'uploaded_by': uploaded_by,
                         'notes': notes
