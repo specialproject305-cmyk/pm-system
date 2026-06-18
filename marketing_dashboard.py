@@ -128,36 +128,47 @@ def marketing_dashboard_page():
     # Master data untuk KPI Unik global (tidak terpengaruh filter)
     absolute_total_spk = df['spk_number'].nunique() if 'spk_number' in df.columns else 0
     absolute_total_tenant = df['tenant_index'].nunique() if 'tenant_index' in df.columns else 0
+
+    # ═══════════════════════════════════════
+    # HEADER BANNER
+    # ═══════════════════════════════════════
+    st.markdown(f"""
+    <div class="marketing-header">
+        <h1>📢 Marketing Dashboard Intel</h1>
+        <p>Real-time monitoring analitik site, akuisisi tenant, dan pipeline status SPK • {datetime.now().strftime('%d %B %Y')}</p>
+    </div>
+    """, unsafe_allow_html=True)
         
     # ═══════════════════════════════════════
-    # GLOBAL SIDEBAR FILTERS (UPGRADED)
+    # PANEL KONTROL EXPANDER (PINDAHAN DARI SIDEBAR)
     # ═══════════════════════════════════════
-    with st.sidebar:
-        st.markdown("<h3 style='margin-bottom:0;'>🎯 Filter Kontrol</h3>", unsafe_allow_html=True)
-        st.caption("Filter ini mengontrol seluruh matriks & grafik")
-        st.markdown("---")
+    with st.expander("🛠️ Panel Kontrol & Filter Data Dashboard", expanded=False):
+        col_f1, col_f2 = st.columns(2)
         
-        # 1. Filter Kontrol Baru: Year
-        years_list = sorted(df['spk_year'].unique().tolist())
-        if 'No Year' in years_list:
-            years_list.remove('No Year')
-            years_list.append('No Year')
-        sel_year = st.selectbox("📅 Pilih Tahun SPK:", ['ALL'] + years_list)
-        
-        # 2. Filter Kontrol: Tenant
-        sel_tenant = st.selectbox(
-            "🏢 Pilih Tenant:", 
-            ['ALL'] + sorted(df['tenant_index'].dropna().unique().tolist()) if 'tenant_index' in df.columns else ['ALL']
-        )
-        
-        # 3. Filter Kontrol: SPK Status
-        sel_status = st.selectbox(
-            "📋 Pilih SPK Status:", 
-            ['ALL'] + sorted(df['spk_status'].dropna().unique().tolist()) if 'spk_status' in df.columns else ['ALL']
-        )
-        
-        # 4. Filter Kontrol Baru: SPK Number (Free Text Search)
-        sel_spk_num = st.text_input("🔍 Cari Nomor SPK:", value="", placeholder="Ketik nomor SPK...")
+        with col_f1:
+            # 1. Filter Kontrol: Year
+            years_list = sorted(df['spk_year'].unique().tolist())
+            if 'No Year' in years_list:
+                years_list.remove('No Year')
+                years_list.append('No Year')
+            sel_year = st.selectbox("📅 Pilih Tahun SPK:", ['ALL'] + years_list)
+            
+            # 2. Filter Kontrol: Tenant
+            sel_tenant = st.selectbox(
+                "🏢 Pilih Tenant:", 
+                ['ALL'] + sorted(df['tenant_index'].dropna().unique().tolist()) if 'tenant_index' in df.columns else ['ALL']
+            )
+            
+        with col_f2:
+            # 3. Filter Kontrol: SPK Status
+            sel_status = st.selectbox(
+                "📋 Pilih SPK Status:", 
+                ['ALL'] + sorted(df['spk_status'].dropna().unique().tolist()) if 'spk_status' in df.columns else ['ALL']
+            )
+            
+            # 4. Filter Kontrol: SPK Number (Enum/Selectbox Referensi Kolom Data Marketing)
+            spk_options = sorted(df['spk_number'].dropna().unique().tolist()) if 'spk_number' in df.columns else []
+            sel_spk_num = st.selectbox("🔍 Pilih Nomor SPK:", ['ALL'] + spk_options)
         
         st.markdown("---")
         
@@ -169,11 +180,11 @@ def marketing_dashboard_page():
             filtered = filtered[filtered['tenant_index'] == sel_tenant]
         if sel_status != 'ALL': 
             filtered = filtered[filtered['spk_status'] == sel_status]
-        if sel_spk_num.strip() != "": 
-            filtered = filtered[filtered['spk_number'].astype(str).str.contains(sel_spk_num, case=False, na=False)]
-        
+        if sel_spk_num != 'ALL': 
+            filtered = filtered[filtered['spk_number'] == sel_spk_num]
+            
         st.download_button(
-            label="📥 Export Report (CSV)", 
+            label="📥 Export Report Terfilter (CSV)", 
             data=filtered.to_csv(index=False), 
             file_name=f"marketing_report_{datetime.now().strftime('%Y%m%d')}.csv", 
             mime="text/csv",
@@ -181,28 +192,18 @@ def marketing_dashboard_page():
         )
 
     # ═══════════════════════════════════════
-    # HEADER BANNER
-    # ═══════════════════════════════════════
-    st.markdown(f"""
-    <div class="marketing-header">
-        <h1>📢 Marketing Dashboard Intel</h1>
-        <p>Real-time monitoring analitik site, akuisisi tenant, dan pipeline status SPK • {datetime.now().strftime('%d %B %Y')}</p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # ═══════════════════════════════════════
-    # METRICS ROW (6 METRICS - RESPONSIVE CONTAINER)
+    # METRICS ROW (TOTAL SPK SUDAH PALING KIRI)
     # ═══════════════════════════════════════
     total_sites_filtered = len(filtered)
     rfs_count = len(filtered[filtered['milestone'] == 'RFS']) if 'milestone' in filtered.columns else 0
     erected_count = len(filtered[filtered['milestone'] == 'Erected']) if 'milestone' in filtered.columns else 0
     on_progress = len(filtered[filtered['milestone'].isin(['On Progress', 'Pending', 'Negosiasi Lahan', 'RFI'])]) if 'milestone' in filtered.columns else 0
     
-    # Render menggunakan kontainer CSS Grid agar muat 6 kolom dengan seimbang dan tidak sempit
+    # Render KPI Total SPK berada di susunan grid pertama (paling kiri)
     st.markdown(f"""
     <div class="kpi-container">
-        <div class="kpi-box kpi-total"><div class="kpi-val">{total_sites_filtered}</div><div class="kpi-lbl">📢 Total Sites</div></div>
         <div class="kpi-box kpi-spk"><div class="kpi-val">{absolute_total_spk}</div><div class="kpi-lbl">📄 Total SPK</div></div>
+        <div class="kpi-box kpi-total"><div class="kpi-val">{total_sites_filtered}</div><div class="kpi-lbl">📢 Total Sites</div></div>
         <div class="kpi-box kpi-tenant"><div class="kpi-val">{absolute_total_tenant}</div><div class="kpi-lbl">🏢 Total Tenant</div></div>
         <div class="kpi-box kpi-rfs"><div class="kpi-val">{rfs_count}</div><div class="kpi-lbl">✅ RFS Done</div></div>
         <div class="kpi-box kpi-erected"><div class="kpi-val">{erected_count}</div><div class="kpi-lbl">🏗️ Erected</div></div>
@@ -305,7 +306,6 @@ def marketing_dashboard_page():
     
     df_display = filtered[valid_cols].copy()
     
-    # Sinkronisasi tipe data aman sebelum dikirim ke komponen visual
     if 'spk_date' in df_display.columns:
         df_display['spk_date'] = pd.to_datetime(df_display['spk_date'], errors='coerce')
     if 'tower_height' in df_display.columns:
