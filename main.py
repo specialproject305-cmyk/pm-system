@@ -260,9 +260,8 @@ with st.sidebar:
         "viewer": [
             "📊 Dashboard",
             "📦 Inventory Dashboard",
-            "🤖 AI Insights",
-            "💬 Chat & Notif",
-            "📽️ Presentation",
+            "📢 Marketing Dashboard",
+            "📁 Site Tracker",
             "📊 Export Report",
             "📖 User Manual"
         ]
