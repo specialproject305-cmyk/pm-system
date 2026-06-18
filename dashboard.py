@@ -465,47 +465,50 @@ def dashboard_page():
             st.info("👷 Modul penugasan workforce akan aktif secara live ketika kolom 'assigned_to' di tabel milestones terisi.")
 
     # ═══════════════════════════════════════════════════════════════
-    # 📊 TABEL MONITORING PROGRESS SITE TOWER (DITAMBAHKAN DI PALING BAWAH)
+    # 📊 TABEL MONITORING PROGRESS SITE TOWER (AUTO-DETECT ENGINE)
     # ═══════════════════════════════════════════════════════════════
     st.markdown("---")
     st.markdown("### 📋 Detail Progress & Jadwal Konstruksi Site")
     st.caption("Tabel ini otomatis terintegrasi dengan filter Regional, Status, dan Pencarian di atas.")
     
-    # Menggunakan dataframe yang sudah terfilter oleh logic dashboard Anda sebelumnya
-    # Pastikan nama dataframe hasil filter Anda disesuaikan (biasanya 'filtered_df' atau 'df')
-    if 'filtered_df' in locals():
-        display_table_df = filtered_df.copy()
-    elif 'df_filtered' in locals():
-        display_table_df = df_filtered.copy()
-    else:
-        # Fallback jika nama variabel filter Anda berbeda, silakan sesuaikan nama df-nya
-        try:
-            display_table_df = filtered_df
-        except:
-            display_table_df = pd.DataFrame()
+    # Scan otomatis dataframe aktif di memory dashboard Anda
+    active_df = None
+    for var_name in list(locals().keys()):
+        # Cari dataframe yang punya kolom krusial proyek Anda
+        if isinstance(locals()[var_name], pd.DataFrame):
+            potential_df = locals()[var_name]
+            if 'site_id' in potential_df.columns or 'site_name' in potential_df.columns:
+                # Jika namanya mengandung kata 'filter' atau 'search', ini target utama kita
+                if 'filter' in var_name.lower() or 'search' in var_name.lower() or 'select' in var_name.lower():
+                    active_df = potential_df
+                    break
+                active_df = potential_df # Fallback ke dataframe master jika tidak ada nama 'filter'
     
-    if not display_table_df.empty:
-        # Memilih dan mengurutkan kolom sesuai kebutuhan monitoring PMO Anda
-        # Menggunakan fungsi .get() agar aman jika ada perbedaan kecil penulisan huruf besar/kecil di DB
-        table_view = pd.DataFrame({
-            "Site ID": display_table_df.get("site_id", display_table_df.get("Site ID", "-")),
-            "Site Name": display_table_df.get("site_name", display_table_df.get("Site Name", "-")),
-            "Tenant": display_table_df.get("tenant", display_table_df.get("Tenant", "-")),
-            "Plan Start": display_table_df.get("plan_start", display_table_df.get("Plan Start", "-")),
-            "Plan Finish": display_table_df.get("plan_finish", display_table_df.get("Plan Finish", "-")),
-            "Actual Start": display_table_df.get("actual_start", display_table_df.get("Actual Start", "-")),
-            "Actual Finish": display_table_df.get("actual_finish", display_table_df.get("Actual Finish", "-"))
-        })
+    if active_df is not None and not active_df.empty:
+        # Build data view secara fleksibel (Aman dari Case Sensitive Huruf Besar/Kecil)
+        table_view = pd.DataFrame()
         
-        # Render tabel interaktif Streamlit (Bisa di-sort, di-search, dan didownload ke Excel/CSV)
+        # Fungsi pencari kolom otomatis agar tidak error jika nama kolom di DB Anda pakai huruf besar
+        def get_col(df, col_names):
+            for name in col_names:
+                if name in df.columns: return df[name]
+            return "-"
+    
+        table_view["Site ID"] = get_col(active_df, ["site_id", "Site ID", "id", "ID"])
+        table_view["Site Name"] = get_col(active_df, ["site_name", "Site Name"])
+        table_view["Tenant"] = get_col(active_df, ["tenant", "Tenant"])
+        table_view["Plan Start"] = get_col(active_df, ["plan_start", "Plan Start"])
+        table_view["Plan Finish"] = get_col(active_df, ["plan_finish", "Plan Finish"])
+        table_view["Actual Start"] = get_col(active_df, ["actual_start", "Actual Start"])
+        table_view["Actual Finish"] = get_col(active_df, ["actual_finish", "Actual Finish"])
+        
+        # Render tabel interaktif murni Streamlit
         st.dataframe(
             table_view, 
             use_container_width=True, 
             hide_index=True
         )
-        
-        # Informasi total baris terfilter
-        st.caption(f"Menampilkan {len(table_view)} site berdasarkan hasil filter aktif.")
+        st.caption(f"📊 Menyajikan {len(table_view)} site tower sesuai filter aktif di dashboard.")
     else:
         st.info("📭 Tidak ada data site yang cocok dengan kombinasi filter saat ini.")
 
