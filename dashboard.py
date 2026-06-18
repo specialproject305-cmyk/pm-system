@@ -464,6 +464,51 @@ def dashboard_page():
         else:
             st.info("👷 Modul penugasan workforce akan aktif secara live ketika kolom 'assigned_to' di tabel milestones terisi.")
 
+    # ═══════════════════════════════════════════════════════════════
+    # 📊 TABEL MONITORING PROGRESS SITE TOWER (DITAMBAHKAN DI PALING BAWAH)
+    # ═══════════════════════════════════════════════════════════════
+    st.markdown("---")
+    st.markdown("### 📋 Detail Progress & Jadwal Konstruksi Site")
+    st.caption("Tabel ini otomatis terintegrasi dengan filter Regional, Status, dan Pencarian di atas.")
+    
+    # Menggunakan dataframe yang sudah terfilter oleh logic dashboard Anda sebelumnya
+    # Pastikan nama dataframe hasil filter Anda disesuaikan (biasanya 'filtered_df' atau 'df')
+    if 'filtered_df' in locals():
+        display_table_df = filtered_df.copy()
+    elif 'df_filtered' in locals():
+        display_table_df = df_filtered.copy()
+    else:
+        # Fallback jika nama variabel filter Anda berbeda, silakan sesuaikan nama df-nya
+        try:
+            display_table_df = filtered_df
+        except:
+            display_table_df = pd.DataFrame()
+    
+    if not display_table_df.empty:
+        # Memilih dan mengurutkan kolom sesuai kebutuhan monitoring PMO Anda
+        # Menggunakan fungsi .get() agar aman jika ada perbedaan kecil penulisan huruf besar/kecil di DB
+        table_view = pd.DataFrame({
+            "Site ID": display_table_df.get("site_id", display_table_df.get("Site ID", "-")),
+            "Site Name": display_table_df.get("site_name", display_table_df.get("Site Name", "-")),
+            "Tenant": display_table_df.get("tenant", display_table_df.get("Tenant", "-")),
+            "Plan Start": display_table_df.get("plan_start", display_table_df.get("Plan Start", "-")),
+            "Plan Finish": display_table_df.get("plan_finish", display_table_df.get("Plan Finish", "-")),
+            "Actual Start": display_table_df.get("actual_start", display_table_df.get("Actual Start", "-")),
+            "Actual Finish": display_table_df.get("actual_finish", display_table_df.get("Actual Finish", "-"))
+        })
+        
+        # Render tabel interaktif Streamlit (Bisa di-sort, di-search, dan didownload ke Excel/CSV)
+        st.dataframe(
+            table_view, 
+            use_container_width=True, 
+            hide_index=True
+        )
+        
+        # Informasi total baris terfilter
+        st.caption(f"Menampilkan {len(table_view)} site berdasarkan hasil filter aktif.")
+    else:
+        st.info("📭 Tidak ada data site yang cocok dengan kombinasi filter saat ini.")
+
     # ─────────────────────────────────────────────────────────────
     # FOOTER
     # ─────────────────────────────────────────────────────────────
