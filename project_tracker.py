@@ -69,8 +69,7 @@ def project_tracker_page():
         master_df = pd.DataFrame()
         master_options = ["ALL"]
 
-        tab1, tab2, tab3, tab4, tab5 = st.tabs([
-        "📋 Daftar Site", "🏢 Master Project", "➕ Tambah Site", "📥 Import CSV", "🔗 SPK Dashboard"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📋 Daftar Site", "🏢 Master Project", "➕ Tambah Site", "📥 Import CSV", "🔗 SPK Dashboard"])
 
     # ═══════════════ TAB 1: DAFTAR SITE ═══════════════
     with tab1:
