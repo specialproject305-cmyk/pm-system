@@ -16,9 +16,8 @@ GOOGLE_DRIVE_FOLDER_ID = "1soOsPCQ3yYF_9P-Yc8EIbdQRFvb61KQd"
 # PRE-PROCESS UTILITIES
 # ═══════════════════════════════════════
 def get_gps_location():
-    """Dapatkan lokasi GPS & Alamat langsung dari Browser HP (Fix Syntax F-String)"""
+    """Dapatkan lokasi GPS & Alamat murni aman tanpa merusak teks input Streamlit"""
     
-    # Menggunakan double {{ }} agar tidak bertabrakan dengan sistem f-string Python
     location_html = f"""
     <style>
         #location_btn {{
@@ -59,35 +58,26 @@ def get_gps_location():
                 
                 status.innerText = '⌛ 2. Menghubungkan ke Satelit & LocationIQ...';
                 
-                const latInput = parent.document.querySelector('input[aria-label="Latitude"]');
-                const lngInput = parent.document.querySelector('input[aria-label="Longitude"]');
-                const addrInput = parent.document.querySelector('input[aria-label="📫 Address Detail (Auto-Address)"]');
-                
-                if(latInput) latInput.value = lat;
-                if(lngInput) lngInput.value = lng;
-                
                 try {{
                     const url = `https://us1.locationiq.com/v1/reverse.php?key={LOCATIONIQ_KEY}&lat=${{lat}}&lon=${{lng}}&format=json`;
                     const response = await fetch(url);
                     const data = await response.json();
                     const address = data.display_name || '';
                     
-                    if(addrInput) addrInput.value = address;
+                    // 🚀 KIRIM DATA LANGSUNG KE URL QUERY STREAMLIT (100% AMAN & SINKRON)
+                    const params = new URLSearchParams(window.parent.location.search);
+                    params.set('lat', lat);
+                    params.set('lng', lng);
+                    params.set('addr', address);
                     
-                    if(latInput) latInput.dispatchEvent(new Event('input', {{ bubbles: true }}));
-                    if(lngInput) lngInput.dispatchEvent(new Event('input', {{ bubbles: true }}));
-                    if(addrInput) addrInput.dispatchEvent(new Event('input', {{ bubbles: true }}));
-                    
-                    status.innerText = '✅ GPS & Alamat Berhasil Disinkronisasi! Silakan isi Catatan & Simpan.';
-                    status.style.color = '#059669';
+                    window.parent.location.search = params.toString();
                 }} catch (err) {{
-                    if(latInput) latInput.dispatchEvent(new Event('input', {{ bubbles: true }}));
-                    if(lngInput) lngInput.dispatchEvent(new Event('input', {{ bubbles: true }}));
-                    status.innerText = '✅ GPS Dapat, tapi Alamat Gagal Dimuat. Koordinat Tetap Aman!';
-                    status.style.color = '#D97706';
+                    const params = new URLSearchParams(window.parent.location.search);
+                    params.set('lat', lat);
+                    params.set('lng', lng);
+                    params.set('addr', 'Gagal memuat alamat otomatis');
+                    window.parent.location.search = params.toString();
                 }}
-                
-                btn.disabled = false;
             }}, function(error) {{
                 status.innerText = '⚠️ Akses GPS ditolak browser HP. Pastikan HTTPS aktif & Izinkan Lokasi.';
                 status.style.color = '#DC2626';
@@ -98,6 +88,16 @@ def get_gps_location():
             btn.disabled = false;
         }}
     }}
+    </script>
+    
+    <div style="text-align:center; padding: 5px;">
+        <button id="location_btn" onclick="findMeAndAddress()">
+            📍 AMBIL GPS & AUTO-ALAMAT (KLIK DI SINI)
+        </button>
+        <p id="status" style="margin-top:10px; color:#64748B; font-size:0.9rem; font-weight:600;"></p>
+    </div>
+    """
+    components.html(location_html, height=140, scrolling=False)
     </script>
     
     <div style="text-align:center; padding: 5px;">
@@ -209,13 +209,21 @@ def photo_page():
         st.markdown("### 📍 Lokasi Pengambilan Foto")
         get_gps_location() 
 
+        # ─── 🚀 PROSES DATA DARI URL PARAMETERS ───
+        query_params = st.query_params
+        gps_lat = query_params.get("lat", "")
+        gps_lng = query_params.get("lng", "")
+        gps_addr = query_params.get("addr", "")
+
+        # Tampilkan data koordinat dalam mode Read-Only / Teks Informatif (Bebas Bug Klik)
         col_lat, col_lng = st.columns(2)
         with col_lat:
-            lat = st.text_input("Latitude", key="lat_input", placeholder="Klik tombol di atas...")
+            lat = st.text_input("Latitude", value=gps_lat, key="lat_input", placeholder="Klik tombol di atas...", disabled=True)
         with col_lng:
-            lng = st.text_input("Longitude", key="lng_input", placeholder="Klik tombol di atas...")
+            lng = st.text_input("Longitude", value=gps_lng, key="lng_input", placeholder="Klik tombol di atas...", disabled=True)
         
-        address = st.text_input("📫 Address Detail (Auto-Address)", key="addr_input", placeholder="Klik tombol di atas...")
+        address = st.text_input("📫 Address Detail (Auto-Address)", value=gps_addr, key="addr_input", placeholder="Klik tombol di atas...")
+        
         uploaded_by = st.text_input("👷 Uploaded By PIC Lapangan", value=st.session_state.get('user', {}).get('full_name', 'PIC Vendor'))
         
         tz_wib = timezone(timedelta(hours=7))
@@ -233,15 +241,9 @@ def photo_page():
             notes = st.text_area("📝 Catatan Progres & Isu Kritis", placeholder="Tulis deskripsi progres nyata...")
             
             if st.button("💾 SIMPAN METADATA & UPLOAD FOTO KE G-DRIVE", type="primary", use_container_width=True, key="btn_submit_tab1"):
-                
-                # ─── 🛡️ PENGAMAN ULANG SINKRONISASI (FORCE GRAB ST.SESSION_STATE) ───
-                # Terkadang variabel lokal 'lat' belum update, tapi di st.session_state sudah masuk.
-                final_lat = st.session_state.get('lat_input', lat)
-                final_lng = st.session_state.get('lng_input', lng)
-                final_address = st.session_state.get('addr_input', address)
-
-                if not final_lat or not final_lng or str(final_lat).strip() == "" or str(final_lng).strip() == "":
-                    st.error("❌ GAGAL SIMPAN: Sistem Python mendeteksi sinkronisasi koordinat tertunda. Silakan tunggu 1-2 detik setelah klik tombol GPS sebelum menekan tombol simpan, atau ketik spasi sedikit di kolom Latitude agar sistem terpaksa membaca.")
+                # Validasi menggunakan variabel langsung dari URL State
+                if not gps_lat or not gps_lng or str(gps_lat).strip() == "" or str(gps_lng).strip() == "":
+                    st.error("❌ GAGAL SIMPAN: Koordinat belum terdeteksi sistem. Silakan klik tombol 'AMBIL GPS & AUTO-ALAMAT' terlebih dahulu.")
                     st.stop()
                 
                 with st.spinner("📤 Sedang memproses file ke Google Drive & Supabase..."):
@@ -258,9 +260,9 @@ def photo_page():
                         'milestone_name': ms_name,
                         'photo_url': drive_url if drive_url else '',
                         'drive_file_id': drive_id if drive_id else photo_id,
-                        'latitude': str(final_lat),   # Menggunakan data yang sudah aman
-                        'longitude': str(final_lng), # Menggunakan data yang sudah aman
-                        'address': final_address if final_address else '',
+                        'latitude': str(gps_lat),
+                        'longitude': str(gps_lng),
+                        'address': address if address else gps_addr,
                         'timestamp_taken': timestamp_now,
                         'uploaded_by': uploaded_by,
                         'notes': notes
@@ -268,6 +270,10 @@ def photo_page():
                     
                     try:
                         insert_row("project_photos", supabase_payload)
+                        
+                        # BERSIHKAN URL QUERY PARAMETERS SETELAH BERHASIL SIMPAN
+                        st.query_params.clear()
+                        
                         st.success("✅ Foto Evidence & Koordinat Lapangan Berhasil Tersimpan!")
                         st.balloons()
                         st.rerun()
