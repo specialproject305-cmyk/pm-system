@@ -16,11 +16,12 @@ GOOGLE_DRIVE_FOLDER_ID = "1soOsPCQ3yYF_9P-Yc8EIbdQRFvb61KQd"
 # PRE-PROCESS UTILITIES
 # ═══════════════════════════════════════
 def get_gps_location():
-    """Dapatkan lokasi GPS & Alamat murni aman tanpa merusak teks input Streamlit"""
+    """Dapatkan lokasi GPS & Alamat murni aman tanpa f-string Python agar bebas SyntaxError"""
     
-    location_html = f"""
+    # Menghilangkan huruf 'f' di depan string agar kurung kurawal JS tidak merusak Python
+    location_html = """
     <style>
-        #location_btn {{
+        #location_btn {
             background: linear-gradient(135deg, #3B82F6 0%, #1E40AF 100%);
             color: white;
             border: none;
@@ -32,62 +33,62 @@ def get_gps_location():
             width: 100%;
             box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3);
             transition: all 0.2s ease;
-        }}
-        #location_btn:hover {{
+        }
+        #location_btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 12px rgba(59, 130, 246, 0.4);
-        }}
-        #location_btn:disabled {{
+        }
+        #location_btn:disabled {
             background: #94A3B8;
             cursor: not-allowed;
-        }}
+        }
     </style>
     
     <script>
-    async function findMeAndAddress() {{
+    async function findMeAndAddress() {
         const status = document.getElementById('status');
         const btn = document.getElementById('location_btn');
         
         status.innerText = '⌛ 1. Mencari Satelit GPS HP...';
         btn.disabled = true;
 
-        if (navigator.geolocation) {{
-            navigator.geolocation.getCurrentPosition(async function(position) {{
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(async function(position) {
                 const lat = position.coords.latitude;
                 const lng = position.coords.longitude;
                 
                 status.innerText = '⌛ 2. Menghubungkan ke Satelit & LocationIQ...';
                 
-                try {{
-                    const url = `https://us1.locationiq.com/v1/reverse.php?key={LOCATIONIQ_KEY}&lat=${{lat}}&lon=${{lng}}&format=json`;
+                try {
+                    const url = `https://us1.locationiq.com/v1/reverse.php?key=__LOCATIONIQ_KEY_PLACEHOLDER__&lat=${lat}&lon=${lng}&format=json`;
                     const response = await fetch(url);
                     const data = await response.json();
                     const address = data.display_name || '';
                     
-                    // 🚀 KIRIM DATA LANGSUNG KE URL QUERY STREAMLIT (100% AMAN & SINKRON)
+                    // Kirim data langsung ke Query URL Streamlit Parent Window
                     const params = new URLSearchParams(window.parent.location.search);
                     params.set('lat', lat);
                     params.set('lng', lng);
                     params.set('addr', address);
                     
                     window.parent.location.search = params.toString();
-                }} catch (err) {{
+                } catch (err) {
                     const params = new URLSearchParams(window.parent.location.search);
                     params.set('lat', lat);
                     params.set('lng', lng);
                     params.set('addr', 'Gagal memuat alamat otomatis');
                     window.parent.location.search = params.toString();
-                }}
-            }}, function(error) {{
+                }
+            }, function(error) {
                 status.innerText = '⚠️ Akses GPS ditolak browser HP. Pastikan HTTPS aktif & Izinkan Lokasi.';
                 status.style.color = '#DC2626';
                 btn.disabled = false;
-            }}, {{enableHighAccuracy: true, timeout: 15000}});
-        }} else {{
+            }, {enableHighAccuracy: true, timeout: 15000});
+        } else {
             status.innerText = '⚠️ Browser HP Anda tidak mendukung Geolocation.';
             btn.disabled = false;
-        }}
-    }}
+        }
+    }
     </script>
     
     <div style="text-align:center; padding: 5px;">
@@ -96,29 +97,9 @@ def get_gps_location():
         </button>
         <p id="status" style="margin-top:10px; color:#64748B; font-size:0.9rem; font-weight:600;"></p>
     </div>
-    """
-    components.html(location_html, height=140, scrolling=False)
-    </script>
+    """.replace("__LOCATIONIQ_KEY_PLACEHOLDER__", LOCATIONIQ_KEY) # Injeksi aman di sini
     
-    <div style="text-align:center; padding: 5px;">
-        <button id="location_btn" onclick="findMeAndAddress()">
-            📍 AMBIL GPS & AUTO-ALAMAT (KLIK DI SINI)
-        </button>
-        <p id="status" style="margin-top:10px; color:#64748B; font-size:0.9rem; font-weight:600;"></p>
-    </div>
-    """
     components.html(location_html, height=140, scrolling=False)
-
-def get_address_from_locationiq(lat, lng):
-    """Fallback function jika dibutuhkan di luar client-side"""
-    if not lat or not lng: return ''
-    try:
-        url = f"https://us1.locationiq.com/v1/reverse.php?key={LOCATIONIQ_KEY}&lat={lat}&lon={lng}&format=json"
-        res = requests.get(url, timeout=7)
-        data = res.json()
-        return data.get('display_name', '')
-    except:
-        return ''
 
 def upload_to_google_drive(file_bytes, file_name):
     """Upload file ke Google Drive via Service Account & Streamlit Secrets"""
@@ -170,7 +151,7 @@ def photo_page():
     tab1, tab2, tab3 = st.tabs(["📸 Upload Foto Lapangan", "🖼️ Galeri Foto Evidence", "📊 Statistik"])
     
     # ─────────────────────────────────────────────────────────────
-    # TAB 1: FORM UPLOAD MANAGEMENT
+    # TAB 1: FORM UPLOAD MANAGEMENT (FIX RE-RUN & PARAMETERS STATE)
     # ─────────────────────────────────────────────────────────────
     with tab1:
         st.subheader("📸 Form Pengisian Foto Evidence")
@@ -209,13 +190,12 @@ def photo_page():
         st.markdown("### 📍 Lokasi Pengambilan Foto")
         get_gps_location() 
 
-        # ─── 🚀 PROSES DATA DARI URL PARAMETERS ───
+        # Baca data langsung dari URL parameter state browser
         query_params = st.query_params
         gps_lat = query_params.get("lat", "")
         gps_lng = query_params.get("lng", "")
         gps_addr = query_params.get("addr", "")
 
-        # Tampilkan data koordinat dalam mode Read-Only / Teks Informatif (Bebas Bug Klik)
         col_lat, col_lng = st.columns(2)
         with col_lat:
             lat = st.text_input("Latitude", value=gps_lat, key="lat_input", placeholder="Klik tombol di atas...", disabled=True)
@@ -223,7 +203,6 @@ def photo_page():
             lng = st.text_input("Longitude", value=gps_lng, key="lng_input", placeholder="Klik tombol di atas...", disabled=True)
         
         address = st.text_input("📫 Address Detail (Auto-Address)", value=gps_addr, key="addr_input", placeholder="Klik tombol di atas...")
-        
         uploaded_by = st.text_input("👷 Uploaded By PIC Lapangan", value=st.session_state.get('user', {}).get('full_name', 'PIC Vendor'))
         
         tz_wib = timezone(timedelta(hours=7))
@@ -241,7 +220,6 @@ def photo_page():
             notes = st.text_area("📝 Catatan Progres & Isu Kritis", placeholder="Tulis deskripsi progres nyata...")
             
             if st.button("💾 SIMPAN METADATA & UPLOAD FOTO KE G-DRIVE", type="primary", use_container_width=True, key="btn_submit_tab1"):
-                # Validasi menggunakan variabel langsung dari URL State
                 if not gps_lat or not gps_lng or str(gps_lat).strip() == "" or str(gps_lng).strip() == "":
                     st.error("❌ GAGAL SIMPAN: Koordinat belum terdeteksi sistem. Silakan klik tombol 'AMBIL GPS & AUTO-ALAMAT' terlebih dahulu.")
                     st.stop()
@@ -270,10 +248,7 @@ def photo_page():
                     
                     try:
                         insert_row("project_photos", supabase_payload)
-                        
-                        # BERSIHKAN URL QUERY PARAMETERS SETELAH BERHASIL SIMPAN
-                        st.query_params.clear()
-                        
+                        st.query_params.clear() # Bersihkan URL parameter
                         st.success("✅ Foto Evidence & Koordinat Lapangan Berhasil Tersimpan!")
                         st.balloons()
                         st.rerun()
@@ -281,7 +256,7 @@ def photo_page():
                         st.error(f"❌ Gagal sinkronisasi data ke Supabase: {str(db_err)}")
 
     # ─────────────────────────────────────────────────────────────
-    # TAB 2: GALERI CARD RENDER FIX
+    # TAB 2: GALERI CARD RENDER
     # ─────────────────────────────────────────────────────────────
     with tab2:
         st.subheader("🖼️ Galeri Foto Evidence Lapangan")
@@ -318,7 +293,6 @@ def photo_page():
                         notes_v = str(row.get('notes') or '')
                         photo_url = str(row.get('photo_url') or '')
                         
-                        # Konstruksi String Murni Tanpa F-String bersarang yang membocorkan Sintaks HTML
                         card_html = f"""
                         <div style="background-color: #ffffff; border-radius: 12px; padding: 16px; margin: 10px 0; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-left: 5px solid #3B82F6;">
                             <div style="font-weight: 700; color: #1E293B; font-size: 1rem; display: flex; justify-content: space-between;">
