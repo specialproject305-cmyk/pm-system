@@ -5,21 +5,20 @@ from supabase_db import read_sheet, insert_row, generate_id
 import streamlit.components.v1 as components
 import requests
 import json
-import numpy as np
 
 # ═══════════════════════════════════════
 # KONFIGURASI OPERASIONAL
 # ═══════════════════════════════════════
-LOCATIONIQ_KEY = "pk.01a381b84c8dc483a561e0ddd24b6e6d"  # ✅ API Key Location IQ Anda aktif
-GOOGLE_DRIVE_FOLDER_ID = "1soOsPCQ3yYF_9P-Yc8EIbdQRFvb61KQd"   # ✅ Folder ID GDrive Anda
+LOCATIONIQ_KEY = "pk.01a381b84c8dc483a561e0ddd24b6e6d"  
+GOOGLE_DRIVE_FOLDER_ID = "1soOsPCQ3yYF_9P-Yc8EIbdQRFvb61KQd"   
 
 # ═══════════════════════════════════════
 # PRE-PROCESS UTILITIES
 # ═══════════════════════════════════════
 def get_gps_location():
-    """Dapatkan lokasi GPS & Alamat langsung dari Browser HP (Fix Syntax Error)"""
+    """Dapatkan lokasi GPS & Alamat langsung dari Browser HP (Fix Syntax F-String)"""
     
-    # ─── 🚀 PERBAIKAN UTAMA: Menggunakan double {{ }} untuk escaped f-string agar tidak crash di Python ───
+    # Menggunakan double {{ }} agar tidak bertabrakan dengan sistem f-string Python
     location_html = f"""
     <style>
         #location_btn {{
@@ -60,7 +59,6 @@ def get_gps_location():
                 
                 status.innerText = '⌛ 2. Menghubungkan ke Satelit & LocationIQ...';
                 
-                // Suntik Koordinat ke Elemen HTML Streamlit
                 const latInput = parent.document.querySelector('input[aria-label="Latitude"]');
                 const lngInput = parent.document.querySelector('input[aria-label="Longitude"]');
                 const addrInput = parent.document.querySelector('input[aria-label="📫 Address Detail (Auto-Address)"]');
@@ -76,7 +74,6 @@ def get_gps_location():
                     
                     if(addrInput) addrInput.value = address;
                     
-                    // ⚠️ FIX: Menggunakan boolean huruf kecil murni bawaan JavaScript (true)
                     if(latInput) latInput.dispatchEvent(new Event('input', {{ bubbles: true }}));
                     if(lngInput) lngInput.dispatchEvent(new Event('input', {{ bubbles: true }}));
                     if(addrInput) addrInput.dispatchEvent(new Event('input', {{ bubbles: true }}));
@@ -110,136 +107,17 @@ def get_gps_location():
         <p id="status" style="margin-top:10px; color:#64748B; font-size:0.9rem; font-weight:600;"></p>
     </div>
     """
-    components.html(location_html, height=140, scrolling=False)
-    </style>
-    
-    <script>
-    async function findMeAndAddress() {{
-        const status = document.getElementById('status');
-        const btn = document.getElementById('location_btn');
-        
-        status.innerText = '⌛ 1. Mencari Satelit GPS HP...';
-        btn.disabled = true;
-
-        if (navigator.geolocation) {{
-            navigator.geolocation.getCurrentPosition(async function(position) {{
-                const lat = position.coords.latitude;
-                const lng = position.coords.longitude;
-                
-                status.innerText = '⌛ 2. Menghubungkan ke Satelit & LocationIQ...';
-                
-                // Suntik Koordinat ke Elemen HTML Streamlit
-                const latInput = parent.document.querySelector('input[aria-label="Latitude"]');
-                const lngInput = parent.document.querySelector('input[aria-label="Longitude"]');
-                const addrInput = parent.document.querySelector('input[aria-label="📫 Address Detail (Auto-Address)"]');
-                
-                if(latInput) latInput.value = lat;
-                if(lngInput) lngInput.value = lng;
-                
-                // Panggil Reverse Geocoding langsung di sisi Client (Browser) agar super cepat
-                try {{
-                    const url = `https://us1.locationiq.com/v1/reverse.php?key={LOCATIONIQ_KEY}&lat=${{lat}}&lon=${{lng}}&format=json`;
-                    const response = await fetch(url);
-                    const data = await response.json();
-                    const address = data.display_name || '';
-                    
-                    if(addrInput) addrInput.value = address;
-                    
-                    // Trigger Event Input secara berurutan agar Streamlit Python Terpaksa Membaca Nilainya
-                    if(latInput) latInput.dispatchEvent(new Event('input', {{ bubbles: true }}));
-                    if(lngInput) lngInput.dispatchEvent(new Event('input', {{ bubbles: true }}));
-                    if(addrInput) addrInput.dispatchEvent(new Event('input', {{ bubbles: true }}));
-                    
-                    status.innerText = '✅ GPS & Alamat Berhasil Disinkronisasi! Silakan isi Catatan & Simpan.';
-                    status.style.color = '#059669';
-                }} catch (err) {{
-                    // Jika API LocationIQ gagal, koordinat tetap masuk
-                    if(latInput) latInput.dispatchEvent(new Event('input', {{ bubbles: true }}));
-                    if(lngInput) lngInput.dispatchEvent(new Event('input', {{ bubbles: true }}));
-                    status.innerText = '✅ GPS Dapat, tapi Alamat Gagal Dimuat. Koordinat Tetap Aman!';
-                    status.style.color = '#D97706';
-                }}
-                
-                btn.disabled = false;
-            }}, function(error) {{
-                status.innerText = '⚠️ Akses GPS ditolak browser HP. Pastikan HTTPS aktif & Izinkan Lokasi.';
-                status.style.color = '#DC2626';
-                btn.disabled = false;
-            }}, {{enableHighAccuracy: true, timeout: 15000}});
-        }} else {{
-            status.innerText = '⚠️ Browser HP Anda tidak mendukung Geolocation.';
-            btn.disabled = false;
-        }}
-    }}
-    </script>
-    
-    <div style="text-align:center; padding: 5px;">
-        <button id="location_btn" onclick="findMeAndAddress()">
-            📍 AMBIL GPS & AUTO-ALAMAT (KLIK DI SINI)
-        </button>
-        <p id="status" style="margin-top:10px; color:#64748B; font-size:0.9rem; font-weight:600;"></p>
-    </div>
-    """
-    components.html(location_html, height=140, scrolling=False)
-    </style>
-    
-    <script>
-    function findMe() {
-        const status = document.getElementById('status');
-        const btn = document.getElementById('location_btn');
-        
-        status.innerText = '⌛ Mencari satelit GPS...';
-        btn.disabled = true;
-
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(function(position) {
-                
-                // ─── 🚀 FIX: Sinkronisasi nilai ke input text Streamlit di IFrame Induk ───
-                parent.document.querySelector('input[aria-label="Latitude"]').value = position.coords.latitude;
-                parent.document.querySelector('input[aria-label="Longitude"]').value = position.coords.longitude;
-                
-                // Trigger event input agar Streamlit mendeteksi perubahan nilai saat rerun
-                parent.document.querySelector('input[aria-label="Latitude"]').dispatchEvent(new Event('input', { bubbles: true }));
-                parent.document.querySelector('input[aria-label="Longitude"]').dispatchEvent(new Event('input', { bubbles: true }));
-                
-                status.innerText = '✅ Lokasi terdeteksi & disinkronisasi!';
-                status.style.color = '#059669';
-                btn.disabled = false;
-            }, function(error) {
-                status.innerText = '⚠️ GPS ditolak. Aktifkan GPS HP Anda.';
-                status.style.color = '#DC2626';
-                btn.disabled = false;
-            }, {enableHighAccuracy: true, timeout: 10000}); // Akurasi tinggi aktif
-        } else {
-            status.innerText = '⚠️ Browser tidak support GPS.';
-            btn.disabled = false;
-        }
-    }
-    </script>
-    
-    <div style="text-align:center;padding:10px;">
-        <button id="location_btn" onclick="findMe()">
-            📍 Deteksi Lokasi Saya (GPS HP)
-        </button>
-        <p id="status" style="margin-top:10px;color:#64748B;font-size:0.9rem;font-weight:500;"></p>
-    </div>
-    """
-    
-    # MENAMBAHKAN IZIN GEOLOCATION KE IFRAME
     components.html(location_html, height=140, scrolling=False)
 
 def get_address_from_locationiq(lat, lng):
-    """Dapatkan alamat dari Location IQ (Reverse Geocoding)"""
+    """Fallback function jika dibutuhkan di luar client-side"""
     if not lat or not lng: return ''
     try:
-        # LocationIQ us1 standard API endpoint
         url = f"https://us1.locationiq.com/v1/reverse.php?key={LOCATIONIQ_KEY}&lat={lat}&lon={lng}&format=json"
         res = requests.get(url, timeout=7)
-        res.raise_for_status() # Cek apakah ada error HTTP
         data = res.json()
         return data.get('display_name', '')
-    except Exception as e:
-        st.warning(f"⚠️ Gagal hubungi LocationIQ: {str(e)[:50]}")
+    except:
         return ''
 
 def upload_to_google_drive(file_bytes, file_name):
@@ -250,49 +128,26 @@ def upload_to_google_drive(file_bytes, file_name):
         from googleapiclient.http import MediaIoBaseUpload
         import io
         
-        # ─── 🛠️ FIX: Validasi Format Secrets Tepat ───
-        # Pastikan di secrets tertulis: [drive_service_account]
         creds_dict = st.secrets.get("drive_service_account")
-        
         if not creds_dict:
-            st.error("❌ Kredensial 'drive_service_account' tidak ditemukan di Streamlit Secrets.")
             return None, None
-        
-        # Validasi Izin Folder ID
-        if not GOOGLE_DRIVE_FOLDER_ID or GOOGLE_DRIVE_FOLDER_ID == "Folder ID Drive Anda":
-            st.error("❌ Folder ID Google Drive belum diisi di Konfigurasi kode.")
-            return None, None
-
-        # Build credentials
+            
         credentials = service_account.Credentials.from_service_account_info(
             creds_dict, scopes=['https://www.googleapis.com/auth/drive.file'])
         
-        # Build Drive Service v3
         service = build('drive', 'v3', credentials=credentials)
-        
-        file_metadata = {
-            'name': file_name,
-            'parents': [GOOGLE_DRIVE_FOLDER_ID] # Masukkan file ke folder tujuan
-        }
-        
-        # Upload media stream
+        file_metadata = {'name': file_name, 'parents': [GOOGLE_DRIVE_FOLDER_ID]}
         media = MediaIoBaseUpload(io.BytesIO(file_bytes), mimetype='image/jpeg', resumable=True)
-        
-        # Execute create
         file = service.files().create(body=file_metadata, media_body=media, fields='id, webViewLink').execute()
-        
         return file.get('id'), file.get('webViewLink')
-        
     except Exception as e:
-        # Tampilkan error detail untuk debugging di logs
-        st.warning(f"⚠️ Upload ke Drive gagal: {str(e)}")
+        st.warning(f"⚠️ Upload ke Drive gagal: {str(e)[:50]}")
         return None, None
 
 # ═══════════════════════════════════════
 # MAIN APPLICATION PAGE
 # ═══════════════════════════════════════
 def photo_page():
-    # CSS Injeksi Premium (Menjaga estetika desain)
     st.markdown("""
     <style>
         .stTabs [data-baseweb="tab-list"] { gap: 10px; border-bottom: 2px solid #DBEAFE; }
@@ -304,25 +159,22 @@ def photo_page():
     st.title("📸 Project Photo Evidence")
     st.caption("Foto progress konstruksi tower dengan GPS murni HP & auto-address")
     
-    # 📥 Load Data Supabase (Data Safety Handle)
     try:
         sites_df = read_sheet("projects")
         ms_df = read_sheet("milestones")
-        
-        # Fallback jika data kosong
         if sites_df.empty:
             st.info("📋 Belum ada site terdaftar di database."); return
-            
     except Exception as e:
         st.error(f"❌ Gagal muat data Supabase: {e}"); return
 
-    # 📑 UI TABS
     tab1, tab2, tab3 = st.tabs(["📸 Upload Foto Lapangan", "🖼️ Galeri Foto Evidence", "📊 Statistik"])
     
+    # ─────────────────────────────────────────────────────────────
+    # TAB 1: FORM UPLOAD MANAGEMENT
+    # ─────────────────────────────────────────────────────────────
     with tab1:
         st.subheader("📸 Form Pengisian Foto Evidence")
         
-        # ─── 🏗️ SELEKSI SITE & MILESTONE ───
         col1, col2 = st.columns(2)
         with col1:
             site_list = sites_df['id'].tolist()
@@ -354,76 +206,42 @@ def photo_page():
         
         st.markdown('<div class="upload-divider"></div>', unsafe_allow_html=True)
 
-        # ─── 📍 ENGINE GPS & GEOCODING TERPADU (JAVASCRIPT) ───
         st.markdown("### 📍 Lokasi Pengambilan Foto")
-        
-        # Memanggil fungsi HTML/JS terpadu yang langsung mencari lokasi & alamat di sisi browser
         get_gps_location() 
 
-        # Field Koordinat (Menerima suntikan data aman dari dispatch event JS)
         col_lat, col_lng = st.columns(2)
         with col_lat:
-            lat = st.text_input(
-                "Latitude", 
-                key="lat_input", 
-                placeholder="Klik tombol di atas...",
-                help="Akan terisi otomatis secara sinkron setelah menekan tombol GPS."
-            )
+            lat = st.text_input("Latitude", key="lat_input", placeholder="Klik tombol di atas...")
         with col_lng:
-            lng = st.text_input(
-                "Longitude", 
-                key="lng_input", 
-                placeholder="Klik tombol di atas...",
-                help="Akan terisi otomatis secara sinkron setelah menekan tombol GPS."
-            )
+            lng = st.text_input("Longitude", key="lng_input", placeholder="Klik tombol di atas...")
         
-        # Field Alamat Detail (Satu alur sinkronisasi dengan event trigger JS)
-        address = st.text_input(
-            "📫 Address Detail (Auto-Address)", 
-            key="addr_input", 
-            placeholder="Klik tombol di atas...",
-            help="Alamat otomatis dari satelit LocationIQ. Anda juga dapat mengedit teks ini manual jika diperlukan."
-        )
+        address = st.text_input("📫 Address Detail (Auto-Address)", key="addr_input", placeholder="Klik tombol di atas...")
+        uploaded_by = st.text_input("👷 Uploaded By PIC Lapangan", value=st.session_state.get('user', {}).get('full_name', 'PIC Vendor'))
         
-        # ─── 👷 INFORMASI PIC & TIMESTAMPS ───
-        uploaded_by = st.text_input(
-            "👷 Uploaded By PIC Lapangan", 
-            value=st.session_state.get('user', {}).get('full_name', 'PIC Vendor')
-        )
-        
-        # Sinkronisasi Waktu Indonesia Barat (WIB)
         tz_wib = timezone(timedelta(hours=7))
         timestamp_now = datetime.now(tz_wib).strftime('%Y-%m-%d %H:%M:%S')
         st.info(f"🕐 Timestamp Laporan: **{timestamp_now} WIB**")
         
         st.markdown('<div class="upload-divider"></div>', unsafe_allow_html=True)
 
-        # ─── 📸 CAMERA INPUT & MEDIA UPLOADER ───
         st.markdown("### 📸 Ambil Foto Evidence Lapangan")
         upload_method = st.radio("Metode Pengambilan:", ["📷 Kamera HP (Live)", "🖼️ Galeri File"], horizontal=True, key="method_upload_tab1")
-        
         photo_file = st.camera_input("Ambil Foto Progres") if upload_method == "📷 Kamera HP (Live)" else st.file_uploader("Pilih File Foto", type=['jpg','jpeg','png'])
         
         if photo_file:
             st.image(photo_file, caption="Preview Foto Evidence", width=350)
-            notes = st.text_area("📝 Catatan Progres & Isu Kritis", placeholder="Tulis deskripsi progres nyata atau kendala material di lapangan...")
+            notes = st.text_area("📝 Catatan Progres & Isu Kritis", placeholder="Tulis deskripsi progres nyata...")
             
-            # ─── 💾 PROSES SIMPAN SINKRON TOTAL ───
             if st.button("💾 SIMPAN METADATA & UPLOAD FOTO KE G-DRIVE", type="primary", use_container_width=True, key="btn_submit_tab1"):
-                
-                # 🛠️ VALIDASI CRITICAL CRASH PREVENT: Pastikan data text input tidak kosong di sisi Python
-                if not lat or not lng or lat.strip() == "" or lng.strip() == "":
-                    st.error("❌ GAGAL SIMPAN: Sistem mendeteksi koordinat masih kosong! Silakan klik ulang tombol 'AMBIL GPS & AUTO-ALAMAT' di atas sampai angka muncul stabil di kotak input.")
+                if not lat or not lng or str(lat).strip() == "" or str(lng).strip() == "":
+                    st.error("❌ GAGAL SIMPAN: Sistem mendeteksi koordinat masih kosong! Silakan klik ulang tombol di atas.")
                     st.stop()
                 
-                with st.spinner("📤 Sedang memproses file ke Google Drive & Sinkronisasi database Supabase..."):
+                with st.spinner("📤 Sedang memproses file ke Google Drive & Supabase..."):
                     file_bytes = photo_file.read()
-                    
-                    # 🏭 Langkah 1: Push Binary File ke Google Drive Target Folder
                     filename_formatted = f"photo_{timestamp_now.replace(':', '-')}_{site_name}_{uploaded_by}.jpg"
                     drive_id, drive_url = upload_to_google_drive(file_bytes, filename_formatted)
                     
-                    # 🏭 Langkah 2: Build Payload JSON untuk Skema Database `project_photos`
                     photo_id = generate_id()
                     supabase_payload = {
                         'id': photo_id,
@@ -431,7 +249,7 @@ def photo_page():
                         'site_name': site_name,
                         'milestone_id': sel_ms if sel_ms else '',
                         'milestone_name': ms_name,
-                        'photo_url': drive_url if drive_url else '', # Menyimpan URL WebView Google Drive asli
+                        'photo_url': drive_url if drive_url else '',
                         'drive_file_id': drive_id if drive_id else photo_id,
                         'latitude': str(lat),
                         'longitude': str(lng),
@@ -441,43 +259,25 @@ def photo_page():
                         'notes': notes
                     }
                     
-                    # 🏭 Langkah 3: Eksekusi Injeksi Row ke Supabase DB
                     try:
                         insert_row("project_photos", supabase_payload)
-                        
-                        # ─── 📦 INTERACTION RESPONSES ───
-                        if drive_url:
-                            st.success("✅ Foto Evidence & Koordinat Lapangan Berhasil Tersimpan!")
-                            st.toast("📸 Berhasil disinkronisasi ke Cloud!", icon="📸")
-                            st.balloons()
-                            
-                            # Bersihkan sisa state cache alamat lama sebelum auto-reload
-                            if 'auto_address' in st.session_state: 
-                                del st.session_state['auto_address']
-                                
-                            st.rerun()
-                        else:
-                            st.warning("⚠️ Metadata tersimpan di database, tetapi file fisik gagal diupload ke Google Drive. Periksa kembali struktur Service Account Anda.")
-                            
+                        st.success("✅ Foto Evidence & Koordinat Lapangan Berhasil Tersimpan!")
+                        st.balloons()
+                        st.rerun()
                     except Exception as db_err:
                         st.error(f"❌ Gagal sinkronisasi data ke Supabase: {str(db_err)}")
-    
+
     # ─────────────────────────────────────────────────────────────
-    # TAB 2: GALERI FOTO EVIDENCE (FIX CODE LEAK & TEXT DISPLAY)
+    # TAB 2: GALERI CARD RENDER FIX
     # ─────────────────────────────────────────────────────────────
     with tab2:
         st.subheader("🖼️ Galeri Foto Evidence Lapangan")
-        
         try:
             photos_df = read_sheet("project_photos")
-        except Exception as e:
-            st.error(f"❌ Gagal memuat data galeri dari Supabase: {e}")
+        except:
             photos_df = pd.DataFrame()
         
         if not photos_df.empty:
-            st.metric("Total Foto Evidence", len(photos_df))
-            
-            # Filter Berdasarkan Site
             opts_site_filter = ['Tampilkan Semua Site'] + sorted(sites_df['id'].tolist())
             site_filter = st.selectbox(
                 "Filter Galeri Berdasarkan Site:", 
@@ -491,69 +291,65 @@ def photo_page():
                 filtered = filtered[filtered['project_id'] == site_filter]
             
             if not filtered.empty:
-                # Urutkan berdasarkan tanggal terbaru (Limit 20 foto)
                 filtered = filtered.sort_values(by='timestamp_taken', ascending=False).head(20)
-                
-                # Render Grid Kolom (Kiri & Kanan)
                 cols = st.columns(2)
                 for i, (_, row) in enumerate(filtered.iterrows()):
                     with cols[i % 2]:
-                        # Bersihkan & Ambil Data Lapangan
-                        ms_n = str(row.get('milestone_name', 'General Photo') or 'General Photo')
-                        s_n = str(row.get('site_name', '-'))
-                        up_b = str(row.get('uploaded_by', 'PIC'))
-                        ts_t = str(row.get('timestamp_taken', '-'))
-                        lat_v = str(row.get('latitude', '-'))
-                        lng_v = str(row.get('longitude', '-'))
-                        addr_v = str(row.get('address', '-'))
-                        notes_v = str(row.get('notes', ''))
-                        photo_url = str(row.get('photo_url', ''))
+                        ms_n = str(row.get('milestone_name') or 'General Photo')
+                        s_n = str(row.get('site_name') or '-')
+                        up_b = str(row.get('uploaded_by') or 'PIC')
+                        ts_t = str(row.get('timestamp_taken') or '-')
+                        lat_v = str(row.get('latitude') or '-')
+                        lng_v = str(row.get('longitude') or '-')
+                        addr_v = str(row.get('address') or '-')
+                        notes_v = str(row.get('notes') or '')
+                        photo_url = str(row.get('photo_url') or '')
                         
-                        # ─── 📦 STRUKTUR HTML AMAN DAN RAPI (FIXED) ───
+                        # Konstruksi String Murni Tanpa F-String bersarang yang membocorkan Sintaks HTML
                         card_html = f"""
                         <div style="background-color: #ffffff; border-radius: 12px; padding: 16px; margin: 10px 0; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-left: 5px solid #3B82F6;">
                             <div style="font-weight: 700; color: #1E293B; font-size: 1rem; display: flex; justify-content: space-between;">
                                 <span>🏗️ {ms_n[:40]}</span>
                                 <span style="font-size: 0.75rem; color: #94A3B8; font-weight: 400;">WIB</span>
                             </div>
-                            <div style="font-size: 0.85rem; color: #4B5563; margin: 4px 0 10px 0; font-weight: 600;">
-                                📍 {s_n}
-                            </div>
-                            
+                            <div style="font-size: 0.85rem; color: #4B5563; margin: 4px 0 10px 0; font-weight: 600;">📍 {s_n}</div>
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 0.75rem; color: #6B7280; background-color: #F9FAFB; padding: 8px; border-radius: 6px;">
-                                <div>🕐 {ts_t[:16]}</div>
+                                <div>Submited: {ts_t[:16]}</div>
                                 <div>👷 PIC: {up_b}</div>
                                 <div style="grid-column: span 2; color: #374151; font-family: monospace;">🌐 {lat_v}, {lng_v}</div>
                             </div>
-                            
                             <div style="font-size: 0.75rem; color: #6B7280; margin-top: 8px; padding-top: 6px; border-top: 1px solid #E5E7EB;">
                                 <strong>📫 Alamat:</strong> {addr_v[:120]}...
                             </div>
                         """
-                        
-                        # Injeksi Link Drive Jika Ada Data Terupload
                         if photo_url and photo_url.strip() != "":
                             card_html += f"""
                             <div style="margin-top: 10px; padding-top: 6px; border-top: 1px solid #E5E7EB;">
-                                <a href="{photo_url}" target="_blank" style="color: #2563EB; text-decoration: none; font-weight: 700; font-size: 0.8rem;">
-                                    📎 Buka Foto Asli di Google Drive 🚀
-                                </a>
+                                <a href="{photo_url}" target="_blank" style="color: #2563EB; text-decoration: none; font-weight: 700; font-size: 0.8rem;">📎 Buka Foto Asli di Google Drive 🚀</a>
                             </div>
                             """
-                        
-                        # Injeksi Catatan Lapangan / Isu Proyek Jika Ada
                         if notes_v and notes_v.strip() != "":
                             card_html += f"""
                             <div style="font-size: 0.75rem; color: #1F2937; background-color: #FEF3C7; border-left: 3px solid #D97706; border-radius: 4px; padding: 6px; margin-top: 8px;">
                                 <strong>Catatan:</strong> {notes_v[:150]}
                             </div>
                             """
-                            
                         card_html += "</div>"
-                        
-                        # Eksekusi Render dengan Izin HTML Aktif
                         st.markdown(card_html, unsafe_allow_html=True)
             else:
-                st.info("ℹ️ Tidak ditemukan rekaman foto pada hasil filter site ini.")
+                st.info("ℹ️ Tidak ditemukan foto pada site ini.")
         else:
-            st.info("📭 Belum ada data foto evidence terdaftar di dalam database.")
+            st.info("📭 Belum ada data foto evidence.")
+
+    # ─────────────────────────────────────────────────────────────
+    # TAB 3: STATISTIK
+    # ─────────────────────────────────────────────────────────────
+    with tab3:
+        st.subheader("📊 Statistik Foto")
+        if not photos_df.empty:
+            import plotly.express as px
+            site_counts = photos_df['site_name'].value_counts().reset_index()
+            site_counts.columns = ['Site', 'Jumlah']
+            fig = px.bar(site_counts, x='Site', y='Jumlah', color='Jumlah', color_continuous_scale=['#3B82F6','#1E40AF'])
+            fig.update_layout(height=300, showlegend=False, paper_bgcolor='rgba(0,0,0,0)')
+            st.plotly_chart(fig, use_container_width=True)
