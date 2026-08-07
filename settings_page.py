@@ -58,7 +58,12 @@ def settings_page():
                     mat_df = all_data.get('materials', pd.DataFrame())
                     
                     total = len(sites_df)
-                    avg_prog = sites_df['progress'].mean() if not sites_df.empty else 0
+                    # Konversi progress ke numerik dulu
+                    if not sites_df.empty and 'progress' in sites_df.columns:
+                        sites_df['progress'] = pd.to_numeric(sites_df['progress'], errors='coerce').fillna(0)
+                        avg_prog = sites_df['progress'].mean()
+                    else:
+                        avg_prog = 0
                     on_track = len(sites_df[sites_df['status']=='ON_TRACK']) if not sites_df.empty else 0
                     delayed = len(sites_df[sites_df['status'].isin(['DELAYED','CRITICAL'])]) if not sites_df.empty else 0
                     
