@@ -4,7 +4,7 @@ from supabase_db import read_all_sheets
 
 def daily_task_page():
     st.title("📋 Daily Task Heatmap")
-    st.caption("Status Milestone per Site — Dikelompokkan per Master Projectƒ")
+    st.caption("Status Milestone per Site — Dikelompokkan per Master Project")
 
     # 1. Load data
     all_data = read_all_sheets()
@@ -26,8 +26,7 @@ def daily_task_page():
         ms_df = ms_df[ms_df["project_id"].isin(valid_sites)]
 
     # 3. Filter Master Project (dropdown)
-        # 3. Filter Master Project (dropdown)
-    sel_project = "ALL"  # ← Default value
+    sel_project = "ALL"
     if not master_df.empty:
         project_options = ["ALL"] + master_df["id"].tolist()
         sel_project = st.selectbox(
@@ -36,11 +35,6 @@ def daily_task_page():
             format_func=lambda x: "🌐 SEMUA PROJECT"
             if x == "ALL"
             else f"{master_df[master_df['id']==x]['project_code'].values[0]} - {master_df[master_df['id']==x]['project_name'].values[0]}",
-        )
-        if sel_project != "ALL":
-            valid_sites = sites_df[sites_df["master_project_id"] == sel_project]["id"].tolist()
-            ms_df = ms_df[ms_df["project_id"].isin(valid_sites)]
-            sites_df = sites_df[sites_df["id"].isin(valid_sites)] f"{master_df[master_df['id']==x]['project_code'].values[0]} - {master_df[master_df['id']==x]['project_name'].values[0]}",
         )
         if sel_project != "ALL":
             valid_sites = sites_df[sites_df["master_project_id"] == sel_project]["id"].tolist()
@@ -60,13 +54,12 @@ def daily_task_page():
         index="site_name",
         columns="name",
         values="status",
-        aggfunc="first",  # jika ada duplikat, ambil pertama
+        aggfunc="first",
     )
 
-    # Urutkan kolom milestone berdasarkan planned_start (opsional, agar kronologis)
+    # Urutkan kolom milestone berdasarkan planned_start
     ms_df["planned_start"] = pd.to_datetime(ms_df["planned_start"], errors="coerce")
     milestone_order = ms_df.groupby("name")["planned_start"].min().sort_values().index.tolist()
-    # Hanya ambil kolom yang ada di pivot
     ordered_cols = [col for col in milestone_order if col in pivot.columns]
     pivot = pivot[ordered_cols]
 
@@ -85,14 +78,14 @@ def daily_task_page():
     styled = pivot.style.map(color_status)
 
     # 6. Tampilkan
-        project_label = "Semua Project"
+    project_label = "Semua Project"
     if sel_project != "ALL" and not master_df.empty:
         match = master_df[master_df['id'] == sel_project]
         if not match.empty:
             project_label = match['project_name'].values[0]
+
     st.subheader(f"🔥 Heatmap Status Milestone — {project_label}")
 
-    # Keterangan warna
     st.markdown("""
     <div style="display:flex; gap:20px; margin-bottom:10px;">
         <span style="background:#DCFCE7; padding:4px 12px; border-radius:4px; color:#166534;">✅ Done</span>
