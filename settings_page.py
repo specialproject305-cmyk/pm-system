@@ -30,8 +30,11 @@ def settings_page():
         with st.form("telegram_settings"):
             bot_token = st.text_input("Bot Token", value=str(settings.get("telegram_bot_token", "")),
                                      placeholder="7654321:AAHxJqK...", type="password")
-            chat_id = st.text_input("Chat ID Group", value=str(settings.get("telegram_chat_id", "")),
-                                   placeholder="-123456789")
+            chat_id = st.text_area("Chat ID (grup/individu)", 
+                       value=str(settings.get("telegram_chat_id", "")),
+                       placeholder="-123456789 (grup) atau 123456789 (individu)\nPisahkan dengan koma untuk banyak penerima\nContoh: -123456789, 987654321, 11223344",
+                       height=80)
+            st.caption("💡 Cara dapat Chat ID: chat ke @getidsbot di Telegram")
             
             if st.form_submit_button("💾 Save Telegram Settings", type="primary"):
                 update_row("settings", "settings_1", {
