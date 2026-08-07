@@ -85,11 +85,11 @@ def daily_task_page():
     styled = pivot.style.map(color_status)
 
     # 6. Tampilkan
-    project_label = (
-        "Semua Project"
-        if sel_project == "ALL"
-        else f"{master_df[master_df['id']==sel_project]['project_name'].values[0]}"
-    )
+        project_label = "Semua Project"
+    if sel_project != "ALL" and not master_df.empty:
+        match = master_df[master_df['id'] == sel_project]
+        if not match.empty:
+            project_label = match['project_name'].values[0]
     st.subheader(f"🔥 Heatmap Status Milestone — {project_label}")
 
     # Keterangan warna
