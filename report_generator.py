@@ -146,7 +146,7 @@ def generate_daily_report(all_data):
         pdf.set_font('Helvetica', '', 8)
         for rec in str(latest.get('recommendation', '')).split(';'):
             if rec.strip():
-                pdf.cell(0, 5, f'  • {rec.strip()}', 0, 1)
+                pdf.cell(0, 5, f'  * {rec.strip()}', 0, 1)
     
     # ===== 6. CRITICAL ALERTS =====
     pdf.section_title('6. CRITICAL ALERTS')
@@ -166,7 +166,7 @@ def generate_daily_report(all_data):
     if alerts:
         pdf.set_font('Helvetica', '', 9)
         for a in alerts:
-            pdf.cell(0, 5, f'  ⚠ {a}', 0, 1)
+            pdf.cell(0, 5, f'  [!!] {a}', 0, 1)
     else:
         pdf.set_font('Helvetica', '', 9)
         pdf.cell(0, 5, 'No critical alerts.', 0, 1)
