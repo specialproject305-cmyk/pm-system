@@ -75,7 +75,7 @@ def daily_task_page():
             return "background-color: #FEE2E2; color: #991B1B; font-weight: bold;"
         return ""
 
-    styled = pivot.style.applymap(color_status)
+    styled = pivot.style.map(color_status)
 
     # 6. Tampilkan
     project_label = (
