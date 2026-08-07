@@ -261,19 +261,29 @@ def clear_cache():
 import requests
 
 def send_telegram_notification(message):
-    """Kirim notifikasi ke Telegram Group"""
+    """Kirim notifikasi ke Telegram (bisa banyak penerima)"""
     try:
         settings = read_sheet("settings")
         if not settings.empty:
             bot_token = settings.iloc[0].get('telegram_bot_token', '')
-            chat_id = settings.iloc[0].get('telegram_chat_id', '')
-            if bot_token and chat_id:
+            chat_ids_str = settings.iloc[0].get('telegram_chat_id', '')
+            
+            if bot_token and chat_ids_str:
+                # Split koma, bersihkan spasi
+                chat_ids = [cid.strip() for cid in chat_ids_str.split(',') if cid.strip()]
+                
+                import requests
                 url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-                requests.post(url, data={
-                    "chat_id": chat_id,
-                    "text": message,
-                    "parse_mode": "Markdown"
-                }, timeout=5)
+                
+                for cid in chat_ids:
+                    try:
+                        requests.post(url, data={
+                            "chat_id": cid,
+                            "text": message,
+                            "parse_mode": "Markdown"
+                        }, timeout=5)
+                    except:
+                        pass  # Skip kalau satu gagal
     except:
         pass
 
